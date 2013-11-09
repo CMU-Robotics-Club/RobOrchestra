@@ -1,0 +1,61 @@
+#include <MIDI.h>
+
+#define CHANNEL 2
+#define STARTNOTE 60
+#define ENDNOTE 76
+
+#define BIN0 8
+#define NUMBINS 5
+#define ENABLE 13
+#define LED 6
+#define LED2 7
+
+#define ONTIME 8
+#define QUIETNOTE 32
+
+byte pins[NUMBINS];
+long stopTime;
+byte numMap[17] = {0,10,1,11,2,3,12,4,13,5,14,6,7,15,8,16,9};
+boolean ready;
+
+void setup(){
+  ready = true;
+  for(byte i = 0; i < NUMBINS; ++i){
+    pins[i] = BIN0+i;
+    pinMode(pins[i],OUTPUT);
+  }
+  pinMode(ENABLE,OUTPUT);
+  writeNote(QUIETNOTE);
+  MIDI.begin(CHANNEL);
+}
+
+void loop(){
+  if(MIDI.read() && ready){
+    if(MIDI.getType() == NoteOn){
+      if(MIDI.getData1() >= STARTNOTE && MIDI.getData1() <= ENDNOTE){
+        stopTime = millis() + ONTIME;
+        ready = false;
+        writeNote(numMap[MIDI.getData1() - STARTNOTE]);
+      }
+    }
+  }
+  checkNote();
+}
+
+void writeNote(byte note){//note must be from 0 to 16
+  for(byte i = 0; i < NUMBINS; ++i){
+    digitalWrite(pins[i],(note>>i)&1);
+  }
+  if(note < 16){
+    digitalWrite(ENABLE,LOW);
+  } else {
+    digitalWrite(ENABLE,HIGH);
+  }
+}
+
+void checkNote(){
+  if(!ready && stopTime < millis()){
+    writeNote(QUIETNOTE);
+    ready = true;
+  }
+}
