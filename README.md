@@ -1,4 +1,4 @@
-Roboorchestra
+RobOrchestra
 =============
 
-RoboOrchetra is a project seeking to make music with robotic instruments.
+RobOrchetra is a project seeking to make music with robotic instruments.
