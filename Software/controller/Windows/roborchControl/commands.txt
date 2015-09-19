@@ -1,0 +1,43 @@
+// RobOrchestra Controller v1.0
+// set control strings for instruments
+// keep a blank line between instruments (and above the first)
+// melodic instruments generate a full list of commands selectable
+// by drop down
+//
+// NOTE: Comments can only appear between instruments
+//
+// FORMAT: name|command_string
+
+BASSBOT
+hit|[61A]
+
+SNAREBOT2
+hit|[81]
+accent|[81]
+roll|[81]
+buzzroll|[81]
+
+HIHAT
+O|[51A]
+C|[51B]
+
+SNAREBOT1
+hit|[51]
+
+WHAMOLA
+A|[x2]
+
+FLUTOPHONE
+C|[31]
+B|[31]
+Bb|[31]
+A|[31]
+G|[31]
+F#|[31]
+F|[31]
+E|[31]
+D|[31]
+C|[31]
+
+XYLOBOT
+A|[A]
