@@ -1,7 +1,7 @@
 RobOrchestra
 =============
 
-Welcome to RobOrchestra! We ar a project in Carnegie Mellon University's Robotics Club 
+Welcome to RobOrchestra! We are a project in Carnegie Mellon University's Robotics Club 
 dedicated to making robots that can play a wide range of instruments usually reserved
 for human performance.
 
