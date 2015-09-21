@@ -20,3 +20,9 @@ work with nearly any MIDI software.
 The orchestra is currently comprised of BassBot and SnareBot, our percussion section,
 and xzylobot, our, well, more of our percussion section. We are in the process of building 
 glockenspielbot, xzylobot's bigger brother, and ukulele bot.
+
+
+### Files that work:
+MIDI_xylo
+MIDI_Snare
+Bassbot
