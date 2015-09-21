@@ -22,7 +22,4 @@ and xzylobot, our, well, more of our percussion section. We are in the process o
 glockenspielbot, xzylobot's bigger brother, and ukulele bot.
 
 
-### Files that work:
-MIDI_xylo
-MIDI_Snare
-Bassbot
+#####The Arduino directory was moved to instruments/archives
