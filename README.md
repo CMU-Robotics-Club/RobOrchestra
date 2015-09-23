@@ -5,6 +5,7 @@ Welcome to RobOrchestra! We are a project in Carnegie Mellon University's Roboti
 dedicated to making robots that can play a wide range of instruments usually reserved
 for human performance.
 
+Info for team members can be found on the wiki.
 
 ###How it works.
 	
