@@ -4,12 +4,12 @@
 		"appversion" : 		{
 			"major" : 7,
 			"minor" : 0,
-			"revision" : 3,
+			"revision" : 5,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 42.0, 85.0, 1224.0, 733.0 ],
+		"rect" : [ 38.0, 85.0, 1050.0, 703.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -37,6 +37,37 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-2",
+					"maxclass" : "newobj",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "bang" ],
+					"patching_rect" : [ 224.0, 279.0, 65.0, 22.0 ],
+					"style" : "",
+					"text" : "metro 700"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-1",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 224.0, 335.0, 113.0, 22.0 ],
+					"saved_object_attributes" : 					{
+						"filename" : "simple_rhythm.js",
+						"parameter_enable" : 0
+					}
+,
+					"style" : "",
+					"text" : "js simple_rhythm.js"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"fontface" : 1,
 					"fontsize" : 14.0,
@@ -93,7 +124,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 151.5, 306.0, 96.0, 23.0 ],
+					"patching_rect" : [ 49.5, 224.0, 96.0, 23.0 ],
 					"presentation" : 1,
 					"presentation_rect" : [ 342.5, 331.0, 96.0, 23.0 ],
 					"style" : "",
@@ -291,7 +322,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 178.0, 338.0, 24.0, 24.0 ],
+					"patching_rect" : [ 178.0, 224.0, 24.0, 24.0 ],
 					"presentation" : 1,
 					"presentation_rect" : [ 355.75, 366.0, 69.5, 69.5 ],
 					"style" : ""
@@ -305,7 +336,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "bang" ],
-					"patching_rect" : [ 178.0, 386.0, 65.0, 22.0 ],
+					"patching_rect" : [ 178.0, 380.0, 65.0, 22.0 ],
 					"style" : "",
 					"text" : "metro 700"
 				}
@@ -336,7 +367,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 581.0, 390.75, 47.0, 36.0 ],
 					"style" : "",
-					"text" : "62"
+					"text" : "65"
 				}
 
 			}
@@ -505,6 +536,15 @@
  ],
 		"lines" : [ 			{
 				"patchline" : 				{
+					"destination" : [ "obj-71", 1 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-53", 1 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -598,6 +638,15 @@
 					"hidden" : 0,
 					"midpoints" : [ 575.75, 128.5, 504.75, 128.5 ],
 					"source" : [ "obj-112", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-1", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-2", 0 ]
 				}
 
 			}
@@ -829,6 +878,15 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-2", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-73", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-71", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -875,7 +933,13 @@
 
 			}
  ],
-		"dependency_cache" : [  ],
+		"dependency_cache" : [ 			{
+				"name" : "simple_rhythm.js",
+				"bootpath" : "~/GitHub/RobOrchestra",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+ ],
 		"embedsnapshot" : 0
 	}
 
