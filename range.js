@@ -1,30 +1,15 @@
-inlets = 4;
-outlets = 4;
+inlets = 1;
+outlets = 1;
 
+//if note is out of range of xylobot
+//decrement note by an octave to put it back in range
 function msg_int(note) {
 	
-	if(inlet == 1) {
-		if(note > 76) {
-			outlet(1,note-12);
-		}
+	if(note > 76) {
+		outlet(0,note-12);
 	}
 	
-	else if(inlet == 2) {
-		if(note > 76) {
-			outlet(2,note-12);
-		}
+	else{
+		outlet(0,note);
 	}
-	
-	else if(inlet == 3) {
-		if(note > 76) {
-			outlet(3,note-12);
-		}
-	}
-	
-	else {
-		if(note > 76) {
-			outlet(4,note-12);
-		}
-	}
-	
 }
