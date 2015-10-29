@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 842.0, 85.0, 716.0, 733.0 ],
+		"rect" : [ 34.0, 77.0, 1532.0, 749.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -37,6 +37,19 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-4",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 402.0, 581.0, 31.0, 22.0 ],
+					"style" : "",
+					"text" : "100"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-23",
 					"maxclass" : "newobj",
@@ -99,7 +112,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 495.0, 581.0, 50.0, 22.0 ],
 					"style" : "",
-					"text" : "76"
+					"text" : "67"
 				}
 
 			}
@@ -125,7 +138,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 332.0, 148.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "9"
+					"text" : "0"
 				}
 
 			}
@@ -138,7 +151,7 @@
 					"outlettype" : [ "bang" ],
 					"patching_rect" : [ 332.0, 107.0, 71.0, 22.0 ],
 					"style" : "",
-					"text" : "metro 3000"
+					"text" : "metro 1000"
 				}
 
 			}
@@ -164,7 +177,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 519.0, 491.0, 74.0, 22.0 ],
 					"style" : "",
-					"text" : "69 72 76 69"
+					"text" : "60 64 67 72"
 				}
 
 			}
@@ -375,6 +388,15 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-15", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-12", 1 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -431,17 +453,26 @@
 				}
 
 			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-16", 1 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-4", 0 ]
+				}
+
+			}
  ],
 		"dependency_cache" : [ 			{
 				"name" : "nextChord.js",
-				"bootpath" : "~/GitHub/RobOrchestra",
+				"bootpath" : "~/GitHub/RobOrchestra/Max MSP files",
 				"patcherrelativepath" : ".",
 				"type" : "TEXT",
 				"implicit" : 1
 			}
 , 			{
 				"name" : "range.js",
-				"bootpath" : "~/GitHub/RobOrchestra",
+				"bootpath" : "~/GitHub/RobOrchestra/Max MSP files",
 				"patcherrelativepath" : ".",
 				"type" : "TEXT",
 				"implicit" : 1
