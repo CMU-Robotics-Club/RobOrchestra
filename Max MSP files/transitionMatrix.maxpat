@@ -122,7 +122,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 38.5, 397.0, 171.5, 22.0 ],
 					"style" : "",
-					"text" : "71 64 67 69"
+					"text" : "65 64 60"
 				}
 
 			}
@@ -142,13 +142,14 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-28",
+					"linecount" : 4,
 					"maxclass" : "message",
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 196.5, 325.0, 29.5, 22.0 ],
+					"patching_rect" : [ 196.5, 325.0, 29.5, 62.0 ],
 					"style" : "",
-					"text" : "250"
+					"text" : "333.333344"
 				}
 
 			}
@@ -161,7 +162,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 100.0, 189.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "64"
+					"text" : "67"
 				}
 
 			}
@@ -170,8 +171,8 @@
 					"id" : "obj-26",
 					"maxclass" : "newobj",
 					"numinlets" : 1,
-					"numoutlets" : 3,
-					"outlettype" : [ "", "", "" ],
+					"numoutlets" : 4,
+					"outlettype" : [ "", "", "", "" ],
 					"patching_rect" : [ 115.0, 258.0, 89.0, 22.0 ],
 					"saved_object_attributes" : 					{
 						"filename" : "melody.js",
@@ -192,7 +193,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 169.0, 184.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "71"
+					"text" : "60"
 				}
 
 			}
@@ -399,7 +400,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 332.0, 148.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "7"
+					"text" : "0"
 				}
 
 			}
@@ -438,7 +439,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 519.0, 491.0, 74.0, 22.0 ],
 					"style" : "",
-					"text" : "67 71 74 67"
+					"text" : "60 64 67 72"
 				}
 
 			}
@@ -791,6 +792,15 @@
 					"disabled" : 0,
 					"hidden" : 0,
 					"source" : [ "obj-25", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-24", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-26", 3 ]
 				}
 
 			}

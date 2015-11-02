@@ -1,12 +1,11 @@
 inlets = 1
-outlets = 3
+outlets = 4
 
 var test = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76]
 var scale = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76]
 var out = []
 
 function msg_int(newnote){
-	post("Test");
 	//Inputs in MIDI
 	//Old note is jsarguments[1]
 	//New note is newnote
@@ -33,8 +32,7 @@ function msg_int(newnote){
 	if(n1 < n2){
 		for(x = n1; x < n2; x++){
 			var randNum = Math.random();
-			post(randNum);
-			if(randNum < 0.5){
+			if(randNum < 0.2){
 				out[c] = scale[x]
 				c++
 			}
@@ -44,12 +42,10 @@ function msg_int(newnote){
 	}
 	if(n1 > n2){
 		for(x = n1; x > n2; x--){
-			if(Math.random() < 0.5){
+			var randNum = Math.random();
+			if(randNum < 0.2){
 				out[c] = scale[x]
 				c++
-			}
-			else{
-				post("Omitted")
 			}
 		}
 		out[c] = scale[x] //End on last note
@@ -60,4 +56,8 @@ function msg_int(newnote){
 	outlet(1, 1000/out.length); //Necessary note length
 	outlet(2, jsarguments[1]); //Old note (only for debugging)
 	jsarguments[1] = newnote
+	post(newnote)
+	if(newnote == 60 || newnote == 72){
+		outlet(3, "bang")
+	}
 }
