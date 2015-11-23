@@ -6,6 +6,8 @@
 # Note.solfege returns the solfege name of the note
 #######################################################
 
+#Apparently pygame.midi is a thing to look into
+
 class Note(object):
     NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
     SOLFEGE = ['Do','Re','Mi','Fa','So','La','Ti']
@@ -59,7 +61,7 @@ class Note(object):
 # prev_chord is an array of notes (SATB)
 # chord is an integer between I and VII (1 and 7)
 def voice_next_chord(prev_chord, chord):
-    next_chord = [None]*4
+    next_chord = next_other(prev_chord, chord)
 
     # bass
     next_chord[3] = next_bass(prev_chord, chord)
@@ -80,7 +82,43 @@ def next_bass(prev_chord, chord):
     elif(i3 <= i1 and i3 <= i2):
         return b3
 
+def get_best(n1, n2, n3, n):
+    i1, i2, i3 = n1-n, n2-n, n3-n
+    if(i1 <= i2 and i1 <= i3):
+        return n1
+    elif(i2 <= i1 and i2 <= i3):
+        return n2
+    elif(i3 <= i1 and i3 <= i2):
+        return n3
+
+def next_other(prev_chord, chord):
+    pc = [prev_chord[0], prev_chord[1], prev_chord[2], prev_chord[3]] #Copy pvev_chord
+    #I'm going to be changing this later; hopefully I don't overwrite anything useful
+    nc = [None, None, None, None]
+    for x in range(0, 2):
+        dms = [None, None, None] #Do mi so (best notes); not degree minute second
+        for y in range(0, 2):
+            if(pc[x] == None):
+                dms[x] = 1000000
+                continue
+            #We're going to loop through do, mi, so, and get the optimal note from each, then get the optimal note from that
+            n1 = Note(pc[x].octave*12 + Note.INTERVALS[chord+2*y-1])
+            n2 = Note(pc[x].octave*12 + 12 + Note.INTERVALS[chord+2*y-1])
+            n3 = Note(pc[x].octave*12 - 12 + Note.INTERVALS[chord+2*y-1])
+            n = pc[x]
+            dms[x] = get_best(n1, n2, n3, n)
+        #I should theoretically now have the best do, mi, so notes (or 1000000 if impossible
+        gb = get_best(dms[0], dms[1], dms[2], pc[x])
+        for y in range(0, 2):
+            if(gb == dms[y]):
+                pc[y] = None
+                nc[y] = gb
+    return nc
+    #And... this should theoretically work.
+                
+        
+#This is the code that actually runs
 prev_chord = [None, None, None, Note(60)]
-chord = 7
+chord = 5
 
 print(voice_next_chord(prev_chord,chord))
