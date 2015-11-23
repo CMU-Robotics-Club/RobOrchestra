@@ -13,7 +13,7 @@
 #include "def.h"
 #include "ukulele.h"
 
-#define KEY_UP_TIME 50
+#define KEY_UP_TIME 50 //Change this to be appropriate for ukulele
 
 // Simple tutorial on how to receive and send MIDI messages.
 // Here, when receiving any message on channel 4, the Arduino 
@@ -40,14 +40,25 @@ void loop()
       int noteIndex = MIDI.getData1();
       //int note_2 = MIDI.getData2();
       if(noteIndex >= STARTNOTE && noteIndex <= ENDNOTE){
+        /* The leftmost string should be the most significant byte in the int
+         * Likewise, the rightmost string should be the least significant byte.
+         * Then starting from 0 (Nothing pressed) to 4 (Press the highest note
+         * of the string), that's how each byte of the int should be 
+         * represented.
+         */
         int notePin = getNote(noteIndex); // map the note to the pin
-        playKey(notePin); // plays the key on the glockenspiel (xylobot)
+        char notesPressedString[4];
+        for (int i = 3; i <= 0; i--) {
+          notesPressedString[i] = (char) (0xFF & (notePin >> i*8));
+        }
+        playKey(notePin); // plays the key on the ukulele
       }  
     }  
   }
 }
 
 // maps the note index to the note pin
+//Look at def.h to see how these should be modified.
 int getNote(int noteIndex){
   switch (noteIndex) {
   case NOTE_A:
@@ -106,6 +117,7 @@ int getNote(int noteIndex){
 }
 
 void playKey(int keyPin){
+  //Need to modify this as well.
   digitalWrite(keyPin, HIGH);
   digitalWrite(LED, HIGH);
   delay(KEY_UP_TIME);
