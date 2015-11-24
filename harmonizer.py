@@ -13,10 +13,11 @@ class Note(object):
     SOLFEGE = ['Do','Re','Mi','Fa','So','La','Ti']
     INTERVALS = [0,2,4,5,7,9,11]
 
-    def __init__(self, midi_val):
+    def __init__(self, midi_val, rescale = 1):
         self.midi_val = midi_val
 
-        self.rescale()
+        if(rescale):
+            self.rescale()
 
         self.octave = self.midi_val//12
         self.note_val = self.midi_val%12
@@ -95,30 +96,32 @@ def next_other(prev_chord, chord):
     pc = [prev_chord[0], prev_chord[1], prev_chord[2], prev_chord[3]] #Copy pvev_chord
     #I'm going to be changing this later; hopefully I don't overwrite anything useful
     nc = [None, None, None, None]
-    for x in range(0, 2):
+    dmsdone = [0, 0, 0] #Tracks which do/mi/so notes were used
+    for x in range(0, 3): #Loop through soprano, alto, tenor
         dms = [None, None, None] #Do mi so (best notes); not degree minute second
-        for y in range(0, 2):
-            if(pc[x] == None):
-                dms[x] = 1000000
+        for y in range(0, 3): #Loop through do, mi, so
+            if(dmsdone[y] == 1):
+                dms[y] = Note(1000000, 0)
                 continue
-            #We're going to loop through do, mi, so, and get the optimal note from each, then get the optimal note from that
-            n1 = Note(pc[x].octave*12 + Note.INTERVALS[chord+2*y-1])
-            n2 = Note(pc[x].octave*12 + 12 + Note.INTERVALS[chord+2*y-1])
-            n3 = Note(pc[x].octave*12 - 12 + Note.INTERVALS[chord+2*y-1])
+            #We're going to loop through do, mi, so, and get the optimal octave for each, then get the optimal note from that
+            n1 = Note(pc[x].octave*12 + Note.INTERVALS[(chord+2*y-1)%7])
+            n2 = Note(pc[x].octave*12 + 12 + Note.INTERVALS[(chord+2*y-1)%7])
+            n3 = Note(pc[x].octave*12 - 12 + Note.INTERVALS[(chord+2*y-1)%7])
             n = pc[x]
-            dms[x] = get_best(n1, n2, n3, n)
+            dms[y] = get_best(n1, n2, n3, n)
         #I should theoretically now have the best do, mi, so notes (or 1000000 if impossible
-        gb = get_best(dms[0], dms[1], dms[2], pc[x])
-        for y in range(0, 2):
+        gb = get_best(dms[0], dms[1], dms[2], pc[x]) #Apparently, this line sometimes passes in None
+        for y in range(0, 3):
             if(gb == dms[y]):
-                pc[y] = None
-                nc[y] = gb
+                dmsdone[y] = 1
+                nc[x] = gb
     return nc
     #And... this should theoretically work.
                 
         
 #This is the code that actually runs
-prev_chord = [None, None, None, Note(60)]
-chord = 5
+prev_chord = [Note(72), Note(67), Note(64), Note(60)] #60, 64, 67, 72 is a 1 chord
+chord = 7
 
+print(prev_chord)
 print(voice_next_chord(prev_chord,chord))
