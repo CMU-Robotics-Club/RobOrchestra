@@ -46,11 +46,13 @@ void loop()
          * of the string), that's how each byte of the int should be 
          * represented.
          */
+	//might need to switch the order of the stuff
         int notePin = getNote(noteIndex); // map the note to the pin
-        char notesPressedString[4];
+        int notesPressedString[4]; //maybe make this was a char, might be better as an int
         for (int i = 3; i <= 0; i--) {
-          notesPressedString[i] = (char) (0xFF & (notePin >> i*8));
+          notesPressedString[i] = (int) (0x000000FF & (notePin >> i*8)); //changed cast and shift for ints
         }
+
         playKey(notePin); // plays the key on the ukulele
       }  
     }  
@@ -61,61 +63,64 @@ void loop()
 //Look at def.h to see how these should be modified.
 int getNote(int noteIndex){
   switch (noteIndex) {
-  case NOTE_A:
-    return N_A;
-  case NOTE_A_S:
-    return N_A_S;
-  case NOTE_B:
-    return N_B;
-  case NOTE_C:
-    return N_C;
-  case NOTE_C_S:
-    return N_C_S;
-  case NOTE_D:
-    return N_D;
-  case NOTE_D_S:
-    return N_D_S;
-  case NOTE_E:
-    return N_E;
-  case NOTE_F:
-    return N_F;
-  case NOTE_F_S:
-    return N_F_S;
-  case NOTE_G:
-    return N_G;
-  case NOTE_G_S:
-    return N_G_S;
-  case NOTE_HIGH_A:
-    return N_HIGH_A;
-  case NOTE_HIGH_A_S:
-    return N_HIGH_A_S;
-  case NOTE_HIGH_B:
-    return N_HIGH_B;
-  case NOTE_HIGH_C:
-    return N_HIGH_C;
-  case NOTE_HIGH_C_S:
-    return N_HIGH_C_S;
-  case NOTE_HIGH_D:
-    return N_HIGH_D;
-  case NOTE_HIGH_D_S:
-    return N_HIGH_D_S;
-  case NOTE_HIGH_E:
-    return N_HIGH_E;
-  case NOTE_HIGH_F:
-    return N_HIGH_F;
-  case NOTE_HIGH_F_S:
-    return N_HIGH_F_S;
-  case NOTE_HIGH_G:
-    return N_HIGH_G;
-  case NOTE_HIGH_G_S:
-    return N_HIGH_G_S;
-  case NOTE_HIGHER_A:
-    return N_HIGHER_A;
-  default: // should never drop to this case!
-    return 0;
+  case NOTE_A_1:
+    return A_1;
+  case NOTE_A_2:
+    return A_2;
+  case NOTE_A_3:
+    return A_3;
+  case NOTE_A_4:
+    return A_4;
+  case NOTE_B_1:
+    return B_1;
+  case NOTE_B_2:
+    return B_2;
+  case NOTE_B_3:
+    return B_3;
+  case NOTE_B_4:
+    return B_4;
+  case NOTE_C_1:
+    return C_1;
+  case NOTE_C_2:
+    return C_2;
+  case NOTE_C_3:
+    return C_3;
+  case NOTE_C_4:
+    return C_4;
+  case NOTE_D_1:
+    return D_1;
+  case NOTE_D_2:
+    return D_2;
+  case NOTE_D_3:
+    return D_3;
+  case NOTE_D_4:
+    return D_4;
+  default: // if string is open - no fingers on string
+    return -1;
+  }
+}
+void strum(){
+  //servo probably
+  //code to strum the "arm"	
+}
+void playKey(char[] notes){
+  for(int i = 0;i < 3;i++){
+    int pin = getNote(notes[i]);
+    if(pin != -1){
+      digitalWrite(pin,HIGH);//add in led later?
+    }
+  }
+  strum();//the strum will have the delay in it 
+  //delay(KEY_UP_TIME);
+  for(int i = 0;i < 3;i++){
+    int pin = getNote(notes[i]);
+    if(pin != -1){
+      digitalWrite(pin,low);//add in led later?
+    }
   }
 }
 
+/*
 void playKey(int keyPin){
   //Need to modify this as well.
   digitalWrite(keyPin, HIGH);
@@ -124,7 +129,7 @@ void playKey(int keyPin){
   digitalWrite(LED, LOW);
   digitalWrite(keyPin, LOW); 
 }
-
+*/
 
 
 
