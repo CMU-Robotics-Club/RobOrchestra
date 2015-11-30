@@ -95,8 +95,8 @@ int getNote(int noteIndex){
     return D_3;
   case NOTE_D_4:
     return D_4;
-  default: // should never drop to this case!
-    return 0;
+  default: // if string is open - no fingers on string
+    return -1;
   }
 }
 void strum(){
@@ -105,12 +105,18 @@ void strum(){
 }
 void playKey(char[] notes){
   for(int i = 0;i < 3;i++){
-    digitalWrite(getNote(notes[i]),HIGH);//add in led later?
+    int pin = getNote(notes[i]);
+    if(pin != -1){
+      digitalWrite(pin,HIGH);//add in led later?
+    }
   }
   strum();//the strum will have the delay in it 
   //delay(KEY_UP_TIME);
   for(int i = 0;i < 3;i++){
-    digitalWrite(getNote(notes[i]),LOW);
+    int pin = getNote(notes[i]);
+    if(pin != -1){
+      digitalWrite(pin,low);//add in led later?
+    }
   }
 }
 
