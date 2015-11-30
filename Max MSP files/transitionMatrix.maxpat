@@ -9,7 +9,7 @@
 			"modernui" : 1
 		}
 ,
-		"rect" : [ 252.0, 79.0, 748.0, 733.0 ],
+		"rect" : [ 206.0, 79.0, 794.0, 733.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -37,6 +37,88 @@
 		"style" : "",
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-46",
+					"maxclass" : "newobj",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "int" ],
+					"patching_rect" : [ 732.0, 573.0, 31.0, 22.0 ],
+					"style" : "",
+					"text" : "- 12"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-47",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 641.75, 573.0, 31.0, 22.0 ],
+					"style" : "",
+					"text" : "100"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-48",
+					"maxclass" : "newobj",
+					"numinlets" : 3,
+					"numoutlets" : 0,
+					"patching_rect" : [ 677.25, 615.0, 61.0, 22.0 ],
+					"style" : "",
+					"text" : "noteout 1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-38",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 684.0, 417.0, 52.0, 22.0 ],
+					"style" : "",
+					"text" : "compile"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-18",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 639.0, 476.0, 97.0, 22.0 ],
+					"saved_object_attributes" : 					{
+						"filename" : "harmony.js",
+						"parameter_enable" : 0
+					}
+,
+					"style" : "",
+					"text" : "js harmony.js 60"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-36",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 732.0, 521.0, 29.5, 22.0 ],
+					"style" : "",
+					"text" : "60"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-37",
 					"maxclass" : "message",
@@ -69,7 +151,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 43.75, 573.0, 31.0, 22.0 ],
+					"patching_rect" : [ 43.75, 573.0, 29.5, 22.0 ],
 					"style" : "",
 					"text" : "100"
 				}
@@ -122,7 +204,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 38.5, 397.0, 171.5, 22.0 ],
 					"style" : "",
-					"text" : "62 67 71 72"
+					"text" : "72"
 				}
 
 			}
@@ -142,13 +224,14 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-28",
+					"linecount" : 2,
 					"maxclass" : "message",
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 196.5, 325.0, 29.5, 22.0 ],
+					"patching_rect" : [ 196.5, 325.0, 29.5, 35.0 ],
 					"style" : "",
-					"text" : "250"
+					"text" : "1000"
 				}
 
 			}
@@ -159,7 +242,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 100.0, 189.0, 29.5, 22.0 ],
+					"patching_rect" : [ 100.0, 188.0, 29.5, 22.0 ],
 					"style" : "",
 					"text" : "72"
 				}
@@ -192,7 +275,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 568.5, 643.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "50"
+					"text" : "25"
 				}
 
 			}
@@ -230,7 +313,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 483.5, 643.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "50"
+					"text" : "25"
 				}
 
 			}
@@ -268,7 +351,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 410.5, 643.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "50"
+					"text" : "25"
 				}
 
 			}
@@ -360,7 +443,7 @@
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 341.5, 643.0, 29.5, 22.0 ],
 					"style" : "",
-					"text" : "50"
+					"text" : "25"
 				}
 
 			}
@@ -529,6 +612,15 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-18", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-1", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-21", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -689,6 +781,33 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-36", 1 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-18", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-46", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-18", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-47", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-18", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-16", 1 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -801,6 +920,15 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-30", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-26", 3 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-30", 1 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -900,6 +1028,33 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-18", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-38", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-48", 0 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-46", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-48", 1 ],
+					"disabled" : 0,
+					"hidden" : 0,
+					"source" : [ "obj-47", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-2", 0 ],
 					"disabled" : 0,
 					"hidden" : 0,
@@ -967,6 +1122,12 @@
 			}
 , 			{
 				"name" : "melody.js",
+				"bootpath" : "~/RobOrchestra/Max MSP files",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "harmony.js",
 				"bootpath" : "~/RobOrchestra/Max MSP files",
 				"type" : "TEXT",
 				"implicit" : 1

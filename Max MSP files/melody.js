@@ -19,9 +19,6 @@ var defpnum = 4 //Default phrase number
 //Bad transitions: 5
 
 function msg_int(newchord){
-	//WARNING: This code may or may not be a complete mess.
-	//I started trying to clean it up, so it's better now, but it's still not great.
-	
 	//Inputs in MIDI
 	//Old note is jsarguments[1]
 	//New note is newnote
@@ -118,26 +115,28 @@ function msg_int(newchord){
 		out[c] = scale[x] //End on last note
 	}
 	
-	//Output stuff
-	outlet(0, out); //Note sequence
-	outlet(1, 1000/out.length); //Necessary note length
-	jsarguments[1] = newnote
-	outlet(2, jsarguments[1]); //New note (only for debugging)
-	
 	//Check if phrase ended
 	if((newnote == 60 || newnote == 72)  && jsarguments[3] == 0 && jsarguments[4] == 0){
 		//Print final note (should be 60 or 72), number of phrases remaining, current chord (should be 0)
-		post(jsarguments[1])
+		post(newnote)
 		post(jsarguments[2] - 1)
 		post(jsarguments[3])
 		post("\n")
 		jsarguments[2] -=1
 		jsarguments[4] = 1
 	}
-
+	
+	//Check if you're done
 	if(jsarguments[2] <= 0){
 		post("Done\n")
+		out = [newnote]
 		jsarguments[2] = defpnum //Reset phrase counter
 		outlet(3, "bang") //Stop program
 	}
+	
+	//Output stuff
+	outlet(0, out); //Note sequence
+	outlet(1, 1000/out.length); //Necessary note length
+	jsarguments[1] = newnote
+	outlet(2, jsarguments[1]); //New note (only for debugging)
 }

@@ -6,7 +6,26 @@
 # Note.solfege returns the solfege name of the note
 #######################################################
 
+#The above seems to be a note about Note. Hmm...
+
 #Apparently pygame.midi is a thing to look into
+
+#Bad progressions:
+    #Parallel fifths
+    #Parallel octaves
+        #if we don't count the bass line for this, this should never come up, since there's no octave in 1, 3, 5
+        #if we count the bass, we have to be careful with implementation
+        #so I assume we aren't counting the bass for now
+    #Anything else I'm missing
+
+#Planned implementation:
+    #Pass in a list of stuff that doesn't work (6 possible cases, determined by S and A lines)
+        #so we could even pass in a length 6 boolean array (3 by 2 might be cleaner), or, if we feel really clever, a number between 0 and 63
+    #Create an order for S (best to worst)
+    #Try best. If only one valid alto note, use it. If no valid alto note, pick the next soprano note
+    #If this creates a bad condition, add this to the set of bad conditions and rerun the function
+    #If you're good, run the next chord
+    #If you run out of soprano notes, throw an error and backtrack
 
 class Note(object):
     NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
