@@ -46,11 +46,13 @@ void loop()
          * of the string), that's how each byte of the int should be 
          * represented.
          */
+	//might need to switch the order of the stuff
         int notePin = getNote(noteIndex); // map the note to the pin
-        char notesPressedString[4];
+        int notesPressedString[4]; //maybe make this was a char, might be better as an int
         for (int i = 3; i <= 0; i--) {
-          notesPressedString[i] = (char) (0xFF & (notePin >> i*8));
+          notesPressedString[i] = (int) (0x000000FF & (notePin >> i*8)); //changed cast and shift for ints
         }
+
         playKey(notePin); // plays the key on the ukulele
       }  
     }  
@@ -97,7 +99,22 @@ int getNote(int noteIndex){
     return 0;
   }
 }
+void strum(){
+  //servo probably
+  //code to strum the "arm"	
+}
+void playKey(char[] notes){
+  for(int i = 0;i < 3;i++){
+    digitalWrite(getNote(notes[i]),HIGH);//add in led later?
+  }
+  strum();//the strum will have the delay in it 
+  //delay(KEY_UP_TIME);
+  for(int i = 0;i < 3;i++){
+    digitalWrite(getNote(notes[i]),LOW);
+  }
+}
 
+/*
 void playKey(int keyPin){
   //Need to modify this as well.
   digitalWrite(keyPin, HIGH);
@@ -106,7 +123,7 @@ void playKey(int keyPin){
   digitalWrite(LED, LOW);
   digitalWrite(keyPin, LOW); 
 }
-
+*/
 
 
 
