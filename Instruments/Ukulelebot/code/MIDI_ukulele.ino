@@ -23,12 +23,17 @@
 
 int played = 0;
 
+Servo strummer;
+
+int pos = 0;    // variable to store the servo position, be sure to start in "down" position
+
 void setup()
 {
   ukulele_init();
   pinMode(LED, OUTPUT);
   Serial3.begin(115200);
   MIDI.begin();          // Launch MIDI and listen to channel 1
+  strummer.attach(0); //Change 0 to correct servo (strummer) port
 }
 
 void loop()
@@ -100,9 +105,17 @@ int getNote(int noteIndex){
   }
 }
 void strum(){
-  //servo probably
-  //code to strum the "arm"	
+  if (pos <= 30) { //Down position, can be defined arbitrarily
+    pos = 60;
+    strummer.write(pos);
+  }
+  else { //Up position, also can be defined arbitrarily
+    pos = 0;
+	strummer.write(pos);
+  }
+  delay(40); //Adjust delay as needed
 }
+
 void playKey(char[] notes){
   for(int i = 0;i < 3;i++){
     int pin = getNote(notes[i]);
