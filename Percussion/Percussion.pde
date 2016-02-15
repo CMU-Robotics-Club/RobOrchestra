@@ -11,9 +11,20 @@ int tonicTotal = 3; //Music stops when we reach this number of tonic chord/quart
 
 //Chord attributes relocated to make them global
 int channel = 1; //set channel. 0 for speakers
+int pchannel1 = 0; //Percussion channel 1 (snare drum)
+int pchannel2 = 0; //Percussion channel 2 (bass drum)
 int velocity = 80; //chord volume
 int melVelocity = 120; //melody note volumn
 int ticks = noteLen; //length in milliseconds
+
+//Moving drum patterns up here
+float thresh = 0.01;
+float[] bassbeats = new float[]{4};
+float[] snarebeats = new float[]{1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5};
+
+//Adding beat info
+int nbeats = 4;
+int beat = 0; //Increments first, so start at 0
 
                         //I   no    ii    no    no    IV    no    V     no    vi    no    viid
 float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20, 0.00, 0.05}, //I
@@ -29,6 +40,77 @@ float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20,
                     {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00}, //no
                     {0.95, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.05}};//vii(dim)
 
+
+//For utility/debugging
+void printArray(Object[] A){
+  System.out.println("{");
+  for(int x = 0; x < A.length; x++){
+     System.out.print(A[x]); 
+     if(x < A.length - 1) System.out.print(", ");
+  }
+  System.out.println("}");
+}
+
+//Gets greatest common factor (using the Euclidean algorithm)
+int gcf(int a, int b){
+  //System.out.println("Starting GCF");
+  //Make a >= b
+  if(a < b){
+    int temp = a;
+    a = b;
+    b = temp;
+  }
+  if(b == 0){
+     return a; 
+  }
+  //System.out.println("Ending GCF");
+  return gcf(a-b, b);
+}
+
+//Gets least common multiple
+int lcm(int[] B, int... A){
+  //System.out.println("Getting mini-LCM:");
+  int temp = 1;
+  for(int x = 0; x < A.length; x++){
+    temp = temp*A[x]/gcf(temp, A[x]);
+  }
+  for(int x = 0; x < B.length; x++){
+    temp = temp*B[x]/gcf(temp, B[x]);
+  }
+  //System.out.println(temp);
+  return temp;
+}
+
+int lcm(int[]... A){
+  //System.out.println("Getting LCM");
+  int temp = 1;
+  for(int x = 0; x < A.length; x++){
+    temp = lcm(A[x], temp);
+  }
+  //System.out.println(temp);
+  return temp;
+}
+
+int beatToNBeat(float d){
+   //System.out.println("Beat to NBeat");
+   if(abs(d%1) < 0.01){
+      //System.out.println("This is an int");
+      return 1;
+   }
+   //System.out.println(1/ (d%1) );
+   return round(1/ (d%1) ); 
+}
+
+int[] beatsToNBeats(float[] D){
+   //System.out.println("Converting decimals to ints:");
+   int[] temp = new int[D.length];
+   for(int x = 0; x < D.length; x++){
+      temp[x] = beatToNBeat(D[x]); 
+   }
+   //printArray(temp);
+   return temp;
+}
+
 //sets up screen
 void setup() {
   size(200,200);
@@ -37,23 +119,26 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
    
   myBus = new MidiBus(this, 0, 1); //Sends midi output to speakers
-  playDrum(4, 10000000, 1, 4, new double[]{1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5} , new double[]{4});
-  System.exit(0);
+  System.out.println("Starting");
 }
 
 //this function repeats indefinitely
 //note that the output displayed in the window is one chord behind what is being played
 void draw() {
+  //System.out.println("Starting draw");
+  beat = beat % nbeats + 1; //Ranges from 1 to nbeats
   
   //If we haven't reached our tonic total, continue melody
   if(tonicCount < tonicTotal) {
     background(0); //clear screen
-    next = chooseChord(next);
+    next = chooseChord(next, beat);
     text("Tonic Count: " + tonicCount, 20, 80); //prints to screen
   }
 }
 
-int chooseChord(int currChord){
+int chooseChord(int currChord, int beat){
+  //System.out.println("Choosing chord");
+  
   double randomNum = Math.random();
   double sum = 0;
   int base, third, fifth, oct, i=0;
@@ -86,7 +171,7 @@ int chooseChord(int currChord){
       
       oct = base + 12; //root octave
       
-      playChord(base, third, fifth, oct);
+      playChord(base, third, fifth, oct, beat);
       
       break;
     }
@@ -97,9 +182,8 @@ int chooseChord(int currChord){
 }
 
 //plays the chord, and melody notes an octave higher
-void playChord(int base, int third, int fifth, int oct) {
-  
-  
+void playChord(int base, int third, int fifth, int oct, int beat) {
+  //System.out.println("Playing chord");
   
   //Create the midi notes
   Note note1 = new Note(channel, base, velocity, ticks);
@@ -111,18 +195,34 @@ void playChord(int base, int third, int fifth, int oct) {
   text("Chord notes: " + base + " " + third + " " + fifth, 20, 20); //prints to screen
   
   int randNum = (int)(Math.random() * divisions.length);
+  int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
   
   //check if tonic chord and quarter note melody combination
   if(randNum == 0 && base == tonic) {
     tonicCount++;
   }
   
-  int subBeat = noteLen / divisions[randNum]; //define length of melody note
+  //int subBeat = noteLen / divisions[randNum]; //define length of melody note
+  int subBeat = noteLen / nsubbeats;
+  
   text("subBeat length: " + subBeat, 20, 40); //prints to screen
-  for(int i = 0; i < divisions[randNum]; i++){
+  for(int i = 0; i < nsubbeats; i++){
+    
+    //Print count info
+    if(i % nsubbeats == 0){
+        println("");
+        println("Bt " + beat);
+        //text("Beat " + (i/nsubbeats+1), 20, 20);
+        //text("", 20, 40);
+      }
+      else{
+        println(getCountSyllable(i % nsubbeats, nsubbeats));
+        //text(getCountSyllable(i % nsubbeats, nsubbeats), 20, 40);
+      }
     
     //play chord on downbeat
     if(i == 0) {
+      System.out.println("Chord");
       myBus.sendNoteOn(note1);
       myBus.sendNoteOn(note2);
       myBus.sendNoteOn(note3);
@@ -130,10 +230,34 @@ void playChord(int base, int third, int fifth, int oct) {
     }
     
     //play melody note on determined subbeat
-    Note melody = new Note(channel, randMelodyNote(notes) + 12, melVelocity, subBeat);
-    myBus.sendNoteOn(melody);
+    if(i % divisions[randNum]==0){
+      System.out.println("Melody");
+      Note melody = new Note(channel, randMelodyNote(notes) + 12, melVelocity, subBeat);
+      myBus.sendNoteOn(melody);
+    }
+    
+    //Drum code
+    if(fuzzyContains(beat + (float)(i)/nsubbeats, snarebeats, thresh)){
+        Note snareNote = new Note(pchannel1, 36, melVelocity, subBeat);
+        myBus.sendNoteOn(snareNote);
+        println("Snare: MIDI 36");
+        //text("Snare", 20, 60);
+      }
+      else{
+        //text("", 20, 60);
+      }
+
+      if(fuzzyContains(beat + (float)(i)/nsubbeats, bassbeats, thresh)){
+        Note bassNote = new Note(pchannel2, 38, melVelocity, subBeat);
+        myBus.sendNoteOn(bassNote);
+        println("Bass drum: MIDI 38");
+        //text("Bass", 20, 80);
+      }
+      else{
+        //text("", 20, 80);
+      }
   
-    delay(subBeat); //waits for duration of subbeat before playing next note
+      delay(subBeat); //waits for duration of subbeat before checking the next one
   }
 }
 
@@ -157,7 +281,7 @@ void delay(int time) {
 //x: Value being checked
 //myList: List being checked
 //res: Allowed difference between x and elements of myList
-boolean fuzzyContains(double x, double[] myList, double res){
+boolean fuzzyContains(float x, float[] myList, double res){
   for(int n = 0; n < myList.length; n++){
     if(abs((float)(myList[n]-x)) <= res){ //Why does abs only accept floats? Why not doubles (what's the difference?)? And why not ints?
       return true;
@@ -191,7 +315,7 @@ String getCountSyllable(int count, int res){
   if(frac == 2.0/3){
     return "trip";
   }
-  return "" + count;
+  return "" + count + "/" + res;
 }
 
 //Function to play drum beats in a given pattern
@@ -202,7 +326,7 @@ String getCountSyllable(int count, int res){
 //resolution: Amount of subdivision (2 for 8ths, 3 for triplets, 4 for 16ths, etc.)
 //snarebeats: Array containing beats on which the snare should play (two decimal places for fractions)
 //bassbeats: Array countaining beats on which the bass drum should play
-void playDrum(int nbeats, int bpm, int nmeasures, int resolution, double[] snarebeats, double[] bassbeats){
+void playDrum(int nbeats, int bpm, int nmeasures, int resolution, float[] snarebeats, float[] bassbeats){
   for(int x = 0; x < nmeasures; x++){
     println("");
     println("Measure " + (x+1));
@@ -221,7 +345,8 @@ void playDrum(int nbeats, int bpm, int nmeasures, int resolution, double[] snare
         text(getCountSyllable(y % resolution, resolution), 20, 40);
       }
       
-      if(fuzzyContains((double)(y)/resolution + 1, snarebeats, 0.01)){
+      //Copied for use in the melody code
+      if(fuzzyContains((float)(y)/resolution + 1, snarebeats, thresh)){
         Note snareNote = new Note(channel, 36, melVelocity, beatLength);
         myBus.sendNoteOn(snareNote);
         println("Snare: MIDI 36");
@@ -231,7 +356,7 @@ void playDrum(int nbeats, int bpm, int nmeasures, int resolution, double[] snare
         text("", 20, 60);
       }
 
-      if(fuzzyContains((double)(y)/resolution + 1, bassbeats, 0.01)){
+      if(fuzzyContains((float)(y)/resolution + 1, bassbeats, thresh)){
         Note bassNote = new Note(channel, 38, melVelocity, beatLength);
         myBus.sendNoteOn(bassNote);
         println("Bass drum: MIDI 38");
