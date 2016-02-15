@@ -40,77 +40,6 @@ float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20,
                     {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00}, //no
                     {0.95, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.05}};//vii(dim)
 
-
-//For utility/debugging
-void printArray(Object[] A){
-  System.out.println("{");
-  for(int x = 0; x < A.length; x++){
-     System.out.print(A[x]); 
-     if(x < A.length - 1) System.out.print(", ");
-  }
-  System.out.println("}");
-}
-
-//Gets greatest common factor (using the Euclidean algorithm)
-int gcf(int a, int b){
-  //System.out.println("Starting GCF");
-  //Make a >= b
-  if(a < b){
-    int temp = a;
-    a = b;
-    b = temp;
-  }
-  if(b == 0){
-     return a; 
-  }
-  //System.out.println("Ending GCF");
-  return gcf(a-b, b);
-}
-
-//Gets least common multiple
-int lcm(int[] B, int... A){
-  //System.out.println("Getting mini-LCM:");
-  int temp = 1;
-  for(int x = 0; x < A.length; x++){
-    temp = temp*A[x]/gcf(temp, A[x]);
-  }
-  for(int x = 0; x < B.length; x++){
-    temp = temp*B[x]/gcf(temp, B[x]);
-  }
-  //System.out.println(temp);
-  return temp;
-}
-
-int lcm(int[]... A){
-  //System.out.println("Getting LCM");
-  int temp = 1;
-  for(int x = 0; x < A.length; x++){
-    temp = lcm(A[x], temp);
-  }
-  //System.out.println(temp);
-  return temp;
-}
-
-int beatToNBeat(float d){
-   //System.out.println("Beat to NBeat");
-   if(abs(d%1) < 0.01){
-      //System.out.println("This is an int");
-      return 1;
-   }
-   //System.out.println(1/ (d%1) );
-   return round(1/ (d%1) ); 
-}
-
-int[] beatsToNBeats(float[] D){
-   //System.out.println("Converting decimals to ints:");
-   int[] temp = new int[D.length];
-   for(int x = 0; x < D.length; x++){
-      temp[x] = beatToNBeat(D[x]); 
-   }
-   //printArray(temp);
-   return temp;
-}
-
 //sets up screen
 void setup() {
   size(200,200);
@@ -127,6 +56,7 @@ void setup() {
 void draw() {
   //System.out.println("Starting draw");
   beat = beat % nbeats + 1; //Ranges from 1 to nbeats
+  //Note: we pass beat through the chooseChord function into the playChord function so the percussion and counter know what beat it is
   
   //If we haven't reached our tonic total, continue melody
   if(tonicCount < tonicTotal) {
@@ -136,6 +66,7 @@ void draw() {
   }
 }
 
+//Beat gets passed through to playChord
 int chooseChord(int currChord, int beat){
   //System.out.println("Choosing chord");
   
@@ -196,25 +127,27 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
   
   int randNum = (int)(Math.random() * divisions.length);
   int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
+  //nsubbeats is the largest possible number of subbeats one might need, given the possible melody subdivision and the percussion subdivisions
   
   //check if tonic chord and quarter note melody combination
   if(randNum == 0 && base == tonic) {
     tonicCount++;
   }
   
-  //int subBeat = noteLen / divisions[randNum]; //define length of melody note
-  int subBeat = noteLen / nsubbeats;
+  int subBeat = noteLen / nsubbeats; //Define the length of a sub-beat (now less than (or equal to) the length of the actual melody note)
   
   text("subBeat length: " + subBeat, 20, 40); //prints to screen
   for(int i = 0; i < nsubbeats; i++){
     
     //Print count info
+    //If it's a beat, just print "Bt" and the number
     if(i % nsubbeats == 0){
         println("");
         println("Bt " + beat);
         //text("Beat " + (i/nsubbeats+1), 20, 20);
         //text("", 20, 40);
       }
+      //Otherwise, print an appropriate syllable for the sub-beat
       else{
         println(getCountSyllable(i % nsubbeats, nsubbeats));
         //text(getCountSyllable(i % nsubbeats, nsubbeats), 20, 40);
@@ -236,7 +169,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
       myBus.sendNoteOn(melody);
     }
     
-    //Drum code
+    //If the current sub-beat is in the snare drum list, play a snare drum note
     if(fuzzyContains(beat + (float)(i)/nsubbeats, snarebeats, thresh)){
         Note snareNote = new Note(pchannel1, 36, melVelocity, subBeat);
         myBus.sendNoteOn(snareNote);
@@ -247,6 +180,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
         //text("", 20, 60);
       }
 
+      //Same for bass drum
       if(fuzzyContains(beat + (float)(i)/nsubbeats, bassbeats, thresh)){
         Note bassNote = new Note(pchannel2, 38, melVelocity, subBeat);
         myBus.sendNoteOn(bassNote);
@@ -274,23 +208,8 @@ void delay(int time) {
   while (millis () < current+time) Thread.yield();
 }
 
-//Throwing my drum code from Python in here blindly and hoping for the best...
+//Returns the syllable one would count on a given sub beat (1 + 2 + 3 + 4 +; 1 trip let 2 trip let; 1 2 3 4 5 2 2 3 4 5; etc.)
 
-//Utility function to see if a list has anything close to the input
-//Used so I can just throw constants in to 2 decimal places
-//x: Value being checked
-//myList: List being checked
-//res: Allowed difference between x and elements of myList
-boolean fuzzyContains(float x, float[] myList, double res){
-  for(int n = 0; n < myList.length; n++){
-    if(abs((float)(myList[n]-x)) <= res){ //Why does abs only accept floats? Why not doubles (what's the difference?)? And why not ints?
-      return true;
-    }
-  }
-  return false;
-}
-
-//Returns the appropriate syllable for a given beat
 //Count: Number of subdivided beats so far (not zero-indexed)
 //Res: Number of subdivisions per beat
 //Don't call this function for count==1, since then it'll print 1 instead of the current beat number
@@ -318,53 +237,104 @@ String getCountSyllable(int count, int res){
   return "" + count + "/" + res;
 }
 
-//Function to play drum beats in a given pattern
-//Arguments:
-//nbeats: Number of beats per measure
-//bpm: Number of beats per minute
-//nmeasures: Number of measures to be played
-//resolution: Amount of subdivision (2 for 8ths, 3 for triplets, 4 for 16ths, etc.)
-//snarebeats: Array containing beats on which the snare should play (two decimal places for fractions)
-//bassbeats: Array countaining beats on which the bass drum should play
-void playDrum(int nbeats, int bpm, int nmeasures, int resolution, float[] snarebeats, float[] bassbeats){
-  for(int x = 0; x < nmeasures; x++){
-    println("");
-    println("Measure " + (x+1));
-    for(int y = 0; y < nbeats*resolution; y++){
-      int beatLength = 60*1000/bpm/resolution;
-      delay(beatLength); //I think I converted this correctly, but I'm not sure.
-      if(y % resolution == 0){
-        println("");
-        println("Bt " + (y/resolution+1));
-        text("Beat " + (y/resolution+1), 20, 20);
-        text("", 20, 40);
-      }
-      else{
-        println("");
-        println(getCountSyllable(y % resolution, resolution));
-        text(getCountSyllable(y % resolution, resolution), 20, 40);
-      }
-      
-      //Copied for use in the melody code
-      if(fuzzyContains((float)(y)/resolution + 1, snarebeats, thresh)){
-        Note snareNote = new Note(channel, 36, melVelocity, beatLength);
-        myBus.sendNoteOn(snareNote);
-        println("Snare: MIDI 36");
-        text("Snare", 20, 60);
-      }
-      else{
-        text("", 20, 60);
-      }
+//For utility/debugging
+//Prints all the elements in an array
+void printArray(Object[] A){
+  System.out.println("{");
+  for(int x = 0; x < A.length; x++){
+     System.out.print(A[x]); 
+     if(x < A.length - 1) System.out.print(", ");
+  }
+  System.out.println("}");
+}
 
-      if(fuzzyContains((float)(y)/resolution + 1, bassbeats, thresh)){
-        Note bassNote = new Note(channel, 38, melVelocity, beatLength);
-        myBus.sendNoteOn(bassNote);
-        println("Bass drum: MIDI 38");
-        text("Bass", 20, 80);
-      }
-      else{
-        text("", 20, 80);
-      }
+//NUMERICAL UTILITY FUNCTIONS (that hopefully no one actually has to look at):
+
+//Utility function to see if a list has anything close to the input
+//Essentially, just abs(y - x) < epsilon, but for a full array
+//Mostly used so I can just throw constants in to 2 decimal places if I want the percussion to play triplets
+
+//x: Value being checked
+//myList: List being checked
+//res: Allowed difference between x and elements of myList
+boolean fuzzyContains(float x, float[] myList, double res){
+  for(int n = 0; n < myList.length; n++){
+    if(abs((float)(myList[n]-x)) <= res){ //Why does abs only accept floats? Why not doubles (what's the difference?)? And why not ints?
+      return true;
     }
   }
+  return false;
+}
+
+//Gets greatest common factor (GCF)of two ints 
+//Uses the Euclidean algorithm
+//Basic idea: If a number d is a common divisor of a and b, it must also divide a - b (which is less than a or b)
+//So recurse down until a or b is 0, and then the other is the GCF
+int gcf(int a, int b){
+  //System.out.println("Starting GCF");
+  //Make a >= b
+  if(a < b){
+    int temp = a;
+    a = b;
+    b = temp;
+  }
+  if(b == 0){
+     return a; 
+  }
+  //System.out.println("Ending GCF");
+  return gcf(a-b, b);
+}
+
+//Gets least common multiple (LCM) for an array and multiple ints
+//Basic idea: Keep a temporary LCM and multiply in each new value
+//But at each step, also divide by the GCF so you don't unnecessarily duplicate factors
+int lcm(int[] B, int... A){
+  //System.out.println("Getting mini-LCM:");
+  int temp = 1;
+  //Go through all the elements
+  for(int x = 0; x < A.length; x++){
+    temp = temp*A[x]/gcf(temp, A[x]);
+  }
+  for(int x = 0; x < B.length; x++){
+    temp = temp*B[x]/gcf(temp, B[x]);
+  }
+  //System.out.println(temp);
+  return temp;
+}
+
+//Same as above but for multiple arrays
+//Literally just calls the above function on my temporary LCM and each array in turn
+int lcm(int[]... A){
+  //System.out.println("Getting LCM");
+  int temp = 1;
+  for(int x = 0; x < A.length; x++){
+    temp = lcm(A[x], temp);
+  }
+  //System.out.println(temp);
+  return temp;
+}
+
+//Converts my decimals (play on beat 4.5) to a number of sub-beats needed to make that happen (need 2 subbeats)
+//Basic idea: Chop off the integer part and take the reciprocal of the decimal part (or return 1 if you only had an integer)
+int beatToNBeat(float d){
+   //System.out.println("Beat to NBeat");
+   if(abs(d%1) < 0.01){
+      //System.out.println("This is an int");
+      return 1;
+   }
+   //System.out.println(1/ (d%1) );
+   return round(1/ (d%1) ); 
+}
+
+//Same as above, but with full arrays
+//Literally just calls the above on each element of the array
+//Returns an array that I can plug into LCM (though maybe I should have just done that calculation in here anyway)
+int[] beatsToNBeats(float[] D){
+   //System.out.println("Converting decimals to ints:");
+   int[] temp = new int[D.length];
+   for(int x = 0; x < D.length; x++){
+      temp[x] = beatToNBeat(D[x]); 
+   }
+   //printArray(temp);
+   return temp;
 }
