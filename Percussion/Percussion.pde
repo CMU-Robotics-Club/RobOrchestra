@@ -40,6 +40,8 @@ float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20,
                     {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00}, //no
                     {0.95, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.05}};//vii(dim)
 
+float[] probstuff = {0.2, 0, 0.1, 0, 0.2, 0.1, 0, 0.2, 0, 0.1, 0, 0.1}; //To determine whether you want an in-chord tone or not
+
 //sets up screen
 void setup() {
   size(200,200);
@@ -127,10 +129,13 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
   
   int randNum = (int)(Math.random() * divisions.length);
   int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
+
   //nsubbeats is the largest possible number of subbeats one might need, given the possible melody subdivision and the percussion subdivisions
   
   //check if tonic chord and quarter note melody combination
   if(randNum == 0 && base == tonic) {
+    //Note: This increments tonic count based on whether we do a quarter note for the right chord (melody note irrelevant)
+    //I'm not sure we want to do that with more variance on the melody, but I'll leave it for now
     tonicCount++;
   }
   
@@ -165,7 +170,13 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     //play melody note on determined subbeat
     if(i % divisions[randNum]==0){
       System.out.println("Melody");
-      Note melody = new Note(channel, randMelodyNote(notes) + 12, melVelocity, subBeat);
+      int melnote = randMelodyNote2(probstuff, base);
+      Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
+      String space = "";
+      for(int x = 0; x < i/divisions[randNum]; x++){
+         space += "     "; 
+      }
+      text("Melody: " + space + melnote, 20, 60);
       myBus.sendNoteOn(melody);
     }
     
@@ -200,6 +211,16 @@ int randMelodyNote(int[] options) {
   int randNum = (int)(Math.random() * 4);
   
   return options[randNum];
+  
+}
+
+int randMelodyNote2(float[] options, int base){
+  double rand = Math.random();
+  for(int x = 0; x < options.length; x++){
+    rand -= options[x];
+    if(rand < 0) return base + x;
+  }
+  return -1;
 }
 
 //processes delay in milliseconds
@@ -240,7 +261,7 @@ String getCountSyllable(int count, int res){
 //For utility/debugging
 //Prints all the elements in an array
 void printArray(Object[] A){
-  System.out.println("{");
+  System.out.print("{");
   for(int x = 0; x < A.length; x++){
      System.out.print(A[x]); 
      if(x < A.length - 1) System.out.print(", ");
@@ -315,15 +336,14 @@ int lcm(int[]... A){
 }
 
 //Converts my decimals (play on beat 4.5) to a number of sub-beats needed to make that happen (need 2 subbeats)
-//Basic idea: Chop off the integer part and take the reciprocal of the decimal part (or return 1 if you only had an integer)
+//Basic idea: Keep trying denominators until something works
 int beatToNBeat(float d){
-   //System.out.println("Beat to NBeat");
-   if(abs(d%1) < 0.01){
-      //System.out.println("This is an int");
-      return 1;
-   }
-   //System.out.println(1/ (d%1) );
-   return round(1/ (d%1) ); 
+  for(int x = 1; x <= (int)(1/thresh); x++){
+     if(min(abs(d*x%1), abs(1 - (abs(d*x)%1))) < thresh){
+        return x; 
+     }
+  }
+  return (int)(1/thresh);
 }
 
 //Same as above, but with full arrays
