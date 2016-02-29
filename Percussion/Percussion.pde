@@ -120,12 +120,12 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
   //System.out.println("Playing chord");
   
   //Create the midi notes
-  Note note1 = new Note(channel, base, velocity, ticks);
-  Note note2 = new Note(channel, third, velocity, ticks);
-  Note note3 = new Note(channel, fifth, velocity, ticks);
-  Note note4 = new Note(channel, oct, velocity, ticks);
-  
   int[] notes= {base, third, fifth, oct};
+  Note[] MNotes = new Note[notes.length];
+  for(int x = 0; x < notes.length; x++){
+      MNotes[x] = new Note(channel, notes[x], velocity, ticks);
+  }
+  
   text("Chord notes: " + base + " " + third + " " + fifth, 20, 20); //prints to screen
   
   int randNum = (int)(Math.random() * divisions.length);
@@ -162,10 +162,9 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     //play chord on downbeat
     if(i == 0) {
       System.out.println("Chord");
-      myBus.sendNoteOn(note1);
-      myBus.sendNoteOn(note2);
-      myBus.sendNoteOn(note3);
-      myBus.sendNoteOn(note4);
+      for(int x = 0; x < notes.length; x++){
+        myBus.sendNoteOn(MNotes[x]);
+      }
     }
     
     //play melody note on determined subbeat
@@ -233,7 +232,7 @@ void delay(int time) {
   while (millis () < current+time) Thread.yield();
 }
 
-//Returns the syllable one would count on a given sub beat (1 + 2 + 3 + 4 +; 1 trip let 2 trip let; 1 2 3 4 5 2 2 3 4 5; etc.)
+//Returns the syllable one would count on a given sub beat (1 e + a 2 e + a; 1 trip let 2 trip let; 1 2 3 4 5 2 2 3 4 5; etc.)
 
 //Count: Number of subdivided beats so far (not zero-indexed)
 //Res: Number of subdivisions per beat
@@ -284,7 +283,7 @@ void printArray(Object[] A){
 //res: Allowed difference between x and elements of myList
 boolean fuzzyContains(float x, float[] myList, double res){
   for(int n = 0; n < myList.length; n++){
-    if(abs((float)(myList[n]-x)) <= res){ //Why does abs only accept floats? Why not doubles (what's the difference?)? And why not ints?
+    if(abs((float)(myList[n]-x)) <= res){ //Why does abs only accept floats?
       return true;
     }
   }
