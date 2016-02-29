@@ -61,6 +61,15 @@ void setup() {
 void draw() {
   Note note = new Note(channel, degreeToNote[x%degreeToNote.length], velocity, ticks); 
   myBus.sendNoteOn(note); 
+  println(degreeToNote[x%degreeToNote.length]);
+  
+  int[] notes= {tonic, tonic+2, tonic+4, tonic+11};
+  Note[] MNotes = new Note[notes.length];
+  for(int x = 0; x < notes.length; x++){
+      MNotes[x] = new Note(channel, notes[x], velocity, ticks);
+      myBus.sendNoteOn(MNotes[x]);
+  }
+  println("Playing chord");
   
   x++;
   delay(noteLen); 
