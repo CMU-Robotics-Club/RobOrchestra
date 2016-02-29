@@ -40,7 +40,8 @@ float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20,
                     {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00}, //no
                     {0.95, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.05}};//vii(dim)
 
-float[] probstuff = {0.2, 0, 0.1, 0, 0.2, 0.1, 0, 0.2, 0, 0.1, 0, 0.1}; //To determine whether you want an in-chord tone or not
+float[] probstuff = {0.2, 0.1, 0.2, 0.1, 0.2, 0.1, 0.1}; //To determine whether you want an in-chord tone or not
+int[] degreeToNote = {tonic, tonic + 2, tonic + 4, tonic + 5, tonic + 7, tonic + 9, tonic + 11};
 
 //sets up screen
 void setup() {
@@ -215,10 +216,13 @@ int randMelodyNote(int[] options) {
 }
 
 int randMelodyNote2(float[] options, int base){
+  //There's a bug in this function
+  //It does stuff by whole/half step rather than scale degree
+  //So an A major chord pulls stuff from the A major scale, not the A minor scale, etc.
   double rand = Math.random();
   for(int x = 0; x < options.length; x++){
     rand -= options[x];
-    if(rand < 0) return base + x;
+    if(rand < 0) return degreeToNote[(x+7) % 7];
   }
   return -1;
 }
