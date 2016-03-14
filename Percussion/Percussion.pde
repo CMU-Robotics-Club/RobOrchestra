@@ -5,7 +5,7 @@ MidiBus myBus; //Creates a MidiBus object
 int noteLen = 1000; //set chord length in milliseconds
 int tonic = 60; //set key to C major
 int next = 0; //keeps track of next chord. Always start with tonic
-int[] divisions = {1,2,4}; //Possible number of melody nodes per chord(quarter, 2 eights, 4 sixteenths)
+int[] divisions = {1, 2, 3, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
 int tonicCount = 0; //How many times a tonic chord has been played with a quarter note melody
 int tonicTotal = 3; //Music stops when we reach this number of tonic chord/quarter note melodies
 
@@ -128,7 +128,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
   
   text("Chord notes: " + base + " " + third + " " + fifth, 20, 20); //prints to screen
   
-  int randNum = (int)(Math.random() * divisions.length);
+  int randNum = (int)(Math.random() * divisions.length); //Index of number of melody notes to play
   int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
 
   //nsubbeats is the largest possible number of subbeats one might need, given the possible melody subdivision and the percussion subdivisions
@@ -167,8 +167,17 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
       }
     }
     
+    //Bug here: Modulus isn't the right answer
+    /*
+    1->0
+    2->0, n/2
+    3->0, n/3, 2n/3
+    So... if there exists integer k such that k*nsubbeats/divisions[randNum] == i, do stuff
+    That means I want i % (nsubbeats/divisions[randNum])
+    */
+    
     //play melody note on determined subbeat
-    if(i % divisions[randNum]==0){
+    if(i % (nsubbeats/divisions[randNum])==0){
       System.out.println("Melody");
       int melnote = randMelodyNote2(probstuff, base);
       Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
@@ -256,7 +265,7 @@ String getCountSyllable(int count, int res){
     return "trip";
   }
   if(frac == 2.0/3){
-    return "trip";
+    return "let";
   }
   return "" + count + "/" + res;
 }
