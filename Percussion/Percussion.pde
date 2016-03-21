@@ -7,7 +7,7 @@ int tonic = 60; //set key to C major
 int next = 0; //keeps track of next chord. Always start with tonic
 int[] divisions = {1, 2, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
 int tonicCount = 0; //How many times a tonic chord has been played with a quarter note melody
-int tonicTotal = 3; //Music stops when we reach this number of tonic chord/quarter note melodies
+int tonicTotal = 1; //Music stops when we reach this number of tonic chord/quarter note melodies
 
 //Chord attributes relocated to make them global
 int channel = 1; //set channel. 0 for speakers
@@ -17,7 +17,7 @@ int velocity = 80; //chord volume
 int melVelocity = 120; //melody note volume
 int ticks = noteLen; //length in milliseconds
 
-int fudgetime = -200; //Delay between computer and xylobot (computer plays first)
+int fudgetime = 200; //Delay between computer and xylobot (computer plays first)
 
 //Moving drum patterns up here
 float thresh = 0.01;
@@ -66,8 +66,13 @@ void draw() {
   //If we haven't reached our tonic total, continue melody
   if (tonicCount < tonicTotal) {
     background(0); //clear screen
+    println("Choosing chord");
     next = chooseChord(next, beat);
     text("Tonic Count: " + tonicCount, 20, 80); //prints to screen
+  }
+  else{
+    println("Done");
+    System.exit(0);
   }
 }
 
@@ -135,11 +140,14 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
 
   //nsubbeats is the largest possible number of subbeats one might need, given the possible melody subdivision and the percussion subdivisions
 
+  int melnote = -1;
   //check if tonic chord and quarter note melody combination
   if (randNum == 0 && base == tonic) {
     //Note: This increments tonic count based on whether we do a quarter note for the right chord (melody note irrelevant)
     //I'm not sure we want to do that with more variance on the melody, but I'll leave it for now
     tonicCount++;
+    melnote = tonic;
+    println("Tonic count incremented");
   }
 
   int subBeat = noteLen / nsubbeats; //Define the length of a sub-beat (now less than (or equal to) the length of the actual melody note)
@@ -169,11 +177,11 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
       }
     }
     delay(fudgetime); //Give the computer time to catch up when playing chords
-      
+    
     //play melody note on determined subbeat
     if (i % (nsubbeats/divisions[randNum])==0) {
       System.out.println("Melody");
-      int melnote = randMelodyNote2(probstuff);
+      if(melnote == -1) melnote = randMelodyNote2(probstuff);
       Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
       String space = "";
       for (int x = 0; x < i*divisions[randNum]/nsubbeats; x++) {
