@@ -171,6 +171,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     if (i % (nsubbeats/divisions[randNum])==0) {
       System.out.println("Melody");
       int melnote = randMelodyNote2(probstuff);
+      if(melnote == 64) melnote = 60; //Fudge because E doesn't work
       Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
       String space = "";
       for (int x = 0; x < i*divisions[randNum]/nsubbeats; x++) {
