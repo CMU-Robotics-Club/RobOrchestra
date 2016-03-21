@@ -14,8 +14,10 @@ int channel = 1; //set channel. 0 for speakers
 int pchannel1 = 0; //Percussion channel 1 (snare drum)
 int pchannel2 = 0; //Percussion channel 2 (bass drum)
 int velocity = 80; //chord volume
-int melVelocity = 120; //melody note volumn
+int melVelocity = 120; //melody note volume
 int ticks = noteLen; //length in milliseconds
+
+int fudgetime = -200; //Delay between computer and xylobot (computer plays first)
 
 //Moving drum patterns up here
 float thresh = 0.01;
@@ -166,12 +168,12 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
         //myBus.sendNoteOn(MNotes[x]);
       }
     }
-
+    delay(fudgetime); //Give the computer time to catch up when playing chords
+      
     //play melody note on determined subbeat
     if (i % (nsubbeats/divisions[randNum])==0) {
       System.out.println("Melody");
       int melnote = randMelodyNote2(probstuff);
-      if(melnote == 64) melnote = 76; //Fudge because E doesn't work
       Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
       String space = "";
       for (int x = 0; x < i*divisions[randNum]/nsubbeats; x++) {
@@ -201,7 +203,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
       //text("", 20, 80);
     }
 
-    delay(subBeat); //waits for duration of subbeat before checking the next one
+    delay(subBeat - fudgetime); //waits for duration of subbeat before checking the next one
   }
 }
 
