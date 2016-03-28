@@ -18,6 +18,7 @@ int melVelocity = 120; //melody note volume
 int ticks = noteLen; //length in milliseconds
 
 int fudgetime = 200; //Delay between computer and xylobot (computer plays first)
+boolean printstuff = true;
 
 //Moving drum patterns up here
 float thresh = 0.01;
@@ -45,6 +46,9 @@ float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20,
 float[] probstuff = {0.2, 0.1, 0.2, 0.1, 0.2, 0.1, 0.1}; //To determine whether you want an in-chord tone or not
 int[] degreeToNote = {tonic, tonic + 2, tonic + 4, tonic + 5, tonic + 7, tonic + 9, tonic + 11};
 
+//Flag that toggles as the code runs; starts true so a forced quarter note doesn't fire immediately
+boolean disableTonic = true;
+
 //sets up screen
 void setup() {
   size(200, 200);
@@ -66,11 +70,12 @@ void draw() {
   //If we haven't reached our tonic total, continue melody
   if (tonicCount < tonicTotal) {
     background(0); //clear screen
-    println("Choosing chord");
+    qprint("Choosing chord");
     next = chooseChord(next, beat);
     text("Tonic Count: " + tonicCount, 20, 80); //prints to screen
   }
   else{
+    delay(noteLen*4); //Make sure the quarter note isn't just getting cut off when the program stops
     println("Done");
     System.exit(0);
   }
@@ -78,7 +83,6 @@ void draw() {
 
 //Beat gets passed through to playChord
 int chooseChord(int currChord, int beat) {
-  //System.out.println("Choosing chord");
 
   double randomNum = Math.random();
   double sum = 0;
@@ -136,21 +140,28 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
   text("Chord notes: " + base + " " + third + " " + fifth, 20, 20); //prints to screen
 
   int randNum = (int)(Math.random() * divisions.length); //Index of number of melody notes to play
-  int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
-
   //nsubbeats is the largest possible number of subbeats one might need, given the possible melody subdivision and the percussion subdivisions
+  int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
+  int subBeat = noteLen / nsubbeats; //Define the length of a sub-beat (now less than (or possibly equal to) the length of the actual melody note)
 
   int melnote = -1;
   //check if tonic chord and quarter note melody combination
   if (randNum == 0 && base == tonic) {
-    //Note: This increments tonic count based on whether we do a quarter note for the right chord (melody note irrelevant)
-    //I'm not sure we want to do that with more variance on the melody, but I'll leave it for now
-    tonicCount++;
-    melnote = tonic;
-    println("Tonic count incremented");
+    //If this is working right, it should force a tonic quarter note
+    //It should also not trigger repeatedly or on the first iteration
+    //so if you're stuck on the tonic chord for a while, it's fine.
+    //I added a delay before ending the program in case this gets cut off the last time
+    //Not sure if this works, but print statements seem to be working
+    if(!disableTonic){
+      tonicCount++;
+      melnote = tonic;
+      disableTonic = true;
+      qprint("Tonic count incremented");
+    }
   }
-
-  int subBeat = noteLen / nsubbeats; //Define the length of a sub-beat (now less than (or equal to) the length of the actual melody note)
+  else{
+     disableTonic = false; 
+  }
 
   text("subBeat length: " + subBeat, 20, 40); //prints to screen
   for (int i = 0; i < nsubbeats; i++) {
@@ -158,20 +169,20 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     //Print count info
     //If it's a beat, just print "Bt" and the number
     if (i % nsubbeats == 0) {
-      println("");
-      println("Bt " + beat);
+      qprint("");
+      qprint("Bt " + beat);
       //text("Beat " + (i/nsubbeats+1), 20, 20);
       //text("", 20, 40);
     }
     //Otherwise, print an appropriate syllable for the sub-beat
     else {
-      println(getCountSyllable(i % nsubbeats, nsubbeats));
+      qprint(getCountSyllable(i % nsubbeats, nsubbeats));
       //text(getCountSyllable(i % nsubbeats, nsubbeats), 20, 40);
     }
 
     //play chord on downbeat
     if (i == 0) {
-      System.out.println("Chord");
+      qprint("Chord");
       for (int x = 0; x < notes.length; x++) {
         //myBus.sendNoteOn(MNotes[x]);
       }
@@ -180,8 +191,13 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     
     //play melody note on determined subbeat
     if (i % (nsubbeats/divisions[randNum])==0) {
-      System.out.println("Melody");
-      if(melnote == -1) melnote = randMelodyNote2(probstuff);
+      qprint("Melody");
+      if(melnote == -1 || randNum != 0){
+        melnote = randMelodyNote2(probstuff);
+      }
+      else{
+        qprint("Forcing tonic quarter note"); 
+      }
       Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
       String space = "";
       for (int x = 0; x < i*divisions[randNum]/nsubbeats; x++) {
@@ -191,11 +207,14 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
       myBus.sendNoteOn(melody);
     }
 
+    //NOTE: Might need to move percussion above the chords when using full orchestra
+    //as we delay the chords so the computer doesn't fall behind
+    
     //If the current sub-beat is in the snare drum list, play a snare drum note
     if (fuzzyContains(beat + (float)(i)/nsubbeats, snarebeats, thresh)) {
       Note snareNote = new Note(pchannel1, 36, melVelocity, subBeat);
       myBus.sendNoteOn(snareNote);
-      println("Snare: MIDI 36");
+      qprint("Snare: MIDI 36");
       //text("Snare", 20, 60);
     } else {
       //text("", 20, 60);
@@ -205,7 +224,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     if (fuzzyContains(beat + (float)(i)/nsubbeats, bassbeats, thresh)) {
       Note bassNote = new Note(pchannel2, 38, melVelocity, subBeat);
       myBus.sendNoteOn(bassNote);
-      println("Bass drum: MIDI 38");
+      qprint("Bass drum: MIDI 38");
       //text("Bass", 20, 80);
     } else {
       //text("", 20, 80);
@@ -228,6 +247,7 @@ int randMelodyNote2(float[] options) {
     rand -= options[x];
     if (rand < 0) return degreeToNote[(x+7) % 7];
   }
+  System.out.println("Total probabilities in the non-chord tone vector is less than 1?");
   return -1;
 }
 
@@ -268,6 +288,7 @@ String getCountSyllable(int count, int res) {
 
 //For utility/debugging
 //Prints all the elements in an array
+//Not disabled by printstuff since you'd only use this in debugging
 void printArray(Object[] A) {
   System.out.print("{");
   for (int x = 0; x < A.length; x++) {
@@ -275,6 +296,10 @@ void printArray(Object[] A) {
     if (x < A.length - 1) System.out.print(", ");
   }
   System.out.println("}");
+}
+
+void qprint(Object s){
+   if(printstuff)println(s); 
 }
 
 //NUMERICAL UTILITY FUNCTIONS (that hopefully no one actually has to look at):
@@ -300,7 +325,6 @@ boolean fuzzyContains(float x, float[] myList, double res) {
 //Basic idea: If a number d is a common divisor of a and b, it must also divide a - b (which is less than a or b)
 //So recurse down until a or b is 0, and then the other is the GCF
 int gcf(int a, int b) {
-  //System.out.println("Starting GCF");
   //Make a >= b
   if (a < b) {
     int temp = a;
@@ -310,7 +334,6 @@ int gcf(int a, int b) {
   if (b == 0) {
     return a;
   }
-  //System.out.println("Ending GCF");
   return gcf(a-b, b);
 }
 
@@ -318,7 +341,6 @@ int gcf(int a, int b) {
 //Basic idea: Keep a temporary LCM and multiply in each new value
 //But at each step, also divide by the GCF so you don't unnecessarily duplicate factors
 int lcm(int[] B, int... A) {
-  //System.out.println("Getting mini-LCM:");
   int temp = 1;
   //Go through all the elements
   for (int x = 0; x < A.length; x++) {
@@ -327,19 +349,16 @@ int lcm(int[] B, int... A) {
   for (int x = 0; x < B.length; x++) {
     temp = temp*B[x]/gcf(temp, B[x]);
   }
-  //System.out.println(temp);
   return temp;
 }
 
 //Same as above but for multiple arrays
 //Literally just calls the above function on my temporary LCM and each array in turn
 int lcm(int[]... A) {
-  //System.out.println("Getting LCM");
   int temp = 1;
   for (int x = 0; x < A.length; x++) {
     temp = lcm(A[x], temp);
   }
-  //System.out.println(temp);
   return temp;
 }
 
@@ -363,6 +382,5 @@ int[] beatsToNBeats(float[] D) {
   for (int x = 0; x < D.length; x++) {
     temp[x] = beatToNBeat(D[x]);
   }
-  //printArray(temp);
   return temp;
 }
