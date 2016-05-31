@@ -7,7 +7,7 @@ int tonic = 60; //set key to C major
 int next = 0; //keeps track of next chord. Always start with tonic
 int[] divisions = {1, 2, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
 int tonicCount = 0; //How many times a tonic chord has been played with a quarter note melody
-int tonicTotal = 1; //Music stops when we reach this number of tonic chord/quarter note melodies
+int tonicTotal = -1; //Music stops when we reach this number of tonic chord/quarter note melodies (-1 for infinite loop)
 
 //Chord attributes relocated to make them global
 int channel = 1; //set channel. 0 for speakers
@@ -17,8 +17,9 @@ int velocity = 80; //chord volume
 int melVelocity = 120; //melody note volume
 int ticks = noteLen; //length in milliseconds
 
+//General logistics stuff
 int fudgetime = 200; //Delay between computer and xylobot (computer plays first)
-boolean printstuff = true;
+boolean printstuff = false;
 
 //Moving drum patterns up here
 float thresh = 0.01;
@@ -27,7 +28,25 @@ float[] snarebeats = new float[]{1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5};
 
 //Adding beat info
 int nbeats = 4;
-int beat = 0; //Increments first, so start at 0
+int beat = 0; //Increments first and one-indexed, so start at 0
+
+//Variables for each individual subbeat
+int i = -1; //Increments first and zero-indexed, so start at -1
+int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats)); //Constant
+int randNum;
+int melnote;
+ArrayList<Note> toPlayEarly = new ArrayList();
+ArrayList<Note> toPlay = new ArrayList();
+
+//Display info
+PImage roboLogo;
+ArrayList<String> toDisplay = new ArrayList();
+int offset = 0;
+String header = "NOTE: This is one beat behind what the orchestra is doing"; //Displays when offset==2
+int generalLine = 0+offset;
+int melodyLine = 6+offset;
+int snareLine = 10+offset;
+int bassLine = 15+offset;
 
 //I   no    ii    no    no    IV    no    V     no    vi    no    viid
 float[][] chords = {{0.20, 0.00, 0.10, 0.00, 0.00, 0.30, 0.00, 0.15, 0.00, 0.20, 0.00, 0.05}, //I
@@ -51,39 +70,105 @@ boolean disableTonic = true;
 
 //sets up screen
 void setup() {
-  size(200, 200);
+  size(325, 400);
   background(0);
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
 
   myBus = new MidiBus(this, 0, 1); //Sends midi output to speakers
+  initializeText();
+  roboLogo = loadImage("rc_logo.png");
   System.out.println("Starting");
+}
+
+void initializeText(){
+  //Initialize stuff to be displayed
+  display("General", generalLine);
+  display("Tonic Count: 0", generalLine+1);
+  display("Subbeat Length: " + noteLen, generalLine+2);
+  display("Chord Notes: " + degreeToNote[0] + " " + degreeToNote[2] + " " + degreeToNote[4], generalLine+3);
+  display("Beat: 1", generalLine+4);
+  
+  display("Melody", melodyLine);
+  display("Melody Notes: " + tonic, melodyLine+1);
+  
+  display("Snare Drum", snareLine);
+  String temp = "Snare Beats:";
+  for(int x = 0; x < snarebeats.length; x++){
+    temp+=" " + snarebeats[x];
+    if(x < snarebeats.length-1) temp+=",";
+  }
+  display(temp, snareLine + 1);
+  
+  temp = "Bass Beats:";
+  for(int x = 0; x < bassbeats.length; x++){
+    temp+=" " + bassbeats[x];
+    if(x < bassbeats.length-1) temp+=",";
+  }
+  display(temp, bassLine + 1);
+  display("Bass Drum", bassLine);
+  
+  //If there's an offset, display a header
+  if(offset == 2){
+     display(header, 0); 
+  }
 }
 
 //this function repeats indefinitely
 //note that the output displayed in the window is one chord behind what is being played
 void draw() {
-  //System.out.println("Starting draw");
-  beat = beat % nbeats + 1; //Ranges from 1 to nbeats
-  //Note: we pass beat through the chooseChord function into the playChord function so the percussion and counter know what beat it is
-
-  //If we haven't reached our tonic total, continue melody
-  if (tonicCount < tonicTotal) {
-    background(0); //clear screen
-    qprint("Choosing chord");
-    next = chooseChord(next, beat);
-    text("Tonic Count: " + tonicCount, 20, 80); //prints to screen
+  //New plan: We're calling draw() every subbeat
+  //If we hit the start of a beat, rerun chooseChord to figure out what to do
+  //Then run stuff
+  
+  //Play all the notes from the last subbeat (so the display is accurate)
+  //Computer notes (delay added)
+  for(int x = 0; x < toPlayEarly.size(); x++){
+     myBus.sendNoteOn(toPlayEarly.get(x)); 
   }
-  else{
-    delay(noteLen*4); //Make sure the quarter note isn't just getting cut off when the program stops
-    println("Done");
-    System.exit(0);
+  toPlayEarly = new ArrayList<Note>();
+  delay(fudgetime);
+  
+  //Instruments
+  for(int x = 0; x < toPlay.size(); x++){
+     myBus.sendNoteOn(toPlay.get(x)); 
   }
+  toPlay = new ArrayList<Note>();
+  
+  //Run the next subbeat
+  i = (i+1)%nsubbeats;
+  
+  if(i == 0){
+    //Starting a new beat; old draw code is now here
+    beat = beat % nbeats + 1; //Increment the beat; ranges from 1 to nbeats
+    display("Melody Notes:", melodyLine+1);
+    display("Beat: " + beat, generalLine+4);
+  
+    //If we haven't reached our tonic total, continue melody
+    if (tonicTotal == -1 || tonicCount < tonicTotal) {
+      //Run algorithm
+      qprint("Choosing chord");
+      next = runChord(next);
+      
+      //Display stuff to the screen
+      display("Tonic Count: " + tonicCount, generalLine+1); //prints to screen
+      //refreshText();
+    }
+    
+    //Otherwise add a delay so the last note comes out (hopefully), then stop
+    else{
+      delay(noteLen*4); //Make sure the quarter note isn't just getting cut off when the program stops
+      println("Done");
+      System.exit(0);
+    }
+  }
+  
+  runSubbeat(); //This function already waits for the end of the subbeat
+  refreshText();
 }
 
-//Beat gets passed through to playChord
-int chooseChord(int currChord, int beat) {
 
+int runChord(int currChord) {
   double randomNum = Math.random();
   double sum = 0;
   int base, third, fifth, oct, i=0;
@@ -116,7 +201,7 @@ int chooseChord(int currChord, int beat) {
 
       oct = base + 12; //root octave
 
-      playChord(base, third, fifth, oct, beat);
+      playChord(base, third, fifth, oct);
 
       break;
     }
@@ -127,24 +212,21 @@ int chooseChord(int currChord, int beat) {
 }
 
 //plays the chord, and melody notes an octave higher
-void playChord(int base, int third, int fifth, int oct, int beat) {
-  //System.out.println("Playing chord");
-
-  //Create the midi notes
+void playChord(int base, int third, int fifth, int oct) {
+  //Create the midi notes and play the chord
   int[] notes= {base, third, fifth, oct};
-  Note[] MNotes = new Note[notes.length];
+  qprint("Chord");
   for (int x = 0; x < notes.length; x++) {
-    MNotes[x] = new Note(channel, notes[x], velocity, ticks);
+    storeNote(new Note(channel, notes[x], velocity, ticks), true);
   }
 
-  text("Chord notes: " + base + " " + third + " " + fifth, 20, 20); //prints to screen
-
-  int randNum = (int)(Math.random() * divisions.length); //Index of number of melody notes to play
-  //nsubbeats is the largest possible number of subbeats one might need, given the possible melody subdivision and the percussion subdivisions
-  int nsubbeats = lcm(divisions, beatsToNBeats(bassbeats), beatsToNBeats(snarebeats));
+  display("Chord Notes: " + base + " " + third + " " + fifth, generalLine+3); //prints to screen
+  
+  //Initialize all the subbeat stuff you'll need for the beat and decide whether to force a tonic quarter note
+  randNum = (int)(Math.random() * divisions.length); //Index of number of melody notes to play
   int subBeat = noteLen / nsubbeats; //Define the length of a sub-beat (now less than (or possibly equal to) the length of the actual melody note)
 
-  int melnote = -1;
+  melnote = -1;
   //check if tonic chord and quarter note melody combination
   if (randNum == 0 && base == tonic) {
     //If this is working right, it should force a tonic quarter note
@@ -162,76 +244,60 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
   else{
      disableTonic = false; 
   }
+  display("Subbeat Length: " + subBeat*lcm(divisions, 1)/divisions[randNum], generalLine+2); //prints to screen
+}
 
-  text("subBeat length: " + subBeat, 20, 40); //prints to screen
-  for (int i = 0; i < nsubbeats; i++) {
-
-    //Print count info
+void runSubbeat(){
+  int subBeat = noteLen/nsubbeats;
+  
+  //Print count info
     //If it's a beat, just print "Bt" and the number
     if (i % nsubbeats == 0) {
       qprint("");
       qprint("Bt " + beat);
-      //text("Beat " + (i/nsubbeats+1), 20, 20);
-      //text("", 20, 40);
+      display("Beat: " + beat, generalLine+4);
     }
     //Otherwise, print an appropriate syllable for the sub-beat
     else {
       qprint(getCountSyllable(i % nsubbeats, nsubbeats));
-      //text(getCountSyllable(i % nsubbeats, nsubbeats), 20, 40);
+      addText(" " + getCountSyllable(i % nsubbeats, nsubbeats), generalLine+4);
     }
-
-    //play chord on downbeat
-    if (i == 0) {
-      qprint("Chord");
-      for (int x = 0; x < notes.length; x++) {
-        //myBus.sendNoteOn(MNotes[x]);
-      }
-    }
-    delay(fudgetime); //Give the computer time to catch up when playing chords
     
     //play melody note on determined subbeat
     if (i % (nsubbeats/divisions[randNum])==0) {
       qprint("Melody");
-      if(melnote == -1 || randNum != 0){
+      if(melnote == -1 || randNum != 0){ //If neither is true, we've forced a tonic quarter note
         melnote = randMelodyNote2(probstuff);
       }
       else{
         qprint("Forcing tonic quarter note"); 
       }
       Note melody = new Note(channel, melnote + 12, melVelocity, subBeat);
-      String space = "";
-      for (int x = 0; x < i*divisions[randNum]/nsubbeats; x++) {
-        space += "     ";
-      }
-      text("Melody: " + space + melnote, 20, 60);
-      myBus.sendNoteOn(melody);
+      addText(" " + melnote, melodyLine+1);
+      storeNote(melody);
     }
-
-    //NOTE: Might need to move percussion above the chords when using full orchestra
-    //as we delay the chords so the computer doesn't fall behind
     
     //If the current sub-beat is in the snare drum list, play a snare drum note
     if (fuzzyContains(beat + (float)(i)/nsubbeats, snarebeats, thresh)) {
       Note snareNote = new Note(pchannel1, 36, melVelocity, subBeat);
-      myBus.sendNoteOn(snareNote);
+      storeNote(snareNote);
       qprint("Snare: MIDI 36");
-      //text("Snare", 20, 60);
+      display("Snare playing", snareLine+2);
     } else {
-      //text("", 20, 60);
+      display("", snareLine+2);
     }
 
     //Same for bass drum
     if (fuzzyContains(beat + (float)(i)/nsubbeats, bassbeats, thresh)) {
       Note bassNote = new Note(pchannel2, 38, melVelocity, subBeat);
-      myBus.sendNoteOn(bassNote);
+      storeNote(bassNote);
       qprint("Bass drum: MIDI 38");
-      //text("Bass", 20, 80);
+      display("Bass playing", bassLine+2);
     } else {
-      //text("", 20, 80);
+      display("", bassLine+2);
     }
 
-    delay(subBeat - fudgetime); //waits for duration of subbeat before checking the next one
-  }
+    delay(subBeat - fudgetime); //waits for remaining duration of subbeat before checking the next one
 }
 
 //chooses a melody note from the current chord tones
@@ -255,6 +321,48 @@ int randMelodyNote2(float[] options) {
 void delay(int time) {
   int current = millis();
   while (millis () < current+time) Thread.yield();
+}
+
+//Stores text you want displayed
+void display(String text, int line){
+  while(toDisplay.size() <= line){
+     toDisplay.add(""); 
+  }
+  toDisplay.set(line, text); 
+}
+
+//Adds text to the text already being displayed
+void addText(String text, int line){
+   while(toDisplay.size() <= line){
+     toDisplay.add(""); 
+  }
+  toDisplay.set(line, toDisplay.get(line) + text); 
+}
+
+//Refreshes the display by clearing everything, then writing the stored text (called every subbeat)
+void refreshText(){
+  background(0); //clear screen
+  for(int line = 0; line < toDisplay.size(); line++){
+    if(toDisplay.get(line) == null) toDisplay.set(line, "");
+    text(toDisplay.get(line), 20, 20*(line+1)); 
+  }
+  image(roboLogo, 275, 10);
+}
+
+//Stores a note to be played (use this rather than sending the note on directly so the display is accurate)
+//Assumes you don't want the note early
+void storeNote(Note n){
+   toPlay.add(n); 
+}
+
+//Overloaded to allow for early notes
+void storeNote(Note n, boolean early){
+   if(early){
+     toPlayEarly.add(n);
+   }
+   else{
+     toPlay.add(n); 
+   }
 }
 
 //Returns the syllable one would count on a given sub beat (1 e + a 2 e + a; 1 trip let 2 trip let; 1 2 3 4 5 2 2 3 4 5; etc.)
