@@ -26,7 +26,7 @@ Servo myservo;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  if(pitch == 38) {
+  if(pitch == 36) {
     hit();
   }
 }
@@ -58,6 +58,6 @@ void hit() {
   myservo.write(80);
   delay(30);
   myservo.write(103);
-  delay(300);
+  delay(30);
 
 }

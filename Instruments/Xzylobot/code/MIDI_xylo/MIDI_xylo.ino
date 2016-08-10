@@ -22,6 +22,7 @@
 // will blink a led and play back a note for 1 second.
 
 #define LED 13   		    // LED pin on Arduino Uno
+MIDI_CREATE_DEFAULT_INSTANCE();
 
 int played = 0;
 
@@ -30,7 +31,7 @@ void setup()
   xylo_init();
   pinMode(LED, OUTPUT);
   Serial3.begin(115200);
-  MIDI.begin();          // Launch MIDI and listen to channel 1
+  MIDI.begin(MIDI_CHANNEL_OMNI);          // Launch MIDI and listen to channel 1
 }
 
 void loop()
@@ -38,7 +39,7 @@ void loop()
   if(MIDI.read()){
     // && MIDI.getData2() != 0 pokemon theme (bicycle)
    //  hall of fame
-    if(MIDI.getType() > 0){ // note on
+    //if(MIDI.getType() > 0){ // note on
       int noteIndex = MIDI.getData1();
       //int note_2 = MIDI.getData2();
       if(noteIndex >= STARTNOTE && noteIndex <= ENDNOTE){
@@ -46,7 +47,7 @@ void loop()
         playKey(notePin); // plays the key on the glockenspiel (xylobot)
       }  
     }  
-  }
+  //}
 }
 
 // maps the note index to the note pin
