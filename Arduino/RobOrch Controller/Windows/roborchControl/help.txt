@@ -1,6 +1,0 @@
-help|http://www.roboticsclub.org/redmine/projects/roborchestra/wiki
-help whamola|http://www.roboticsclub.org/redmine/projects/roborchestra/wiki/whamola
-help snarebot|http://www.roboticsclub.org/redmine/projects/roborchestra/wiki/snarebot
-help hihat|http://www.roboticsclub.org/redmine/projects/roborchestra/wiki/hihat
-help bassbot|http://www.roboticsclub.org/redmine/projects/roborchestra/wiki/bassbot
-help xylobot|http://www.roboticsclub.org/redmine/projects/roborchestra/wiki/xylobot
