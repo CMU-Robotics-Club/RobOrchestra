@@ -1,11 +1,9 @@
 RobOrchestra
 =============
 
-Welcome to RobOrchestra! We are a project in Carnegie Mellon University's Robotics Club 
-dedicated to making robots that can play a wide range of instruments usually reserved
-for human performance.
+Welcome to RobOrchestra! We are a project in Carnegie Mellon University's Robotics Club that aims to explore the creative possibilities for robotic instruments. We design, build and program robots that read music from MIDI data in order to put on musical performances. Our goal is to create a full robotic orchestra that is able to play from arrangements from standard MIDI files, and is also able to "improvise" unique polyphonic music in real time based off of music generation algorithms developed by our team.
 
-Info for team members can be found on the wiki.
+Meeting agendas and notes can be found on the Wiki.
 
 ###How it works.
 	
@@ -16,9 +14,7 @@ Each robot reads the data and picks out its own part, and then plays it accordin
 
 ###Robots.
 
-The orchestra is currently comprised of BassBot and SnareBot, our percussion section,
-and xylobot, our, well, more of our percussion section. We are in the process of building 
-glockenspielbot, xylobot's bigger brother, and ukulele bot.
+The orchestra is currently comprised of Xylobot, BassBot and SnareBot. We are currently in the process of adding more percussion robots as well as a larger Xylobot and a Ukulelebot.
 
 
 #####The Arduino directory was moved to instruments/archives
