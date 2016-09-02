@@ -11,9 +11,7 @@ Info for team members can be found on the wiki.
 	
 The robots, all powered by Arduinos with MIDI shields, operate via a distributed network.
 A laptop acts as the "conductor", transmitting MIDI signals through the network of robots. 
-Each robot reads the data and picks out its own part, and then plays it accordingly. We use 
-Max 7, a powerful music programming language, to control the orchestra, however it should
-work with nearly any MIDI software.
+Each robot reads the data and picks out its own part, and then plays it accordingly. We currently use Processing to control the orchestra.
 
 
 ###Robots.
