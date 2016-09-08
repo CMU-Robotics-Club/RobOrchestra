@@ -16,8 +16,8 @@ int lo = 60;
 int hi = 76;
 
 //Parameters
-int nreps = 4; //Number of times to repeat each test
-int[] numbeats = {1, 2, 4}; //Number of beats in each test
+int nreps = 1; //Number of times to repeat each test
+int[] numbeats = {1}; //Number of beats in each test
 
 //Reference
 String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
