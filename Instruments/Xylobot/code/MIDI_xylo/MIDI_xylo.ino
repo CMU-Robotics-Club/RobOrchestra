@@ -1,10 +1,4 @@
 
-
-/*
- * @file: 
- *
- *
- */
 #include <MIDI.h>
 #include <midi_Defs.h>
 #include <midi_Namespace.h>
@@ -17,11 +11,8 @@
 #define ENDNOTE 76 // 76
 #define KEY_UP_TIME 50
 
-// Simple tutorial on how to receive and send MIDI messages.
-// Here, when receiving any message on channel 4, the Arduino 
-// will blink a led and play back a note for 1 second.
 
-#define LED 13   		    // LED pin on Arduino Uno
+#define LED 13
 MIDI_CREATE_DEFAULT_INSTANCE();
 
 int played = 0;
@@ -37,11 +28,7 @@ void setup()
 void loop()
 { 
   if(MIDI.read()){
-    // && MIDI.getData2() != 0 pokemon theme (bicycle)
-   //  hall of fame
-    //if(MIDI.getType() > 0){ // note on
       int noteIndex = MIDI.getData1();
-      //int note_2 = MIDI.getData2();
       if(noteIndex >= STARTNOTE && noteIndex <= ENDNOTE){
         int notePin = getNote(noteIndex); // map the note to the pin
         playKey(notePin); // plays the key on the glockenspiel (xylobot)
