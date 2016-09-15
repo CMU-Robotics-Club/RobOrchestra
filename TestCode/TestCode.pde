@@ -1,5 +1,6 @@
 //Xylobot Testing Code
 //Plays through a chromatic scale on loop
+//Used to test functionality of solenoids(they break randomly)
 
 import themidibus.*; //Library documentation: http://www.smallbutdigital.com/themidibus.php
 
