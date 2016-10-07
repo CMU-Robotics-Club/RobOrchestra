@@ -137,8 +137,6 @@ void draw() {
   refreshText();
 }
 
-//Hacked together existing code to create an instance of this new Beat class
- //NOTE: Doesn't support playing notes early (yet), so we'll get some lag if we run the computer and instruments at the same time
  Beat generateBeat(int c){
    
     //GET SUBBEAT LENGTH
@@ -457,7 +455,7 @@ boolean fuzzyContains(float x, float[] myList, double res) {
   return false;
 }
 
-//Gets greatest common factor (GCF)of two ints 
+//Gets greatest common factor (GCF) of two ints 
 //Uses the Euclidean algorithm
 //Basic idea: If a number d is a common divisor of a and b, it must also divide a - b (which is less than a or b)
 //So recurse down until a or b is 0, and then the other is the GCF
