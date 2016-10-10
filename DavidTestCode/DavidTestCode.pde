@@ -287,7 +287,7 @@ void draw() {
      qprint("Subbeat");
      ArrayList<Note> toPlay = b.earlynotes[i];
      for(int x = 0; x < toPlay.size(); x++){
-       myBus.sendNoteOn(toPlay.get(x));
+       compBus.sendNoteOn(toPlay.get(x));
      }
      delay(fudgetime);
      toPlay = b.notes[i];
