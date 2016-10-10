@@ -19,7 +19,7 @@ Servo myservo;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  if(channel == 1 {
+  if (channel == 1) {
     hit();
   }
 }
