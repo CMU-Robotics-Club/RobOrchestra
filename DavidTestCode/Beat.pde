@@ -5,6 +5,8 @@ public class Beat{
    public ArrayList<Note>[] notes;
    public ArrayList<Note>[] earlynotes;
    public ArrayList<String>[] notetext;
+   public boolean forcedTonic;
+   ArrayList<OutputTuple> output;
    
    public Beat(){
        nsubbeats = 1;
@@ -13,6 +15,8 @@ public class Beat{
        earlynotes = new ArrayList[1];
        earlynotes[0] = new ArrayList<Note>();
        getTextFromNotes();
+       forcedTonic = false;
+       output = new ArrayList();
        return;
    }
    public Beat(int n, ArrayList<Note>[] nnotes){
@@ -21,6 +25,8 @@ public class Beat{
        earlynotes = new ArrayList[1];
        earlynotes[0] = new ArrayList<Note>();
        getTextFromNotes();
+       forcedTonic = false;
+       output = new ArrayList();
        return;
    }
    public Beat(int n, ArrayList<Note>[] nnotes, ArrayList<Note>[] nenotes){
@@ -28,6 +34,8 @@ public class Beat{
        notes = nnotes;
        earlynotes = nenotes;
        getTextFromNotes();
+       forcedTonic = false;
+       output = new ArrayList();
        return;
    }
    public Beat(int n, ArrayList<Note>[] nnotes, ArrayList<Note>[] nenotes, ArrayList<String>[] nnotetext){
@@ -35,6 +43,8 @@ public class Beat{
        notes = nnotes;
        earlynotes = nenotes;
        notetext = nnotetext;
+       forcedTonic = false;
+       output = new ArrayList();
        return;
    }
    
@@ -50,4 +60,7 @@ public class Beat{
           }
       }
    }
+   public void addOutput(String s, int i){
+    output.add(new OutputTuple(s, i));
+  }
 }
