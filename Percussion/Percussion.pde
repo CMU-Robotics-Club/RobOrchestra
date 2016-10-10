@@ -11,7 +11,7 @@ int tonicTotal = 1; //Music stops when we reach this number of tonic chord/quart
 
 //Chord attributes relocated to make them global
 int channel = 1; //set channel. 0 for speakers
-int pchannel1 = 0; //Percussion channel 1 (snare drum)
+int pchannel1 = 2; //Percussion channel 1 (snare drum)
 int pchannel2 = 0; //Percussion channel 2 (bass drum)
 int velocity = 80; //chord volume
 int melVelocity = 120; //melody note volume
@@ -212,7 +212,7 @@ void playChord(int base, int third, int fifth, int oct, int beat) {
     
     //If the current sub-beat is in the snare drum list, play a snare drum note
     if (fuzzyContains(beat + (float)(i)/nsubbeats, snarebeats, thresh)) {
-      Note snareNote = new Note(pchannel1, 36, melVelocity, subBeat);
+      Note snareNote = new Note(pchannel1, 0, melVelocity, subBeat);
       myBus.sendNoteOn(snareNote);
       qprint("Snare: MIDI 36");
       //text("Snare", 20, 60);
