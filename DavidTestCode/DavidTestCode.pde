@@ -239,8 +239,10 @@ Measure generateMeasure(int numTonic){
        //TODO: Make this do something a bit more interesting and/or intelligent instead
        beatIndex = x;
        tempBeat.forcedTonic = false;
-       tempBeat.notes = new ArrayList[1];
-       tempBeat.notes[0] = new ArrayList();
+       tempBeat.notes = new ArrayList[nsubbeats];
+       for(int n = 0; n < nsubbeats; n++){
+          tempBeat.notes[n] = new ArrayList(); 
+       }
        switch((nbeats-x-1)%3){
           case 0:
             tempBeat.notes[0].add(new Note(channel, tonic, melVelocity, noteLen));
