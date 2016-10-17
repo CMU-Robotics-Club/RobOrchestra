@@ -1,5 +1,6 @@
 import themidibus.*; //Import midi library
 import java.lang.Math; //To get random numbers
+import java.io.*; //For outputting stuff
 
 MidiBus myBus; //Creates a MidiBus object
 MidiBus compBus;
@@ -76,6 +77,10 @@ int[] degreeToNote = {tonic, tonic + 2, tonic + 4, tonic + 5, tonic + 7, tonic +
 //Flag that toggles as the code runs; starts true so a forced quarter note doesn't fire immediately
 boolean disableTonic = true;
 
+//IO stuff
+File outputFile = new File("RobOrchestra/output.txt");
+FileWriter writer;
+
 //sets up screen
 void setup() {
   size(325, 400);
@@ -90,11 +95,22 @@ void setup() {
   println("Starting");
   
   //piece = generatePiece();
-  piece = generatePiece2(1);
+  try{
+    writer = new FileWriter(outputFile);
+    piece = generatePiece2(1);
+    writer.close();    
+  }
+  catch(IOException e){
+     System.out.println("File IO error");
+     exit();
+  }
+  finally{
+  
+  }
+
 }
 
 //this function repeats indefinitely
-//note that the output displayed in the window is one chord behind what is being played
 void draw() {
   //Run the next subbeat
   i = (i+1)%nsubbeats;
@@ -159,6 +175,36 @@ ArrayList<Measure> generatePiece2(int phraseLength){
      phrase2.add(generateMeasure(phraseLength));
    }
    tonicCount = 0;
+   
+   String toPrint = "";
+   toPrint += "Phrase 1:\n\n";
+   for(int x = 0; x < phrase1.size(); x++){
+      toPrint+=phrase1.get(x).toString(); 
+   }
+   toPrint += "Phrase 1:\n\n";
+   for(int x = 0; x < phrase1.size(); x++){
+      toPrint+=phrase1.get(x).toString(); 
+   }
+   toPrint += "Phrase 2:\n\n";
+   for(int x = 0; x < phrase2.size(); x++){
+      toPrint+=phrase2.get(x).toString(); 
+   }
+   toPrint += "Phrase 1:\n\n";
+   for(int x = 0; x < phrase1.size(); x++){
+      toPrint+=phrase1.get(x).toString(); 
+   }
+   
+   try{
+      writer.write(toPrint);
+    }
+    catch(IOException e){
+       System.out.println("File IO error");
+       exit();
+    }
+    finally{
+    
+    }
+   
    return combinePhrases(phrase1, phrase1, phrase2, phrase1);
 }
 
@@ -173,6 +219,7 @@ ArrayList<Measure> combinePhrases(ArrayList<Measure>... input){
 }
 
 Measure generateMeasure(int numTonic){
+  
    Measure out = new Measure(nbeats);
    
    //Pick a snare pattern for the measure
@@ -191,13 +238,27 @@ Measure generateMeasure(int numTonic){
        //If you're done, just keep repeating tonic quarter notes for the rest of the measure
        //TODO: Make this do something a bit more interesting and/or intelligent instead
        beatIndex = x;
-       out.setBeat(x, tempBeat);
+       tempBeat.forcedTonic = false;
+       tempBeat.notes = new ArrayList[1];
+       tempBeat.notes[0] = new ArrayList();
+       switch((nbeats-x-1)%3){
+          case 0:
+            tempBeat.notes[0].add(new Note(channel, tonic, melVelocity, noteLen));
+            break;
+          case 1:
+            tempBeat.notes[0].add(new Note(channel, tonic+7, melVelocity, noteLen));
+            break;
+          case 2:
+            tempBeat.notes[0].add(new Note(channel, tonic+3, melVelocity, noteLen));
+            break;
+       }
+       tempBeat.getTextFromNotes();
+       out.setBeat(x, new Beat(tempBeat));
      }
      else {
        beatIndex = x;
        tempBeat = generateBeat(next);
        out.setBeat(x, new Beat(tempBeat));
-       tempBeat.forcedTonic = false;
      }
    }
    beatIndex = -1;

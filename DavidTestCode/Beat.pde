@@ -67,11 +67,34 @@ public class Beat{
              notetext[x].add("" + notes[x].get(y).pitch()); 
           }
           for(int y = 0; y < earlynotes[x].size(); y++){
-             notetext[x].add("" + earlynotes[x].get(y).pitch()); 
+             //notetext[x].add("" + earlynotes[x].get(y).pitch()); 
           }
       }
    }
+   
    public void addOutput(String s, int i){
     output.add(new OutputTuple(s, i));
+  }
+  
+  public String toString(){
+    String temp = new String("New beat: \n");
+    temp += "Melody Notes: ";
+    temp += nsubbeats;
+    temp += "\nChord: ";
+    for(int x = 0; x < earlynotes.length; x++){
+       for(int y = 0; y < earlynotes[x].size(); y++){
+         temp += earlynotes[x].get(y).pitch;
+         temp += " ";
+       }
+    }
+    temp += "\nNotes: ";
+    for(int x = 0; x < notes.length; x++){
+       for(int y = 0; y < notes[x].size(); y++){
+         temp += notes[x].get(y).pitch;
+         temp += " ";
+       }
+    }
+    temp += "\n";
+    return temp;
   }
 }

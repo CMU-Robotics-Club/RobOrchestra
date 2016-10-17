@@ -32,4 +32,12 @@ public class Measure{
   public void addOutput(String s, int i){
     output.add(new OutputTuple(s, i));
   }
+  
+  public String toString(){
+     String temp = "New measure: \nNumber of beats: " + nbeats + "\n\n";
+     for(int x = 0; x < nbeats; x++){
+        temp+=beats[x].toString() + "\n";
+     }
+     return temp;
+  }
 }
