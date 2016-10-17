@@ -48,6 +48,17 @@ public class Beat{
        return;
    }
    
+   //Basically just a copy function
+   public Beat(Beat b){
+      nsubbeats = b.nsubbeats;
+      notes = b.notes;
+      earlynotes = b.earlynotes;
+      notetext = b.notetext;
+      forcedTonic = b.forcedTonic;
+      output = b.output;
+      return;
+   }
+   
    public void getTextFromNotes(){
       notetext = new ArrayList[notes.length];
       for(int x = 0; x < notes.length; x++){

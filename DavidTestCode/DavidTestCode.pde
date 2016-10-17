@@ -158,6 +158,7 @@ ArrayList<Measure> generatePiece2(int phraseLength){
    while(tonicCount < phraseLength){
      phrase2.add(generateMeasure(phraseLength));
    }
+   tonicCount = 0;
    return combinePhrases(phrase1, phrase1, phrase2, phrase1);
 }
 
@@ -195,7 +196,8 @@ Measure generateMeasure(int numTonic){
      else {
        beatIndex = x;
        tempBeat = generateBeat(next);
-       out.setBeat(x, tempBeat);
+       out.setBeat(x, new Beat(tempBeat));
+       tempBeat.forcedTonic = false;
      }
    }
    beatIndex = -1;
