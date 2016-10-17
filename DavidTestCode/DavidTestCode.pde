@@ -87,9 +87,10 @@ void setup() {
   compBus = new MidiBus(this, 0, 1);
   initializeText();
   roboLogo = loadImage("rc_logo.png");
-  System.out.println("Starting");
+  println("Starting");
   
-  piece = generatePiece();
+  //piece = generatePiece();
+  piece = generatePiece2(1);
 }
 
 //this function repeats indefinitely
@@ -140,13 +141,37 @@ ArrayList<Measure> generatePiece(){
    ArrayList<Measure> out = new ArrayList();
    //No option for infinite loop here; tonicTotal = -1 means do nothing
    while(tonicCount < tonicTotal){
-     out.add(generateMeasure());
+     out.add(generateMeasure(tonicTotal));
    }
    tonicCount = 0;
    return out;
 }
 
-Measure generateMeasure(){
+ArrayList<Measure> generatePiece2(int phraseLength){
+   ArrayList<Measure> phrase1 = new ArrayList();
+   ArrayList<Measure> phrase2 = new ArrayList();
+   //No option for infinite loop here; tonicTotal = -1 means do nothing
+   while(tonicCount < phraseLength){
+     phrase1.add(generateMeasure(phraseLength));
+   }
+   tonicCount = 0;
+   while(tonicCount < phraseLength){
+     phrase2.add(generateMeasure(phraseLength));
+   }
+   return combinePhrases(phrase1, phrase1, phrase2, phrase1);
+}
+
+ArrayList<Measure> combinePhrases(ArrayList<Measure>... input){
+  ArrayList<Measure> output = new ArrayList();
+  for(int x = 0; x < input.length; x++){
+      for(int y = 0; y < input[x].size(); y++){
+         output.add(input[x].get(y)); 
+      }
+  }
+  return output;
+}
+
+Measure generateMeasure(int numTonic){
    Measure out = new Measure(nbeats);
    
    //Pick a snare pattern for the measure
@@ -158,13 +183,20 @@ Measure generateMeasure(){
      if(x < snarebeats.length-1) temp+=",";
    }
    out.addOutput(temp, snareLine + 1);
-   
-    //Generate the beats in the measure
+   Beat tempBeat = new Beat();
+   //Generate the beats in the measure
    for(int x = 0; x < out.nbeats; x++){
-     beatIndex = x;
-     out.setBeat(x, generateBeat(next));
-     //Stop generating stuff if tonicCount is done
-     if (!(tonicTotal == -1 || tonicCount < tonicTotal)) break;
+     if (!(tonicTotal == -1 || tonicCount < numTonic)){
+       //If you're done, just keep repeating tonic quarter notes for the rest of the measure
+       //TODO: Make this do something a bit more interesting and/or intelligent instead
+       beatIndex = x;
+       out.setBeat(x, tempBeat);
+     }
+     else {
+       beatIndex = x;
+       tempBeat = generateBeat(next);
+       out.setBeat(x, tempBeat);
+     }
    }
    beatIndex = -1;
    return out;
@@ -298,8 +330,6 @@ Measure generateMeasure(){
       onotetext[i].add("" + melnote);
     }
     
-    printArray(snarebeats);
-    println(beatIndex + 1 + (float)(i)/nsubbeats);
     //If the current sub-beat is in the snare drum list, play a snare drum note
     if (fuzzyContains(beatIndex + 1 + (float)(i)/nsubbeats, snarebeats, thresh)) {
       Note snareNote = new Note(pchannel1, 36, melVelocity, subbeatlen);
