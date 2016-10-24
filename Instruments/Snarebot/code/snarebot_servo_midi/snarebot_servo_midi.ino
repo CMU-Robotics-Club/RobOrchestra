@@ -1,8 +1,3 @@
-#include <MIDI.h>
-#include <midi_Defs.h>
-#include <midi_Message.h>
-#include <midi_Namespace.h>
-#include <midi_Settings.h>
 
 #include <MIDI.h>
 #include <midi_Defs.h>
@@ -25,7 +20,7 @@ Servo myservo;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  if(channel == 1 {
+  if(channel == 1) {
     hit();
   }
 }
@@ -34,7 +29,6 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 void setup()
 {
   pinMode(LED, OUTPUT);
-  Serial3.begin(115200);
   myservo.attach(10);
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
