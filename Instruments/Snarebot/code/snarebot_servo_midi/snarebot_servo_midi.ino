@@ -29,7 +29,6 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 void setup()
 {
   pinMode(LED, OUTPUT);
-  Serial3.begin(115200);
   myservo.attach(10);
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
