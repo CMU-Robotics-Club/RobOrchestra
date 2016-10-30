@@ -10,9 +10,9 @@ MidiBus myBus; //Creates a MidiBus object
 //minLen: Array of minimum note lengths that you want a given instrument to play
 //Pitchvals and minLen set to use modular arithmetic on the index, but for more than one value, specify explicitly
 int[] channels = {0};
-int[] pitchvals = {36};
-int[] minLen = {250};
-int maxLen = 2000;
+int[] pitchvals = {37};
+int[] minLen = {60};
+int maxLen = 1000;
 
 //Parameters
 int nreps = 2; //Number of measures played for each length (one measure being one maxLen note)
