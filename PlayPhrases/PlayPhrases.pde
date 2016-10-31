@@ -2,6 +2,12 @@ import themidibus.*; //Import midi library
 import java.lang.Math; //To get random numbers
 import java.io.*; //For outputting stuff
 
+//Phrases to be played
+//Positive numbers mean make a new phrase of that many measures
+//Non-positive numbers mean absolute value and grab the phrase at that index
+//So 0 grabs the first phrase, -1 grabs the second, etc.
+int[] input = {1, 0, 1, -2, 0};
+
 MidiBus myBus; //Creates a MidiBus object
 MidiBus compBus;
 int noteLen = 1000; //set chord length in milliseconds
@@ -18,6 +24,7 @@ int pchannel2 = 2; //Percussion channel 2 (bass drum)
 int velocity = 80; //chord volume
 int melVelocity = 120; //melody note volume
 int ticks = noteLen; //length in milliseconds
+int nbeats = 4; //Beats per measure
 int trackBeat = 1;
 
 //General logistics stuff
@@ -33,10 +40,6 @@ float[] pattern2 = new float[]{1.0, 2.0, 2.5, 3.0, 4.0, 4.5};
 float[] pattern3 = new float[]{1.0, 2.0, 3.0, 3.5, 4.0};
 float[] pattern4 = new float[]{1.0, 1.5, 2.0, 2.5, 3.0, 4.0};
 float[][] snareOptions = new float[][]{pattern1, pattern2, pattern3, pattern4};
-
-
-//Adding beat info
-int nbeats = 4; //Beats per measure
 
 //Variables for each individual subbeat
 int i = -1; //Counts current subbeat; incremented first and zero-indexed, so start at -1;
@@ -88,8 +91,8 @@ void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
 
-  myBus = new MidiBus(this, 0, 4); 
-  compBus = new MidiBus(this, 0, 1);
+  myBus = new MidiBus(this, 0, 1); 
+  compBus = new MidiBus(this, 0, 0);
   initializeText();
   roboLogo = loadImage("rc_logo.png");
   println("Starting");
@@ -100,7 +103,7 @@ void setup() {
     //Put in a list of integers
     //Positive numbers are the phrase lengths of new phrases
     //Non-positive numbers copy previous phrases (0 grabs first phrase, -1 grabs second, etc.)
-    piece = generatePiece(1, 0, 1, -2, 0);
+    piece = generatePiece(input);
     writer.close();    
   }
   catch(IOException e){
@@ -110,7 +113,6 @@ void setup() {
   finally{
   
   }
-
 }
 
 //this function repeats indefinitely
@@ -159,11 +161,12 @@ void draw() {
 //Generate a piece based on a list of integers as input
 //Positive integers create a new phrase of the given length
 //Non-negative integers duplicate an existing phrase (0 grabs the 0th index, -1 the 1st, etc.)
-ArrayList<Measure> generatePiece(int... input){
+ArrayList<Measure> generatePiece(int[] input){
   ArrayList[] phrases = new ArrayList[input.length];
   int[] phrasenums = new int[input.length];
   int temp = 1;
   ArrayList<Measure> output = new ArrayList();
+  output.add(new Measure(nbeats));
   String toPrint = "";
   for(int x = 0; x < input.length; x++){
     if(input[x] > 0){
