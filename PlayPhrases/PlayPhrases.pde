@@ -156,6 +156,9 @@ void draw() {
   refreshText();
 }
 
+//Generate a piece based on a list of integers as input
+//Positive integers create a new phrase of the given length
+//Non-negative integers duplicate an existing phrase (0 grabs the 0th index, -1 the 1st, etc.)
 ArrayList<Measure> generatePiece(int... input){
   ArrayList[] phrases = new ArrayList[input.length];
   int[] phrasenums = new int[input.length];
@@ -195,6 +198,7 @@ ArrayList<Measure> generatePiece(int... input){
    return output;
 }
 
+//Combines multiple ArrayList<Measure> objects into a single one (without modifying the originals)
 ArrayList<Measure> combinePhrases(ArrayList<Measure>... input){
   ArrayList<Measure> output = new ArrayList();
   for(int x = 0; x < input.length; x++){
@@ -205,6 +209,8 @@ ArrayList<Measure> combinePhrases(ArrayList<Measure>... input){
   return output;
 }
 
+//Generate a phrase of the given number of tonics and measures
+//Might infinite loop for impossible settings, though
 ArrayList<Measure> generatePhrase(int numMeasures, int numTonics){
   ArrayList<Measure> phrase = new ArrayList();
   tonicCount = 0;
@@ -218,6 +224,7 @@ ArrayList<Measure> generatePhrase(int numMeasures, int numTonics){
   return phrase;
 }
 
+//Generates a measure
 Measure generateMeasure(int numTonic){
   
    Measure out = new Measure(nbeats);
