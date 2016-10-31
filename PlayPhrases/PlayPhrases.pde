@@ -100,7 +100,7 @@ void setup() {
     //Put in a list of integers
     //Positive numbers are the phrase lengths of new phrases
     //Non-positive numbers copy previous phrases (0 grabs first phrase, -1 grabs second, etc.)
-    piece = generatePiece(1, 1, 1, 0);
+    piece = generatePiece(1, 0, 1, -2, 0);
     writer.close();    
   }
   catch(IOException e){
@@ -158,24 +158,26 @@ void draw() {
 
 ArrayList<Measure> generatePiece(int... input){
   ArrayList[] phrases = new ArrayList[input.length];
+  int[] phrasenums = new int[input.length];
+  int temp = 1;
   ArrayList<Measure> output = new ArrayList();
   String toPrint = "";
   for(int x = 0; x < input.length; x++){
     if(input[x] > 0){
        phrases[x] = generatePhrase(input[x], 1);
-       toPrint += "Phrase " + x + ":\n\n";
-       for(int y = 0; y < phrases[x].size(); y++){
-          toPrint+=phrases[x].get(y).toString(); 
-       }
+       phrasenums[x] = temp;
+       temp++;
     }
     else{
        phrases[x] = phrases[-1*input[x]];
-       toPrint += "Phrase " + -1*input[x] + ":\n\n";
-       for(int y = 0; y < phrases[x].size(); y++){
-          toPrint+=phrases[x].get(y).toString(); 
-       }
+       phrasenums[x] = phrasenums[-1*input[x]];
     }
     output = combinePhrases(output, phrases[x]);
+    
+    toPrint += "Phrase " + phrasenums[x] + ":\n\n";
+    for(int y = 0; y < phrases[x].size(); y++){
+       toPrint+=phrases[x].get(y).toString(); 
+    }
   }
    
    
