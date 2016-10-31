@@ -94,10 +94,13 @@ void setup() {
   roboLogo = loadImage("rc_logo.png");
   println("Starting");
   
-  //piece = generatePiece();
   try{
     writer = new FileWriter(outputFile);
-    piece = generatePiece2(1);
+    //Input settings for piece here:
+    //Put in a list of integers
+    //Positive numbers are the phrase lengths of new phrases
+    //Non-positive numbers copy previous phrases (0 grabs first phrase, -1 grabs second, etc.)
+    piece = generatePiece(1, 1, 1, 0);
     writer.close();    
   }
   catch(IOException e){
@@ -153,46 +156,28 @@ void draw() {
   refreshText();
 }
 
-ArrayList<Measure> generatePiece(){
-   ArrayList<Measure> out = new ArrayList();
-   //No option for infinite loop here; tonicTotal = -1 means do nothing
-   while(tonicCount < tonicTotal){
-     out.add(generateMeasure(tonicTotal));
-   }
-   tonicCount = 0;
-   return out;
-}
-
-ArrayList<Measure> generatePiece2(int phraseLength){
-   ArrayList<Measure> phrase1 = new ArrayList();
-   ArrayList<Measure> phrase2 = new ArrayList();
-   //No option for infinite loop here; tonicTotal = -1 means do nothing
-   while(tonicCount < phraseLength){
-     phrase1.add(generateMeasure(phraseLength));
-   }
-   tonicCount = 0;
-   while(tonicCount < phraseLength){
-     phrase2.add(generateMeasure(phraseLength));
-   }
-   tonicCount = 0;
+ArrayList<Measure> generatePiece(int... input){
+  ArrayList[] phrases = new ArrayList[input.length];
+  ArrayList<Measure> output = new ArrayList();
+  String toPrint = "";
+  for(int x = 0; x < input.length; x++){
+    if(input[x] > 0){
+       phrases[x] = generatePhrase(input[x], 1);
+       toPrint += "Phrase " + x + ":\n\n";
+       for(int y = 0; y < phrases[x].size(); y++){
+          toPrint+=phrases[x].get(y).toString(); 
+       }
+    }
+    else{
+       phrases[x] = phrases[-1*input[x]];
+       toPrint += "Phrase " + -1*input[x] + ":\n\n";
+       for(int y = 0; y < phrases[x].size(); y++){
+          toPrint+=phrases[x].get(y).toString(); 
+       }
+    }
+    output = combinePhrases(output, phrases[x]);
+  }
    
-   String toPrint = "";
-   toPrint += "Phrase 1:\n\n";
-   for(int x = 0; x < phrase1.size(); x++){
-      toPrint+=phrase1.get(x).toString(); 
-   }
-   toPrint += "Phrase 1:\n\n";
-   for(int x = 0; x < phrase1.size(); x++){
-      toPrint+=phrase1.get(x).toString(); 
-   }
-   toPrint += "Phrase 2:\n\n";
-   for(int x = 0; x < phrase2.size(); x++){
-      toPrint+=phrase2.get(x).toString(); 
-   }
-   toPrint += "Phrase 1:\n\n";
-   for(int x = 0; x < phrase1.size(); x++){
-      toPrint+=phrase1.get(x).toString(); 
-   }
    
    try{
       writer.write(toPrint);
@@ -205,7 +190,7 @@ ArrayList<Measure> generatePiece2(int phraseLength){
     
     }
    
-   return combinePhrases(phrase1, phrase1, phrase2, phrase1);
+   return output;
 }
 
 ArrayList<Measure> combinePhrases(ArrayList<Measure>... input){
@@ -216,6 +201,19 @@ ArrayList<Measure> combinePhrases(ArrayList<Measure>... input){
       }
   }
   return output;
+}
+
+ArrayList<Measure> generatePhrase(int numMeasures, int numTonics){
+  ArrayList<Measure> phrase = new ArrayList();
+  tonicCount = 0;
+  while(tonicCount < numTonics){
+     phrase.add(generateMeasure(numTonics)); 
+  }
+  if(phrase.size() != numMeasures){
+     return generatePhrase(numMeasures, numTonics);
+  }
+  tonicCount = 0;
+  return phrase;
 }
 
 Measure generateMeasure(int numTonic){
