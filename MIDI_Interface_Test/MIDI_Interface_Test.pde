@@ -1,4 +1,3 @@
-
 //Gets list of available MIDI output devices
 DeviceList midiOutputs = new DeviceList();
 System.out.println(midiOutputs);

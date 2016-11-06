@@ -64,7 +64,9 @@ public class Orchestra {
     }
 
     public void close() {
-        outputBus.close();
+        if(this.outputBus != null && this.outputBus.isOpen()){
+          this.outputBus.close();
+        }
     }
 
     public String toString(){
