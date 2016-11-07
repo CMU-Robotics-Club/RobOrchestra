@@ -6,14 +6,14 @@ import java.io.*; //For outputting stuff
 //Positive numbers mean make a new phrase of that many measures
 //Non-positive numbers mean absolute value and grab the phrase at that index
 //So 0 grabs the first phrase, -1 grabs the second, etc.
-int[] input = {4, 0, 4, -2, 0};
+int[] input = {2, 2, 2, 2};
 
 Orchestra myBus; //Creates a MidiBus object
 Orchestra compBus;
 int noteLen = 1000; //set chord length in milliseconds
 int tonic = 60; //set key to C major
 int next = 0; //keeps track of next chord. Always start with tonic. Updates in generateChord()
-int[] divisions = {1, 2, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
+int[] divisions = {1, 1, 2, 2, 3, 4, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
 int tonicCount = 0; //How many times a tonic chord has been played with a quarter note melody
 int tonicTotal = 4; //Music stops when we reach this number of tonic chord/quarter note melodies (-1 for infinite loop)
 
@@ -247,8 +247,7 @@ Measure generateMeasure(int numTonic){
    //Generate the beats in the measure
    for(int x = 0; x < out.nbeats; x++){
      if (!(tonicTotal == -1 || tonicCount < numTonic)){
-       //If you're done, just keep repeating tonic quarter notes for the rest of the measure
-       //TODO: Make this do something a bit more interesting and/or intelligent instead
+       //If you're done, play fun arpeggio stuff
        beatIndex = x;
        tempBeat.forcedTonic = false;
        tempBeat.notes = new ArrayList[nsubbeats];
@@ -451,7 +450,7 @@ Measure generateMeasure(int numTonic){
      ArrayList<NoteMessage> toPlay = b.earlynotes[i];
      for(int x = 0; x < toPlay.size(); x++){
        chordNotes.add(toPlay.get(x));
-       compBus.sendNoteOn(toPlay.get(x));
+       compBus.sendMidiNote(toPlay.get(x));
      }
      delay(fudgetime);
      
@@ -461,7 +460,7 @@ Measure generateMeasure(int numTonic){
      boolean bclear = true;
      for(int x = 0; x < toPlay.size(); x++){
        melodyNotes.add(toPlay.get(x));
-       myBus.sendNoteOn(toPlay.get(x));
+       myBus.sendMidiNote(toPlay.get(x));
        
        //Check for percussion notes
        if(toPlay.get(x).channel == pchannel1 && toPlay.get(x).pitch == 36){
@@ -502,9 +501,9 @@ Measure generateMeasure(int numTonic){
 
 //chooses a melody note from the current chord tones
 int randMelodyNote(int[] options) {
-  int randNum = (int)(Math.random() * 4);
+  int rand = (int)(Math.random() * options.length);
 
-  return options[randNum];
+  return options[rand];
 }
 
 int randMelodyNote2(float[] options) {
