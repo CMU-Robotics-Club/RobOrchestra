@@ -4,24 +4,93 @@ New measure:
 Number of beats: 4
 
 New beat: 
-Melody Notes: 1
+Melody Notes: 2
 Chord: 69 72 76 81 
-Notes: 62 36 
+Notes: 65 36 64 
+
+New beat: 
+Melody Notes: 2
+Chord: 69 72 76 81 
+Notes: 60 36 64 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 62 65 69 74 
+Notes: 64 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 38 65 62 36 65 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 64 36 64 60 64 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 65 36 60 65 36 60 
 
 New beat: 
 Melody Notes: 4
 Chord: 65 69 72 77 
-Notes: 67 36 65 60 64 
+Notes: 67 36 67 60 60 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 67 36 38 64 67 36 65 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 1
+Chord: 67 71 74 79 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 67 36 64 64 36 69 
 
 New beat: 
 Melody Notes: 2
+Chord: 62 65 69 74 
+Notes: 64 36 64 
+
+New beat: 
+Melody Notes: 1
 Chord: 67 71 74 79 
-Notes: 67 36 64 36 
+Notes: 60 36 38 36 
+
+New measure: 
+Number of beats: 4
 
 New beat: 
 Melody Notes: 1
 Chord: 60 64 67 72 
-Notes: 60 36 38 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 64 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 67 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 60 
 
 Phrase 1:
 
@@ -29,24 +98,93 @@ New measure:
 Number of beats: 4
 
 New beat: 
-Melody Notes: 1
+Melody Notes: 2
 Chord: 69 72 76 81 
-Notes: 62 36 
+Notes: 65 36 64 
+
+New beat: 
+Melody Notes: 2
+Chord: 69 72 76 81 
+Notes: 60 36 64 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 62 65 69 74 
+Notes: 64 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 38 65 62 36 65 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 64 36 64 60 64 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 65 36 60 65 36 60 
 
 New beat: 
 Melody Notes: 4
 Chord: 65 69 72 77 
-Notes: 67 36 65 60 64 
+Notes: 67 36 67 60 60 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 67 36 38 64 67 36 65 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 1
+Chord: 67 71 74 79 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 67 36 64 64 36 69 
 
 New beat: 
 Melody Notes: 2
+Chord: 62 65 69 74 
+Notes: 64 36 64 
+
+New beat: 
+Melody Notes: 1
 Chord: 67 71 74 79 
-Notes: 67 36 64 36 
+Notes: 60 36 38 36 
+
+New measure: 
+Number of beats: 4
 
 New beat: 
 Melody Notes: 1
 Chord: 60 64 67 72 
-Notes: 60 36 38 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 64 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 67 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 60 
 
 Phrase 2:
 
@@ -55,23 +193,92 @@ Number of beats: 4
 
 New beat: 
 Melody Notes: 1
-Chord: 69 72 76 81 
-Notes: 65 36 
+Chord: 65 69 72 77 
+Notes: 60 36 
 
 New beat: 
 Melody Notes: 4
-Chord: 62 65 69 74 
-Notes: 60 36 62 64 62 
+Chord: 60 64 67 72 
+Notes: 60 36 64 64 62 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 60 36 64 64 60 
 
 New beat: 
 Melody Notes: 4
 Chord: 67 71 74 79 
-Notes: 71 36 69 64 36 64 
+Notes: 67 36 38 64 60 71 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 2
+Chord: 67 71 74 79 
+Notes: 65 36 64 
+
+New beat: 
+Melody Notes: 1
+Chord: 69 72 76 81 
+Notes: 67 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 69 72 76 81 
+Notes: 64 36 67 60 65 
+
+New beat: 
+Melody Notes: 1
+Chord: 65 69 72 77 
+Notes: 67 36 38 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 62 65 69 74 
+Notes: 62 36 64 67 65 
+
+New beat: 
+Melody Notes: 1
+Chord: 67 71 74 79 
+Notes: 64 36 
+
+New beat: 
+Melody Notes: 2
+Chord: 69 72 76 81 
+Notes: 71 36 60 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 38 60 71 64 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 65 36 64 69 67 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 67 67 60 
 
 New beat: 
 Melody Notes: 1
 Chord: 60 64 67 72 
-Notes: 60 36 38 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 60 
 
 Phrase 2:
 
@@ -80,23 +287,92 @@ Number of beats: 4
 
 New beat: 
 Melody Notes: 1
-Chord: 69 72 76 81 
-Notes: 65 36 
+Chord: 65 69 72 77 
+Notes: 60 36 
 
 New beat: 
 Melody Notes: 4
-Chord: 62 65 69 74 
-Notes: 60 36 62 64 62 
+Chord: 60 64 67 72 
+Notes: 60 36 64 64 62 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 60 36 64 64 60 
 
 New beat: 
 Melody Notes: 4
 Chord: 67 71 74 79 
-Notes: 71 36 69 64 36 64 
+Notes: 67 36 38 64 60 71 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 2
+Chord: 67 71 74 79 
+Notes: 65 36 64 
+
+New beat: 
+Melody Notes: 1
+Chord: 69 72 76 81 
+Notes: 67 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 69 72 76 81 
+Notes: 64 36 67 60 65 
+
+New beat: 
+Melody Notes: 1
+Chord: 65 69 72 77 
+Notes: 67 36 38 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 62 65 69 74 
+Notes: 62 36 64 67 65 
+
+New beat: 
+Melody Notes: 1
+Chord: 67 71 74 79 
+Notes: 64 36 
+
+New beat: 
+Melody Notes: 2
+Chord: 69 72 76 81 
+Notes: 71 36 60 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 38 60 71 64 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 65 36 64 69 67 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 67 67 60 
 
 New beat: 
 Melody Notes: 1
 Chord: 60 64 67 72 
-Notes: 60 36 38 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 60 
 
 Phrase 1:
 
@@ -104,22 +380,91 @@ New measure:
 Number of beats: 4
 
 New beat: 
-Melody Notes: 1
+Melody Notes: 2
 Chord: 69 72 76 81 
-Notes: 62 36 
+Notes: 65 36 64 
+
+New beat: 
+Melody Notes: 2
+Chord: 69 72 76 81 
+Notes: 60 36 64 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 62 65 69 74 
+Notes: 64 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 60 36 38 65 62 36 65 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 64 36 64 60 64 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 65 36 60 65 36 60 
 
 New beat: 
 Melody Notes: 4
 Chord: 65 69 72 77 
-Notes: 67 36 65 60 64 
+Notes: 67 36 67 60 60 
+
+New beat: 
+Melody Notes: 4
+Chord: 67 71 74 79 
+Notes: 67 36 38 64 67 36 65 
+
+New measure: 
+Number of beats: 4
+
+New beat: 
+Melody Notes: 1
+Chord: 67 71 74 79 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 4
+Chord: 60 64 67 72 
+Notes: 67 36 64 64 36 69 
 
 New beat: 
 Melody Notes: 2
+Chord: 62 65 69 74 
+Notes: 64 36 64 
+
+New beat: 
+Melody Notes: 1
 Chord: 67 71 74 79 
-Notes: 67 36 64 36 
+Notes: 60 36 38 36 
+
+New measure: 
+Number of beats: 4
 
 New beat: 
 Melody Notes: 1
 Chord: 60 64 67 72 
-Notes: 60 36 38 
+Notes: 60 36 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 64 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 67 
+
+New beat: 
+Melody Notes: 1
+Chord: 60 64 67 72 
+Notes: 60 
 
