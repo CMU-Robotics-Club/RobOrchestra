@@ -5,31 +5,33 @@
 #include <midi_Settings.h>
 #include <Servo.h>
 
-#define STARTNOTE 35 //60
-#define ENDNOTE 81 // 76
-#define KEY_UP_TIME 50
-
-#define SOL1 8
-#define SOL2 9
-
-#define LED 13  
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-Servo myservo;
+Servo servo_near;
+Servo servo_middle;
+
+int which = 0;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  if(channel == 1) {
-    hit();
+  if(pitch == 36) {
+    if(which == 1){
+      hit();
+      which = -1;
+    } else{
+      hit2();
+      which = 1;
+    }
   }
 }
 
 
+
 void setup()
 {
-  pinMode(LED, OUTPUT);
-  myservo.attach(10);
+  servo_near.attach(5);
+  servo_middle.attach(4);
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOn();
@@ -42,9 +44,19 @@ void loop()
 
 void hit() {
   
-  myservo.write(80);
-  delay(30);
-  myservo.write(103);
-  delay(30);
+  servo_near.write(106);
+  delay(100);
+  servo_near.write(90);
+  delay(10);
+
+}
+
+
+void hit2() {
+  
+  servo_middle.write(143);  //143  160   green red black     //
+  delay(100);
+  servo_middle.write(158);
+  delay(10);
 
 }
