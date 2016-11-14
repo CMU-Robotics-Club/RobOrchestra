@@ -24,7 +24,11 @@ void setup() {
   try{  
     Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/ConcerningHobbits.mid"));
     int trackNumber = 0;
-    for (Track track :  sequence.getTracks()) {
+    
+    Track[] tracks = sequence.getTracks();
+    for (int x = 0; x < tracks.length; x++) {
+        Track track = tracks[x];
+        
         trackNumber++;
         System.out.println("Track " + trackNumber + ": size = " + track.size());
         System.out.println();
@@ -74,7 +78,7 @@ void setup() {
   }
   catch(Exception e){exit();}
   finally{
-    System.out.println("Global data:");
+    System.out.println("Finished reading input");
     
     //Process the lists
     for(int x = 0; x < notes.size(); x++){
@@ -91,17 +95,70 @@ void setup() {
        }
     }
     int[][] transCount = new int[notes.size()][notes.size()];
+    double[][] transProbs = new double[notes.size()][notes.size()];
     for(int x = 0; x < notes.size(); x++){
        for(int y = 0; y < transitions.get(x).size(); y++){
            transCount[x][notes.indexOf(transitions.get(x).get(y))]++;
        }
+       transProbs[x] = generateMarkov(transCount[x]);
     }
+    System.out.println("Starting melody");
     
-    println(notes);
-    println(transitions.get(0));
-    printArrayArray(transCount);
+    //We now have our transition matrix transProbs
+    playMelody(notes, transProbs);
   }
 }
+
+void playMelody(ArrayList<Integer> notes, double[][]T){
+  Orchestra output = new Orchestra(0); //Test output port
+  
+  int note = notes.get((int)(Math.random()*notes.size()));
+  while(true){
+     note = getNextNote(note, notes, T);
+     NoteMessage temp = new NoteMessage(note, 127, 0);
+     output.sendMidiNote(temp);
+     delay(500);
+     output.sendNoteOff(temp);
+  }
+}
+
+//Return the new note for Markov chaining
+int getNextNote(int note, ArrayList<Integer> notes, double[][]T){
+   int i = notes.indexOf(note);
+   int out = -1;
+   
+   //Run Markov chain
+   double rand = Math.random();
+   for(int x = 0; x < notes.size(); x++){
+      rand -= T[i][x];
+      if(rand < 0){
+         out = notes.get(x);
+         break;
+      }
+   }
+   
+   //In the event of rounding error, just try again
+   if(out == -1){
+      out = getNextNote(note, notes, T); 
+   }
+   
+   return out;
+}
+
+double[] generateMarkov(int[] tcounts){
+  double total = 0;
+  for(int x = 0; x < tcounts.length; x++){
+     total += tcounts[x];
+  }
+  //Total now has the total
+  double[] probs = new double[tcounts.length];
+  for(int x = 0; x < tcounts.length; x++){
+      probs[x] = tcounts[x]/total;
+  }
+  return probs;
+}
+
+//Array util
 
 void printArray(Object[] A) {
   print("{");
@@ -119,4 +176,12 @@ void printArrayArray(Object[] A) {
     if (x < A.length - 1) print(", ");
   }
   println("}");
+}
+
+//Other util
+
+//processes delay in milliseconds
+void delay(int time) {
+  int current = millis();
+  while (millis () < current+time) Thread.yield();
 }
