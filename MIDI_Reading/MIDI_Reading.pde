@@ -22,7 +22,7 @@ int prevNote = -1;
 
 void setup() {
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/ConcerningHobbits.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven1.mid"));
     int trackNumber = 0;
     
     Track[] tracks = sequence.getTracks();
@@ -44,16 +44,18 @@ void setup() {
                     int octave = (key / 12)-1;
                     int note = key % 12;
                     
-                    //key is the numerical value for the pitch
-                    if(!notes.contains(new Integer(key))){
-                       notes.add(new Integer(key));
-                       transitions.add(new ArrayList());
+                    if(sm.getData2() > 0){
+                      //key is the numerical value for the pitch
+                      if(!notes.contains(new Integer(key))){
+                         notes.add(new Integer(key));
+                         transitions.add(new ArrayList());
+                      }
+                      if(prevNote != -1){
+                         transitions.get(notes.indexOf(prevNote)).add(key);
+                      }
+                      //Update previous note for future transitions
+                      prevNote = key;
                     }
-                    if(prevNote != -1){
-                       transitions.get(notes.indexOf(prevNote)).add(key);
-                    }
-                    //Update previous note for future transitions
-                    prevNote = key;
                     
                     String noteName = NOTE_NAMES[note];
                     int velocity = sm.getData2();
@@ -117,7 +119,7 @@ void playMelody(ArrayList<Integer> notes, double[][]T){
      note = getNextNote(note, notes, T);
      NoteMessage temp = new NoteMessage(note, 127, 0);
      output.sendMidiNote(temp);
-     delay(500);
+     delay(200);
      output.sendNoteOff(temp);
   }
 }
