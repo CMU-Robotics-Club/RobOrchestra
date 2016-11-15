@@ -4,7 +4,7 @@ System.out.println(midiOutputs);
 
 //Opens a connection to a specified MIDI output device
 //-1 defaults to computer speakers
-int deviceIndex = -1;
+int deviceIndex = 3;
 Orchestra robo = new Orchestra(deviceIndex);
 System.out.println(robo);
 

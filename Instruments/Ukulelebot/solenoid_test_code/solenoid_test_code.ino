@@ -1,4 +1,4 @@
-int solenoidPin = 5;
+int solenoidPin = 4;
 
 void setup() {
   pinMode(solenoidPin, OUTPUT);
