@@ -26,7 +26,7 @@ long prevTime = -1;
 
 void setup() {
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Toccatta2.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven1.mid"));
     int trackNumber = 0;
     
     Track[] tracks = sequence.getTracks();
