@@ -25,7 +25,7 @@ boolean printstuff = false;
 
 //Moving drum patterns up here
 float thresh = 0.01;
-float[] bassbeats = new float[]{4};
+float[] bassbeats = new float[]{1,2,3,4};
 float[] snarebeats = new float[]{1, 2, 2.5, 3, 4, 4.5};
 float[] pattern1 = new float[]{1.0, 2.0, 3.0, 4.0};
 float[] pattern2 = new float[]{1.0, 2.0, 2.5, 3.0, 4.0, 4.5};
@@ -109,13 +109,13 @@ void initializeText(){
   }
   display(temp, snareLine + 1);
   
-  temp = "Bass Beats:";
+  temp = "Tom Beats:";
   for(int x = 0; x < bassbeats.length; x++){
     temp+=" " + bassbeats[x];
     if(x < bassbeats.length-1) temp+=",";
   }
-  //display(temp, bassLine + 1);
-  //display("Bass Drum", bassLine);
+  display(temp, bassLine + 1);
+  display("Tom Drum", bassLine);
   
   //If there's an offset, display a header
   if(offset == 2){
@@ -316,10 +316,10 @@ void runSubbeat(int i){
 
     //Same for bass drum
     if (fuzzyContains(beat + (float)(i)/nsubbeats, bassbeats, thresh)) {
-      Note bassNote = new Note(pchannel2, 38, melVelocity, subBeat);
+      Note bassNote = new Note(pchannel2, 37, melVelocity, subBeat);
       storeNote(bassNote);
-      qprint("Bass drum: MIDI 38");
-      //display("Bass playing", bassLine+2);
+      qprint("Tom drum: MIDI 37");
+      display("Tom playing", bassLine+2);
     } else {
       display("", bassLine+2);
     }
