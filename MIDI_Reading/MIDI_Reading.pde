@@ -18,11 +18,15 @@ public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#",
 
 ArrayList<Integer> notes = new ArrayList();
 ArrayList<ArrayList<Integer>> transitions = new ArrayList();
+ArrayList<Long> times = new ArrayList();
+ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
 int prevNote = -1;
+long prevLen = -1;
+long prevTime = -1;
 
 void setup() {
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven1.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Toccatta2.mid"));
     int trackNumber = 0;
     
     Track[] tracks = sequence.getTracks();
@@ -34,6 +38,7 @@ void setup() {
         System.out.println();
         for (int i=0; i < track.size(); i++) { 
             MidiEvent event = track.get(i);
+            long timestamp = event.getTick();
             System.out.print("@" + event.getTick() + " ");
             MidiMessage message = event.getMessage();
             if (message instanceof ShortMessage) {
@@ -44,7 +49,7 @@ void setup() {
                     int octave = (key / 12)-1;
                     int note = key % 12;
                     
-                    if(sm.getData2() > 0){
+                    if(sm.getData2() > 0){ //Make sure you're not just setting the velocity to 0...
                       //key is the numerical value for the pitch
                       if(!notes.contains(new Integer(key))){
                          notes.add(new Integer(key));
@@ -55,6 +60,20 @@ void setup() {
                       }
                       //Update previous note for future transitions
                       prevNote = key;
+                      
+                      if(!times.contains(new Long(timestamp))){
+                         times.add(new Long(timestamp));
+                         transitions2.add(new ArrayList());
+                      }
+                      if(prevTime != -1 && prevTime != timestamp){
+                        long newLen = timestamp - prevTime;
+                        if(prevLen != -1){
+                           transitions2.get(times.indexOf(prevLen)).add(newLen);
+                        }
+                        prevLen = newLen;
+                      }
+                      //Update previous note for future transitions
+                      prevTime = timestamp;
                     }
                     
                     String noteName = NOTE_NAMES[note];
@@ -68,10 +87,10 @@ void setup() {
                     int velocity = sm.getData2();
                     System.out.println("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
                 } else {
-                    //System.out.println("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
+                    System.out.println("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
                 }
             } else {
-                //System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
+                System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
             }
         }
 
@@ -96,6 +115,10 @@ void setup() {
          }
        }
     }
+    
+    printArray(notes);
+    printArray(times);
+    
     int[][] transCount = new int[notes.size()][notes.size()];
     double[][] transProbs = new double[notes.size()][notes.size()];
     for(int x = 0; x < notes.size(); x++){
