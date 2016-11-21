@@ -20,18 +20,22 @@ ArrayList<Integer> notes = new ArrayList();
 ArrayList<ArrayList<Integer>> transitions = new ArrayList();
 ArrayList<Long> times = new ArrayList();
 ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
-int prevNote = -1;
-long prevLen = -1;
-long prevTime = -1;
+
+double legato = 0.1;
 
 void setup() {
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven1.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
     int trackNumber = 0;
     
     Track[] tracks = sequence.getTracks();
-    for (int x = 0; x < tracks.length; x++) {
+    int[] toRead = {1, 3, 4, 6, 7};
+    for(int x: toRead){
+    //for (int x = 0; x < tracks.length; x++) {
         Track track = tracks[x];
+        int prevNote = -1;
+        long prevLen = -1;
+        long prevTime = -1;
         
         trackNumber++;
         System.out.println("Track " + trackNumber + ": size = " + track.size());
@@ -61,12 +65,13 @@ void setup() {
                       //Update previous note for future transitions
                       prevNote = key;
                       
-                      if(!times.contains(new Long(timestamp))){
-                         times.add(new Long(timestamp));
-                         transitions2.add(new ArrayList());
-                      }
+                      
                       if(prevTime != -1 && prevTime != timestamp){
                         long newLen = timestamp - prevTime;
+                        if(!times.contains(new Long(newLen))){
+                         times.add(new Long(newLen));
+                         transitions2.add(new ArrayList());
+                        }
                         if(prevLen != -1){
                            transitions2.get(times.indexOf(prevLen)).add(newLen);
                         }
@@ -115,6 +120,19 @@ void setup() {
          }
        }
     }
+    for(int x = 0; x < times.size(); x++){
+       for(int y = 1; y < times.size(); y++){
+         //Bubble-sort notes; move transitions accordingly
+         if(times.get(y) < times.get(y-1)){
+            long temp = times.get(y);
+            times.set(y, times.get(y-1));
+            times.set(y-1, temp);
+            ArrayList templ = transitions2.get(y);
+            transitions2.set(y, transitions2.get(y-1));
+            transitions2.set(y-1, templ);
+         }
+       }
+    }
     
     printArray(notes);
     printArray(times);
@@ -142,8 +160,25 @@ void playMelody(ArrayList<Integer> notes, double[][]T){
      note = getNextNote(note, notes, T);
      NoteMessage temp = new NoteMessage(note, 127, 0);
      output.sendMidiNote(temp);
-     delay(200);
+     delay((int)(200*legato));
      output.sendNoteOff(temp);
+     delay((int)(200*(1-legato)));
+  }
+}
+
+void playMelody(ArrayList<Integer> notes, double[][]T, ArrayList<Long> lengths, double[][]T2){
+  Orchestra output = new Orchestra(0); //Test output port
+  
+  int note = notes.get((int)(Math.random()*notes.size()));
+  long len = notes.get((int)(Math.random()*notes.size()));
+  while(true){
+     note = getNextNote(note, notes, T);
+     len = getNextLength(len, lengths, T2);
+     NoteMessage temp = new NoteMessage(note, 127, 0);
+     output.sendMidiNote(temp);
+     delay((int)(len*legato));
+     output.sendNoteOff(temp);
+     delay((int)(len*(1-legato)));
   }
 }
 
@@ -165,6 +200,29 @@ int getNextNote(int note, ArrayList<Integer> notes, double[][]T){
    //In the event of rounding error, just try again
    if(out == -1){
       out = getNextNote(note, notes, T); 
+   }
+   
+   return out;
+}
+
+//Return the new note for Markov chaining
+long getNextLength(long note, ArrayList<Long> notes, double[][]T){
+   int i = notes.indexOf(note);
+   long out = -1;
+   
+   //Run Markov chain
+   double rand = Math.random();
+   for(int x = 0; x < notes.size(); x++){
+      rand -= T[i][x];
+      if(rand < 0){
+         out = notes.get(x);
+         break;
+      }
+   }
+   
+   //In the event of rounding error, just try again
+   if(out == -1){
+      out = getNextLength(note, notes, T); 
    }
    
    return out;
