@@ -12,21 +12,33 @@ Servo servo_near;
 Servo servo_middle;
 
 int which = 0;
+int hitting = 0;
+int donthit = 0;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  if(pitch == 36) {
-    if(which == 1){
-      hit();
-      which = -1;
-    } else{
-      hit2();
-      which = 1;
-    }
+  if (pitch == 36 && hitting == 0 && donthit == 0) {
+    hitDrum();
+  }
+  else if (pitch == 37 && velocity == 0) {
+    hitting = 0;
+    donthit = 1;
+  }
+  else if (pitch == 37 && velocity != 0) {
+    hitting = 1;
   }
 }
 
-
+void hitDrum() {
+  if(which == 1){
+    hit();
+    which = -1;
+  } else{
+    hit2();
+    which = 1;
+  }
+  donthit = 0;
+}
 
 void setup()
 {
@@ -40,19 +52,20 @@ void setup()
 void loop()
 { 
   MIDI.read();
+  if (hitting == 1) {
+    hitDrum();
+  }
 }
 
-void hit() {
-  
+void hit() { 
   servo_near.write(106);
   delay(100);
   servo_near.write(90);
   delay(10);
-
 }
 
 
-void hit2() {
+void hit2() { 
   
   servo_middle.write(143);  //143  160   green red black     //
   delay(100);
