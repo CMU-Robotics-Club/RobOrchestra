@@ -4,6 +4,7 @@
 import java.io.File;
 import java.util.Arrays;
 
+import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiSystem;
@@ -21,11 +22,17 @@ ArrayList<ArrayList<Integer>> transitions = new ArrayList();
 ArrayList<Long> times = new ArrayList();
 ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
 
-double legato = 0.1;
+double legato = .5;
+
+double mspertick = -1;
 
 void setup() {
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
+    
+    mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
+    
     int trackNumber = 0;
     
     Track[] tracks = sequence.getTracks();
@@ -36,6 +43,7 @@ void setup() {
         int prevNote = -1;
         long prevLen = -1;
         long prevTime = -1;
+        int firstNote = -1;
         
         trackNumber++;
         System.out.println("Track " + trackNumber + ": size = " + track.size());
@@ -64,10 +72,15 @@ void setup() {
                       }
                       //Update previous note for future transitions
                       prevNote = key;
+                      if(firstNote == -1) firstNote = key;
                       
                       
                       if(prevTime != -1 && prevTime != timestamp){
                         long newLen = timestamp - prevTime;
+                        //There's a fudge factor that has to go in here
+                        //Need to extract tempo, etc, from the MIDI file somehow
+                        newLen *= mspertick;
+                        
                         if(!times.contains(new Long(newLen))){
                          times.add(new Long(newLen));
                          transitions2.add(new ArrayList());
@@ -95,11 +108,16 @@ void setup() {
                     System.out.println("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
                 }
             } else {
-                System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
+              System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
             }
         }
 
         System.out.println();
+        
+        //Map the last note to the first note
+        if(firstNote != -1){
+           transitions.get(notes.indexOf(prevNote)).add(firstNote);
+        }
     }
   }
   catch(Exception e){exit();}
@@ -145,10 +163,20 @@ void setup() {
        }
        transProbs[x] = generateMarkov(transCount[x]);
     }
+    
+    long[][] transCount2 = new long[times.size()][times.size()];
+    double[][] transProbs2 = new double[times.size()][times.size()];
+    for(int x = 0; x < times.size(); x++){
+       for(int y = 0; y < transitions2.get(x).size(); y++){
+           transCount2[x][times.indexOf(transitions2.get(x).get(y))]++;
+       }
+       transProbs2[x] = generateMarkov(transCount2[x]);
+    }
+    
     System.out.println("Starting melody");
     
     //We now have our transition matrix transProbs
-    playMelody(notes, transProbs);
+    playMelody(notes, transProbs, times, transProbs2);
   }
 }
 
@@ -170,7 +198,7 @@ void playMelody(ArrayList<Integer> notes, double[][]T, ArrayList<Long> lengths, 
   Orchestra output = new Orchestra(0); //Test output port
   
   int note = notes.get((int)(Math.random()*notes.size()));
-  long len = notes.get((int)(Math.random()*notes.size()));
+  long len = lengths.get((int)(Math.random()*lengths.size()));
   while(true){
      note = getNextNote(note, notes, T);
      len = getNextLength(len, lengths, T2);
@@ -206,6 +234,7 @@ int getNextNote(int note, ArrayList<Integer> notes, double[][]T){
 }
 
 //Return the new note for Markov chaining
+//Variable names are awful because this is mostly copy-paste from getNextNote
 long getNextLength(long note, ArrayList<Long> notes, double[][]T){
    int i = notes.indexOf(note);
    long out = -1;
@@ -224,11 +253,23 @@ long getNextLength(long note, ArrayList<Long> notes, double[][]T){
    if(out == -1){
       out = getNextLength(note, notes, T); 
    }
-   
    return out;
 }
 
 double[] generateMarkov(int[] tcounts){
+  double total = 0;
+  for(int x = 0; x < tcounts.length; x++){
+     total += tcounts[x];
+  }
+  //Total now has the total
+  double[] probs = new double[tcounts.length];
+  for(int x = 0; x < tcounts.length; x++){
+      probs[x] = tcounts[x]/total;
+  }
+  return probs;
+}
+
+double[] generateMarkov(long[] tcounts){
   double total = 0;
   for(int x = 0; x < tcounts.length; x++){
      total += tcounts[x];
