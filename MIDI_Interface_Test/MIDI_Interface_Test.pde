@@ -4,10 +4,11 @@ System.out.println(midiOutputs);
 
 //Opens a connection to a specified MIDI output device
 //-1 defaults to computer speakers
-int deviceIndex = 3;
+int deviceIndex = 0;
 Orchestra robo = new Orchestra(deviceIndex);
 System.out.println(robo);
 
+delay(500);
 //plays a chromatic C scale
 for(int i = 60; i < 72; i++) {
   
@@ -25,5 +26,6 @@ for(int i = 60; i < 72; i++) {
   robo.sendNoteOff(note);
 }
 
+delay(500);
 //Closes the MIDI output device
 robo.close();
