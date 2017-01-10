@@ -3,8 +3,7 @@ RobOrchestra
 
 Welcome to RobOrchestra! RobOrchestra is an ongoing project in the Carnegie Mellon Robotics Club that aims to explore the creative possibilities for robotic instruments. We design, build and program robots that read music from MIDI data in order to put on musical performances. Our goal is to create a full robotic orchestra that is able to play from arrangements from standard MIDI files, and is also able to "improvise" unique polyphonic music in real time based off of music generation algorithms developed by our team.
 
-
-Meeting agendas and notes can be found on the Wiki.
+####Team Meetings Mondays, 4:30pm in RoboClub. Contact sadkins@andrew.cmu.edu for more information
 
 ###How it works.
 	
