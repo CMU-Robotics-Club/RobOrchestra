@@ -12,8 +12,9 @@ int noteLen = 1000; //set note length in milliseconds
 int lo = 60; //middle C (C4)
 int hi = 76; //E5
 
-//Parameters
-int nreps = 1; //Number of times to repeat each note
+//Parameters for directing stream of MIDI data
+int input = 0;
+int output = 3;
 
 //Reference
 String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
@@ -29,12 +30,14 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, 0, 3); //Creates bus to send MIDI data to xylobot
+  myBus = new MidiBus(this, input, output); //Creates bus to send MIDI data to xylobot
 
 }
 
 //loops
 void draw() {
+  
+  //plays every chromatic note in the range
   for(int x = lo; x < hi; x++){
     System.out.println("Testing note with MIDI value " + x);
     
