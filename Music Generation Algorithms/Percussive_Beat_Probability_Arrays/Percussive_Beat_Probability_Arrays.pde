@@ -14,9 +14,13 @@ int deviceIndex = 0;
 Orchestra robo = new Orchestra(deviceIndex);
 System.out.println(robo);
 
-float[] xylo = {1.0, 0.2, 0.5, 0.1, 0.8, 0.1, 0.7, 0.2, 1.0, 0.1, 0.4, 0.1, 1.0, 0.0, 0.8, 0.0};
-int[] xyloNotes = {59, 60, 62, 64, 65, 67, 69, 71};
-int xyloStart = 1;
+float[] xylo = {1.0, 0.2, 0.5, 0.1, 0.8, 0.1, 0.7, 0.2, 0.9, 0.1, 0.4, 0.1, 1.0, 0.1, 0.7, 0.2};
+int[] xyloNotes = {60, 62, 63, 65, 67, 68, 70, 72, 74, 75};
+int xyloStart = 0;
+
+int streak = 0;
+int dir = 0;
+double contProb = 0.5;
 
 //Probability arrays for each drum, length 16 beats
 //kick
@@ -39,8 +43,6 @@ for(int i = 0; i < 128; i++) {
   double checkS = Math.random();
   double checkX = Math.random();
   double checkNote = Math.random();
-  
-  System.out.println(checkX);
   
   //creates a MIDI message
   //arguments: pitch, velocity, channel
@@ -70,12 +72,53 @@ for(int i = 0; i < 128; i++) {
     timer.schedule(snareTask, date);
   }
   if(checkX <= xylo[i % 16]) {
-    if(checkNote < 0.5 && xyloStart > 0) {
+    if(streak == 0) {
+      contProb = 0.5;
+    }
+    else if(streak < 3) {
+      if(dir == -1){
+        contProb = 0.9;
+      }
+      else {
+        contProb = 0.1;
+      }
+    }
+    else if(streak < 5) {
+      if(dir == -1){
+        contProb = 0.7;
+      }
+      else {
+        contProb = 0.3;
+      }
+    }
+    else {
+      contProb = 0.5;
+    }
+    if(checkNote < contProb && xyloStart > 0) {
       xyloStart--;
+      if(dir == -1) {
+        streak++;
+      }
+      else {
+        streak = 0;
+      }
+      dir = -1;
     }
-    else if(checkNote >= 0.5 && xyloStart < (xyloNotes.length - 1)) {
+    else if(checkNote >= contProb && xyloStart < (xyloNotes.length - 1)) {
       xyloStart++;
+      if(dir == 1) {
+        streak++;
+      }
+      else {
+        streak = 0;
+      }
+      dir = 1;
     }
+    else {
+      streak = 0;
+    }
+    
+    System.out.println("Note: " + xyloStart + " streak: " + streak + " contProb: " + contProb);
     xyloNote = new NoteMessage(xyloNotes[xyloStart],100,1);
     StartNoteTask xyloTask = new StartNoteTask(xyloNote, robo);
     timer.schedule(xyloTask, date);
@@ -99,7 +142,6 @@ for(int i = 0; i < 128; i++) {
     timer.schedule(endSnare, date);
   }
   if(xyloNote.getPitch() != 0) {
-    System.out.println("hi");
     EndNoteTask endXylo = new EndNoteTask(xyloNote, robo);
     timer.schedule(endXylo, date);
   }
