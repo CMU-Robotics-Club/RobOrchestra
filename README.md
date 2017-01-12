@@ -5,6 +5,8 @@ Welcome to RobOrchestra! RobOrchestra is an ongoing project in the Carnegie Mell
 
 ####Team Meetings Mondays, 4:30pm in RoboClub. Contact sadkins@andrew.cmu.edu for more information
 
+####Check out our Wiki for Meeting Agenda's and tutorials
+
 ###How it works.
 	
 The robots, all powered by Arduinos with MIDI shields, operate via a distributed network. A laptop acts as the "conductor", transmitting MIDI siginals through the network of robots. Each robot reads the data and picks out its own part, and then plays it accordingly. We use Processing, a powerful music programming language, to control the orchestra, however it should work with nearly any MIDI software.
