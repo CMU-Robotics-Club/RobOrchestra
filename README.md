@@ -5,7 +5,7 @@ Welcome to RobOrchestra! RobOrchestra is an ongoing project in the Carnegie Mell
 
 ####Team Meetings Mondays, 4:30pm in RoboClub. Contact sadkins@andrew.cmu.edu for more information
 
-####Check out our Wiki for Meeting Agenda's and tutorials
+####Check out our Wiki for meeting agendas and tutorials
 
 ###How it works.
 	
