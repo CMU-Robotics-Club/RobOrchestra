@@ -22,14 +22,19 @@ ArrayList<ArrayList<Integer>> transitions = new ArrayList();
 ArrayList<Long> times = new ArrayList();
 ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
 
+boolean printThings = true;
+
 double legato = .5;
+int notelen = 200;
 
 double mspertick = -1;
 
 void setup() {
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
     //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/C Major Stuff.mid"));
+
     
     mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
     
@@ -37,8 +42,8 @@ void setup() {
     
     Track[] tracks = sequence.getTracks();
     int[] toRead = {1, 3, 4, 6, 7};
-    for(int x: toRead){
-    //for (int x = 0; x < tracks.length; x++) {
+    //for(int x: toRead){
+    for (int x = 0; x < tracks.length; x++) {
         Track track = tracks[x];
         int prevNote = -1;
         long prevLen = -1;
@@ -51,11 +56,11 @@ void setup() {
         for (int i=0; i < track.size(); i++) { 
             MidiEvent event = track.get(i);
             long timestamp = event.getTick();
-            System.out.print("@" + event.getTick() + " ");
+            qprint("@" + event.getTick() + " ");
             MidiMessage message = event.getMessage();
             if (message instanceof ShortMessage) {
                 ShortMessage sm = (ShortMessage) message;
-                System.out.print("Channel: " + sm.getChannel() + " ");
+                qprint("Channel: " + sm.getChannel() + " ");
                 if (sm.getCommand() == NOTE_ON) {
                     int key = sm.getData1();
                     int octave = (key / 12)-1;
@@ -77,8 +82,6 @@ void setup() {
                       
                       if(prevTime != -1 && prevTime != timestamp){
                         long newLen = timestamp - prevTime;
-                        //There's a fudge factor that has to go in here
-                        //Need to extract tempo, etc, from the MIDI file somehow
                         newLen *= mspertick;
                         
                         if(!times.contains(new Long(newLen))){
@@ -105,9 +108,14 @@ void setup() {
                     int velocity = sm.getData2();
                     System.out.println("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
                 } else {
-                    System.out.println("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
+                    qprint("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
                 }
             } else {
+              if(message instanceof MetaMessage){
+                 byte[] data = ((MetaMessage)message).getData();
+                 println("Type: " + ((MetaMessage)message).getType());
+                 printArray(data);
+              }
               System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
             }
         }
@@ -152,8 +160,8 @@ void setup() {
        }
     }
     
-    printArray(notes);
-    printArray(times);
+    //printArray(notes);
+    //printArray(times);
     
     int[][] transCount = new int[notes.size()][notes.size()];
     double[][] transProbs = new double[notes.size()][notes.size()];
@@ -176,6 +184,7 @@ void setup() {
     System.out.println("Starting melody");
     
     //We now have our transition matrix transProbs
+    //playMelody(notes, transProbs);
     playMelody(notes, transProbs, times, transProbs2);
   }
 }
@@ -188,9 +197,9 @@ void playMelody(ArrayList<Integer> notes, double[][]T){
      note = getNextNote(note, notes, T);
      NoteMessage temp = new NoteMessage(note, 127, 0);
      output.sendMidiNote(temp);
-     delay((int)(200*legato));
+     delay((int)(notelen*legato));
      output.sendNoteOff(temp);
-     delay((int)(200*(1-legato)));
+     delay((int)(notelen*(1-legato)));
   }
 }
 
@@ -308,4 +317,10 @@ void printArrayArray(Object[] A) {
 void delay(int time) {
   int current = millis();
   while (millis () < current+time) Thread.yield();
+}
+
+void qprint(String toPrint){
+  if(printThings){
+     System.out.println(toPrint); 
+  }
 }
