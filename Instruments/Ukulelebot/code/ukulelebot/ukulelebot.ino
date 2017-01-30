@@ -14,6 +14,7 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 
 ////// 50 regular   100: minor   120 7
 
+Servo servo1;
 
 int SOL_1 = 1;
 int SOL_2 = 2;
@@ -28,34 +29,34 @@ int SOL_10 = 10;
 int SOL_11 = 11;
 int SOL_12 = 12;
 int SOL_13 = 13;
-int SOL_14 = 14;
-int SOL_15 = 15;
-int SOL_16 = 16;
+int SOL_14 = 22;
+int SOL_15 = 23;
+int SOL_16 = 24;
 
-const int C[] = {15};
-const int D[] = {2, 6,10 };
-const int E[] = { 4, 8,12,14};
-const int F[] = { 4, 8,12,14};
-const int G[] = {6, 11, 14};
-const int A[] = {2, 5};
-const int B[] = {4, 7,10,14};
+const int C[] = {SOL_15};
+const int D[] = {SOL_2, SOL_6,SOL_10 };
+const int E[] = { SOL_4, SOL_8,SOL_12,SOL_14};
+const int F[] = { SOL_4, SOL_8,SOL_12,SOL_14};
+const int G[] = {SOL_6, SOL_11, SOL_14};
+const int A[] = {SOL_2, SOL_5};
+const int B[] = {SOL_4, SOL_7,SOL_10,SOL_14};
 
 
-const int Cm[] = {7,11,15};
-const int Dm[] = {2, 6, 9 };
-const int Em[] = { 8,11,14 };
-const int Fm[] = {1, 9,15};
-const int Gm[] = {6,11,13 };
-const int Am[] = {2};
-const int Bm[] = { 4, 6,10,14};
+const int Cm[] = {SOL_7,SOL_11,SOL_15};
+const int Dm[] = {SOL_2, SOL_6, SOL_9 };
+const int Em[] = { SOL_8,SOL_11,SOL_14 };
+const int Fm[] = {SOL_1, SOL_9,SOL_15};
+const int Gm[] = {SOL_6,SOL_11,SOL_13 };
+const int Am[] = {SOL_2};
+const int Bm[] = { SOL_4, SOL_6,SOL_10,SOL_14};
 
 const int C7[] = {13};
-const int D7[] = {2,10};
-const int E7[] = { 10,14 };
-const int F7[] = { 2,7,9};
-const int G7[] = {6,9,14 };
-const int CORD_A7[] = {5 };
-const int B7[] = {2,7,10,14};
+const int D7[] = {SOL_2,SOL_10};
+const int E7[] = { SOL_10,SOL_14 };
+const int F7[] = { SOL_2,SOL_7,SOL_9};
+const int G7[] = {SOL_6,SOL_9,SOL_14 };
+const int CORD_A7[] = {SOL_5 };
+const int B7[] = {SOL_2,SOL_7,SOL_10,SOL_14};
 
 
 const int major[][4] = {C,D,E,F,G,A,B};
@@ -100,6 +101,8 @@ int getNote(int pitch, int velocity) {
   }
 }
 
+int which = 0;
+
 void play(int note[]){
   int len = sizeof(note);
   
@@ -108,6 +111,18 @@ void play(int note[]){
   }
   
   delay(50);
+
+  if(which == 1){
+    hit();
+    delay(50);
+    which = -1;
+  }else{
+    hit2();
+     delay(50);
+     which = 1;
+   }
+  
+  
   
   for(int i=0;i<len;i++){
     digitalWrite(note[i],LOW);
@@ -138,7 +153,15 @@ void loop()
 }
 
 
+void hit() {
+  servo1.write(100);
+  delay(100);
+}
 
+void hit2() {
+  servo1.write(10);
+  delay(100);
+}
 
 
 
