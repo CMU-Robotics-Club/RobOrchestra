@@ -14,7 +14,7 @@ int hi = 76; //E5
 
 //Parameters for directing stream of MIDI data
 int input = 0;
-int output = 0;
+int output = 1 ;
 
 //Reference
 String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};

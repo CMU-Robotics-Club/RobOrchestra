@@ -51,7 +51,7 @@ for(int i = 0; i < 128; i++) {
   NoteMessage kickNote = new NoteMessage(0,100,9);
   NoteMessage hiNote = new NoteMessage(0,100,9);
   NoteMessage snareNote = new NoteMessage(0,100,9);
-  NoteMessage xyloNote = new NoteMessage(0,100,0);
+  NoteMessage xyloNote = new NoteMessage(0,70,0);
   
   date = new Date(t);
   
@@ -119,7 +119,7 @@ for(int i = 0; i < 128; i++) {
     }
     
     System.out.println("Note: " + xyloStart + " streak: " + streak + " contProb: " + contProb);
-    xyloNote = new NoteMessage(xyloNotes[xyloStart],100,1);
+    xyloNote = new NoteMessage(xyloNotes[xyloStart],70,1);
     StartNoteTask xyloTask = new StartNoteTask(xyloNote, robo);
     timer.schedule(xyloTask, date);
   }
