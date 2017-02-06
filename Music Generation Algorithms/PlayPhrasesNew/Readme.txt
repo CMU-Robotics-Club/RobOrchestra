@@ -1,0 +1,3 @@
+Generates semi-random phrases of a specified length, where a phrase consists of chords and a melody line. The chords are generated using standard transition matrix stuff; the melody is generated with a transition vector biased toward chord tones. Random percussion stuff gets thrown in also. A phrase has to stop on a tonic whole note and a tonic chord, else we throw out the proposed phrase and generate another one.
+
+We then dump the phrases to a file, then play all the phrases. All phrases are generated before we actually start playing anything, so to generate a file just stop when it starts playing notes.

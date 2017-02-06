@@ -8,15 +8,21 @@ int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 int noteLen = 1000; //set chord length in milliseconds
 
+int tonicCount = 4; //Number of whole-note tonics to play before stopping
+
 int tonic = 60; //set key to C major
+boolean minor = true;
 int[] scaleOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
+int[] minorOffsets = {0, 2, 3, 5, 7, 9, 10, 12};
 int[][] rhythms = {{1}, {2, 2}, {4, 4, 4, 4}};
 int[] nextRhythm = {}; //Start on a whole note
 
-int[] ca = {1}; //Starting seed
+int[] ca = {1}; //Starting seed (overwritten by default)
+int[] ca2 = {1}; //Starting seed (overwritten by default)
 int buffer = 40; //Mostly for visuals
 
 int rule = 150;
+int rule2 = 150;
 //18 for Sierpinski
 //150 for stuff that supposedly sounds good
 //30 is complicated
@@ -35,6 +41,37 @@ void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
+  
+  ca = generateSeed(0.9);
+  ca2 = generateSeed(0.9);
+  
+  printArray(ca);
+  printArray(ca2);
+  //Might not want to randomize these...
+  //rule = (int)(Math.random()*255);
+  //rule2 =(int)(Math.random()*255);
+  println(rule);
+  println(rule2);
+  println();
+}
+
+int[] generateSeed(double p){
+  //Generate a random starting seed
+  double rand = Math.random();
+  int count = 1;
+  while(rand < p){
+     rand = Math.random();
+     count++;
+  }
+  int[] ca = new int[count];
+  for(int x = 0; x < count; x++){
+    rand = Math.random();
+    ca[x] = round((float)rand);
+  }
+  if(sum(ca) == 0){
+     ca = generateSeed(p); //Throw out trivial 0 seeds
+  }
+  return ca;
 }
 
 
@@ -49,11 +86,21 @@ void draw() {
     buffer--;
   }
   int pitch = getPitch(ca);
-  int len = noteLen / getNextRhythm(ca);
+  int len = noteLen / getNextRhythm(ca2);
   Note note = new Note(channel, pitch, velocity, len);
   myBus.sendNoteOn(note);
   
+  //Tonic count stuff
+  if(pitch == tonic && len == noteLen){
+     tonicCount--;
+     print("t");
+     if(tonicCount == 0){
+       exit();
+     }
+  }
+  
   ca = runCA(ca, rule);
+  ca2 = runCA(ca2, rule2);
   delay(len);
 }
 
@@ -67,7 +114,13 @@ void printArray(int[] out){
 int getPitch(int[] in){
    //Grab the first three digits, get a number from 0 to 7, adjust and add to tonic
    int temp = (sum(in) + 1) % 8; //Always start with the tonic, but we seed with 1
-   int pitch = tonic + scaleOffsets[temp];
+   int pitch;
+   if(!minor){
+     pitch = tonic + scaleOffsets[temp];
+   }
+   else{
+     pitch = tonic + minorOffsets[temp];
+   }
    return pitch;
 }
 
