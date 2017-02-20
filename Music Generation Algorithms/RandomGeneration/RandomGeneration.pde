@@ -1,5 +1,8 @@
 import themidibus.*; //Import midi library
 import java.lang.Math; //To get random numbers
+import controlP5.*; //For GUI stuff
+
+ControlP5 cp5;
 
 //Open SimpleSynth to play on Mac
 
@@ -12,6 +15,8 @@ int tonicCount = 10; //Number of whole-note tonics to play before stopping
 
 int tonic = 60; //set key to C major
 int[] scaleOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
+int[] majorOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
+int[] minorOffsets = {0, 2, 3, 5, 7, 8, 10, 12};
 int[][] rhythms = {{1}, {2, 2}, {4, 4, 4, 4}};
 int[] nextRhythm = {}; //Start on a whole note
 
@@ -21,6 +26,35 @@ void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
+  
+  size(400, 600);
+  cp5 = new ControlP5(this);
+  
+  cp5.addButton("Major")
+    .setBroadcast(false)
+    .setValue(0)
+    .setPosition(100, 100)
+    .setSize(200, 19)
+    .setBroadcast(true)
+  ;
+  cp5.addButton("Minor")
+    .setBroadcast(false)
+    .setValue(0)
+    .setPosition(100, 150)
+    .setSize(200, 19)
+    .setBroadcast(true)
+  ;
+  cp5.addSlider("tonic")
+    .setPosition(100, 200)
+    .setSize(200, 19)
+    .setRange(48, 72)
+  ;
+  cp5.addSlider("noteLen")
+    .setPosition(100, 250)
+    .setSize(200, 19)
+    .setRange(500, 2000) //I'd like a log scale...
+    .setValue(1000)
+  ;
 }
 
 
@@ -40,6 +74,19 @@ void draw() {
      }
   }
   delay(len);
+  myBus.sendNoteOff(note);
+}
+
+public void Major(int val){
+  //This magically runs when the button gets clicked. I'm not sure how.
+  scaleOffsets = majorOffsets;
+  println("In major");
+}
+
+public void Minor(int val){
+  //This magically runs when the button gets clicked. I'm not sure how.
+  scaleOffsets = minorOffsets;
+  println("In minor");
 }
 
 int getNextRhythm(){

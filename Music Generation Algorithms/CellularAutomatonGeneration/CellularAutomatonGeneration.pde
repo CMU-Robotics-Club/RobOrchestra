@@ -8,7 +8,7 @@ int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 int noteLen = 1000; //set chord length in milliseconds
 
-int tonicCount = 4; //Number of whole-note tonics to play before stopping
+int tonicCount = 10; //Number of whole-note tonics to play before stopping
 
 int tonic = 60; //set key to C major
 boolean minor = true;
@@ -36,14 +36,12 @@ void setup() {
   //size(325, 400);
   //background(0);
 
-  println(rhythms[2].length);
-
-
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   
   ca = generateSeed(0.9);
   ca2 = generateSeed(0.9);
+  
   
   printArray(ca);
   printArray(ca2);
@@ -102,6 +100,7 @@ void draw() {
   ca = runCA(ca, rule);
   ca2 = runCA(ca2, rule2);
   delay(len);
+  myBus.sendNoteOff(note);
 }
 
 void printArray(int[] out){
@@ -125,7 +124,7 @@ int getPitch(int[] in){
 }
 
 int getNextRhythm(int[] ca){
-  int in = (sum(ca) + 2) % 3; //Start with a whole note
+  int in = (sum(ca) + 2) % rhythms.length; //Start with a whole note
   int[] temp = new int[max(nextRhythm.length-1, 0) + rhythms[in].length];
   
   int index = 0;
