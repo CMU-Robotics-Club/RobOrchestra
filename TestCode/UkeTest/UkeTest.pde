@@ -42,6 +42,7 @@ void draw() {
     System.out.println("C chord note off");
     
     myBus.sendNoteOff(mynote);
+    myBus.sendNoteOn(new Note(channel, chord, 0));
     
     delay(noteLen);
 
