@@ -3,7 +3,7 @@
 import themidibus.*; //Library documentation: http://www.smallbutdigital.com/themidibus.php
 
 MidiBus myBus; //Creates a MidiBus object
-int channel = 0; //channel Ukulelebot is on
+int channel = 10; //channel Ukulelebot is on
 int noteLen = 1000; //set note length in milliseconds
 
 //Parameters for directing stream of MIDI data
