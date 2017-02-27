@@ -7,7 +7,9 @@
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 Servo servo1;
+// 22 - 52 evens  31-53 odds
 
+//solenoids
 int SOL_1 = 1;
 int SOL_2 = 2;
 int SOL_3 = 3;
@@ -22,9 +24,10 @@ int SOL_11 = 11;
 int SOL_12 = 12;
 int SOL_13 = 13;
 int SOL_14 = 22;
-int SOL_15 = 23;
+int SOL_15 = 26;
 int SOL_16 = 24;
 
+//cord;  array
 const int C[] = {SOL_15};
 const int D[] = {SOL_2, SOL_6,SOL_10 };
 const int E[] = { SOL_4, SOL_8,SOL_12,SOL_14};
@@ -50,11 +53,12 @@ const int G7[] = {SOL_6,SOL_9,SOL_14 };
 const int CORD_A7[] = {SOL_5 };
 const int B7[] = {SOL_2,SOL_7,SOL_10,SOL_14};
 
-
+// major-velocity100 ; minor-velocity50; velocity120;
 const int major[][4] = {C,D,E,F,G,A,B};
 const int minor[][4] = {Cm,Dm,Em,Fm,Gm,Am,Bm};
 const int other[][4] = {C7,D7,E7,F7,CORD_A7,B7};
 
+int currentNote[] = {0,0,0,0,0,0};
 /*  note number
  *  C = 60
  *  D = 62
@@ -64,9 +68,14 @@ const int other[][4] = {C7,D7,E7,F7,CORD_A7,B7};
  *  A = 79
  *  B = 71  
  */
+void setToNote(int result[]){
+  int lenresult = sizeof(result);
+  for( int i=0;i<lenresult;i++){
+    currentNote[i] = result[i];
+  }
+}
 
-
-int getNote(int pitch, int velocity) {
+void getNote(int pitch, int velocity) {
 
   int Note;
   if(pitch == 60){
@@ -85,54 +94,55 @@ int getNote(int pitch, int velocity) {
     Note == 6;
   }
 
+ 
   if(velocity == 50){
-    return minor[Note];
+    setToNote(minor[Note]);
   } else if (velocity == 100){
-    return major[Note];
+    setToNote(major[Note]);
   } else if (velocity == 120){
-    return other[Note];
+    setToNote(other[Note]);
   }
 }
 
 int which = 0;
 
-void play1(int note[]){
-  int len = sizeof(note);
+void play1(){
+  int len = sizeof(currentNote);
   
   for(int i=0;i<len;i++){
-    digitalWrite(note[i],HIGH);
+    if (currentNote!= 0){
+    digitalWrite(currentNote[i],HIGH);
+    }
   }
 }
 
-void play2(int note[]){
-  int len = sizeof(note);
+void play2(){
+  int len = sizeof(currentNote);
   for(int i=0;i<len;i++){
-    digitalWrite(note[i],LOW);
+    if (currentNote!= 0){
+    digitalWrite(currentNote[i],LOW);
+    currentNote[i] = 0;
+    }
   }
 }
 void noteOn(byte channel, byte pitch, byte velocity)
 {
-  int note;
-  if(channel == 10) {
-    note = getNote(pitch,velocity);
+    getNote(pitch,velocity);
+   
     if (velocity>0){
-      play1(note);
-    }
-
-    else{
-      play2(note);
+      play1();
+    } else{
+      play2();
       }
-    }
 }
 
 
 void noteOff(byte channel, byte pitch, byte velocity)
 {
-  int note;
-  if(channel == 10) {
-    note = getNote(pitch,velocity);
-    }
-  play2(note);
+  //if(channel == 10) {
+  getNote(pitch,velocity);
+    //}
+  play2();
 }
 
 void setup()
