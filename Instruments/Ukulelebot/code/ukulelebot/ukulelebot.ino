@@ -6,10 +6,6 @@
 
 #include <Servo.h>
 
-
-//#include "def.h"
-//#include "xylo.h"
-
 MIDI_CREATE_DEFAULT_INSTANCE();
 
 ////// 50 regular   100: minor   120 7
