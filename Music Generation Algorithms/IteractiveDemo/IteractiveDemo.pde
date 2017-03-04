@@ -9,12 +9,16 @@ ControlP5 cp5;
 MidiBus myBus; //Creates a MidiBus object
 int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
-int noteLen = 1000; //set chord length in milliseconds
+int noteLen = 100; //set chord length in milliseconds
 boolean playing = true;
 
 int tonicCount = 10; //Number of whole-note tonics to play before stopping
-
+ 
 int tonic = 60; //set key to C major
+int currentNote = 7;
+int beatIndex = 0;
+int snareMIDI = 37;
+int tomMIDI = 36;
 int[] scaleOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
 int[] majorOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
 int[] minorOffsets = {0, 2, 3, 5, 7, 8, 10, 12};
@@ -24,13 +28,24 @@ int[] nextRhythm = {}; //Start on a whole note
 float a = 1, b = 1, c = 1, d = 1, e = 1, f = 1, g = 1;
 float[] p = {1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7};
 
+float xyloDensity = 0.0;
+float snareDensity = 0.0;
+float tomDensity = 0.0;
+
+int phraseLen = 16;
+float[] xylo = {1.0, 0.00, 0.00, 0.00, 1.0, 0.00, 0.0, 0.0, 1.0, 0.00, 0.0, 0.00, 1.0, 0.0, 0.0, 0.0};
+float[] tom = {1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0};
+float[] snare = {0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0};
+
+
+
 //sets up screen
 void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 3);
+  myBus = new MidiBus(this, 0, 1);
   
-  size(400, 800);
+  size(400, 700);
   cp5 = new ControlP5(this);
   
   cp5.addButton("Major")
@@ -47,7 +62,7 @@ void setup() {
     .setSize(200, 19)
     .setBroadcast(true)
   ;
-  cp5.addButton("Start_Stop")
+  cp5.addButton("Stop")
     .setBroadcast(false)
     .setValue(0)
     .setPosition(100, 150)
@@ -57,10 +72,35 @@ void setup() {
   cp5.addSlider("noteLen")
     .setPosition(100, 200)
     .setSize(200, 19)
-    .setRange(500, 2000) //I'd like a log scale...
-    .setValue(1000)
+    .setRange(20, 500) //I'd like a log scale...
+    .setValue(200)
   ;
-
+  cp5.addSlider("xyloDensity")
+    .setPosition(100, 250)
+    .setSize(200, 19)
+    .setRange(0.0, 1.0) //I'd like a log scale...
+    .setValue(0.0)
+  ;
+  cp5.addSlider("snareDensity")
+    .setPosition(100, 300)
+    .setSize(200, 19)
+    .setRange(0.0, 1.0) //I'd like a log scale...
+    .setValue(0.0)
+  ;
+  cp5.addSlider("tomDensity")
+    .setPosition(100, 350)
+    .setSize(200, 19)
+    .setRange(0.0, 1.0) //I'd like a log scale...
+    .setValue(0.0)
+  ;
+  for(int x = 'a'; x < 'h'; x++){
+     cp5.addSlider(str((char)x))
+    .setPosition(100, 400 + 50*(x - 'a'))
+    .setSize(200, 19)
+    .setRange(0, 1) //I'd like a log scale...
+    .setValue(1)
+  ; 
+  }
   thread("playMelody");
 }
 
@@ -82,11 +122,17 @@ void draw() {
 }
 
 void playMelody(){
-  while(true){
-    System.out.println("Looping\n");
-    if(playing) {
-      int offset = 0;
-      double r = Math.random();
+  while(playing){
+    int offset = 0;
+    double r = Math.random();
+    double xyloPlay = Math.random();
+    double snarePlay = Math.random();
+    double tomPlay = Math.random();
+    double xyloThresh = Math.min(xylo[beatIndex] + xyloDensity, 1.0);
+    double snareThresh = Math.min(snare[beatIndex] + snareDensity, 1.0);
+    double tomThresh = Math.min(tom[beatIndex] + tomDensity, 1.0);
+     //System.out.println("snarePlay = " + snarePlay + " threshold = " + snareThresh);
+    if(xyloPlay <= xyloThresh) {
       for(int x = 0; x < 7; x++){
         r -= p[x];
         if(r < 0){
@@ -95,22 +141,29 @@ void playMelody(){
         }
       }
       int pitch = tonic + scaleOffsets[offset];
-      int len = noteLen / getNextRhythm();
-      Note note = new Note(channel, pitch, velocity, len);
-      myBus.sendNoteOn(note);
       
-      //Tonic count stuff
-      if(pitch == tonic && len == noteLen){
-         tonicCount--;
-         print("t");
-         if(tonicCount == 0){
-           exit();
-         }
-      }
-      delay(len);
-      myBus.sendNoteOff(note);
+      
+      Note note = new Note(channel, pitch, velocity);
+      myBus.sendNoteOn(note);
+        
     }
+    if(snarePlay <= snareThresh) {
+      int pitch = snareMIDI;
+      Note note = new Note(channel, pitch, velocity);
+      myBus.sendNoteOn(note);
+        
+    }
+    if(tomPlay <= tomThresh) {
+      int pitch = tomMIDI;
+      Note note = new Note(channel, pitch, velocity);
+      myBus.sendNoteOn(note);
+        
+    }
+    delay(noteLen);
+    beatIndex = (beatIndex + 1) % phraseLen;
   }
+
+  exit();
 }
 
 public void Major(int val){
@@ -125,14 +178,8 @@ public void Minor(int val){
   println("In minor");
 }
 
-public void Start_Stop(int val) {
-  if(playing) {
-   playing = false; 
-  }
-  
-  else {
-   playing = true; 
-  }
+public void Stop(int val) {
+  playing = false;
 }
 
 int getNextRhythm(){
