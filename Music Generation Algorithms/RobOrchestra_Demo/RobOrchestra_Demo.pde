@@ -20,7 +20,7 @@ int ticks = noteLen; //length in milliseconds
 int trackBeat = 1;
 
 //General logistics stuff
-int fudgetime = 200; //Delay between computer and xylobot (computer plays first)
+int fudgetime = 0; //Delay between computer and xylobot (computer plays first)
 boolean printstuff = false;
 
 //Moving drum patterns up here
@@ -83,7 +83,7 @@ void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
 
-  myBus = new MidiBus(this, 0, 4); 
+  myBus = new MidiBus(this, 0, 1); 
   compBus = new MidiBus(this, 0, 1);
   initializeText();
   roboLogo = loadImage("rc_logo.png");

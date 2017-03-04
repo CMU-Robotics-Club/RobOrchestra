@@ -11,7 +11,7 @@ int counter = 0;
 void setup() {
   MidiBus.list();
   snareBus = new MidiBus(this, in, out);
-  snareBus.addOutput(4);
+  snareBus.addOutput(1);
 }
 
 void draw() {

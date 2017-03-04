@@ -29,7 +29,7 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, 0, 3); //Creates bus to send MIDI data to xylobot
+  myBus = new MidiBus(this, 0, 1); //Creates bus to send MIDI data to xylobot
 
 }
 
