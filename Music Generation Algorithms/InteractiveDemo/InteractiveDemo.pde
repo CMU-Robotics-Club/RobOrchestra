@@ -43,7 +43,7 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   
-  size(400, 700);
+  size(400, 750);
   cp5 = new ControlP5(this);
   
   cp5.addButton("Major")
