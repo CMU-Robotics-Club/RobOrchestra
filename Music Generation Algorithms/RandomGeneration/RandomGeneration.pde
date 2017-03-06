@@ -28,7 +28,7 @@ float[] p = {1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7};
 void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 3);
+  myBus = new MidiBus(this, 0, 1);
   
   size(400, 800);
   cp5 = new ControlP5(this);
@@ -83,7 +83,6 @@ void draw() {
 
 void playMelody(){
   while(true){
-    System.out.println("Looping\n");
     if(playing) {
       int offset = 0;
       double r = Math.random();
@@ -110,6 +109,9 @@ void playMelody(){
       delay(len);
       myBus.sendNoteOff(note);
     }
+    else{
+      delay(10); //Stop looping infinitely fast when not playing; it causes problems
+    }
   }
 }
 
@@ -127,11 +129,13 @@ public void Minor(int val){
 
 public void Start_Stop(int val) {
   if(playing) {
-   playing = false; 
+   playing = false;
+   println("Pausing");
   }
   
   else {
    playing = true; 
+   println("Resuming");
   }
 }
 

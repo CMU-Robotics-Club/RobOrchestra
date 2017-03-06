@@ -11,8 +11,6 @@ int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 int noteLen = 100; //set chord length in milliseconds
 boolean playing = true;
-
-int tonicCount = 10; //Number of whole-note tonics to play before stopping
  
 int tonic = 60; //set key to C major
 int currentNote = 7;
@@ -78,26 +76,26 @@ void setup() {
   cp5.addSlider("xyloDensity")
     .setPosition(100, 250)
     .setSize(200, 19)
-    .setRange(0.0, 1.0) //I'd like a log scale...
+    .setRange(0.0, 1.0)
     .setValue(0.0)
   ;
   cp5.addSlider("snareDensity")
     .setPosition(100, 300)
     .setSize(200, 19)
-    .setRange(0.0, 1.0) //I'd like a log scale...
+    .setRange(0.0, 1.0)
     .setValue(0.0)
   ;
   cp5.addSlider("tomDensity")
     .setPosition(100, 350)
     .setSize(200, 19)
-    .setRange(0.0, 1.0) //I'd like a log scale...
+    .setRange(0.0, 1.0)
     .setValue(0.0)
   ;
   for(int x = 'a'; x < 'h'; x++){
      cp5.addSlider(str((char)x))
     .setPosition(100, 400 + 50*(x - 'a'))
     .setSize(200, 19)
-    .setRange(0, 1) //I'd like a log scale...
+    .setRange(0, 1)
     .setValue(1)
   ; 
   }
