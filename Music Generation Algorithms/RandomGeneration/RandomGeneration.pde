@@ -22,6 +22,8 @@ int[] majorOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
 int[] minorOffsets = {0, 2, 3, 5, 7, 8, 10, 12};
 int[][] rhythms = {{1}, {2, 2}, {4, 4, 4, 4}};
 float[] rhythmProbs = {1.0, 0.0, 0.0};
+float[] rhythmProbsSnare = {1.0, 0.0, 0.0};
+float[] rhythmProbsTom = {1.0, 0.0, 0.0};
 int[] nextRhythm = {}; //Start on a whole note
 int[] nextRhythmSnare = {}; //Start on a whole note
 int[] nextRhythmTom = {}; //Start on a whole note
@@ -139,7 +141,7 @@ void playMelody(){
       }
       int pitch = tonic + scaleOffsets[offset];
       pitch = pitch%12 + 60; //For xylobot
-      int len = ( noteLen) / getNextRhythm(nextRhythm);
+      int len = ( noteLen) / getNextRhythm(nextRhythm, rhythmProbs);
       //len = (int) exp(len); //Because log scale
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
@@ -167,7 +169,7 @@ void playSnare(){
   while(true){
     if(playing) {
       int pitch = 36;
-      int len = ( noteLen) / getNextRhythm(nextRhythmSnare);
+      int len = ( noteLen) / getNextRhythm(nextRhythmSnare, rhythmProbsSnare);
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
       delay(len);
@@ -184,7 +186,7 @@ void playTom(){
   while(true){
     if(playing) {
       int pitch = 37;
-      int len = ( noteLen) / getNextRhythm(nextRhythmTom);
+      int len = ( noteLen) / getNextRhythm(nextRhythmTom, rhythmProbsTom);
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
       delay(len);
@@ -211,7 +213,7 @@ public void Pause(int val) {
 }
 
 //Gets the next rhythm for use in the melody. Generates more if needed.
-int getNextRhythm(int[] nextRhythm){
+int getNextRhythm(int[] nextRhythm, float[] rhythmProbs){
   if(nextRhythm.length == 0){
     nextRhythm = rhythms[0]; //Failsafe in case some race condition messes up the probability array
     double rand = random(1);
@@ -240,6 +242,20 @@ void recomputeRhythmProbs(){
   //1 means equal probability of quarter, eighth, sixteenth
   //Above 1 makes 16ths more common, quarter/eighths equally likely but less common
   float k = shortNoteBias; //exp(shortNoteBias); //Because log scale
+
+  rhythmProbs[0] = 1; //Constant at 1
+  rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
+  rhythmProbs[2] = k*k; //Quadratic scale, no cap
+  rhythmProbs = normalize(rhythmProbs);
+  
+  k = shortNoteBiasSnare; //exp(shortNoteBias); //Because log scale
+
+  rhythmProbs[0] = 1; //Constant at 1
+  rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
+  rhythmProbs[2] = k*k; //Quadratic scale, no cap
+  rhythmProbs = normalize(rhythmProbs);
+  
+  k = shortNoteBiasTom; //exp(shortNoteBias); //Because log scale
 
   rhythmProbs[0] = 1; //Constant at 1
   rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
