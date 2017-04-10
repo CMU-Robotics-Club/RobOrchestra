@@ -25,7 +25,7 @@ ArrayList<Long> times = new ArrayList();
 ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
 
 boolean printThings = true;
-boolean fixedRhythm = false;
+boolean fixedRhythm = true;
 
 int channel = 0;
 
