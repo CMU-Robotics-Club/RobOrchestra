@@ -1,6 +1,7 @@
 //Found some code online to parse MIDI files: http://stackoverflow.com/questions/3850688/reading-midi-files-in-java
 //Modifying it here to work with our processing code
 
+import themidibus.*; //Import midi library
 import java.io.File;
 import java.util.Arrays;
 
@@ -12,6 +13,7 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 
+public MidiBus output;
 
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
@@ -23,6 +25,9 @@ ArrayList<Long> times = new ArrayList();
 ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
 
 boolean printThings = true;
+boolean fixedRhythm = false;
+
+int channel = 0;
 
 double legato = .5;
 int notelen = 200;
@@ -30,13 +35,16 @@ int notelen = 200;
 double mspertick = -1;
 
 void setup() {
+  output = new MidiBus(this, 0, 1);
+  
   try{  
-    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
     //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/C Major Stuff.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/C Major Stuff.mid"));
 
     
     mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
+    mspertick /= 2; //Fudge to make it sound better
     
     int trackNumber = 0;
     
@@ -181,40 +189,48 @@ void setup() {
        transProbs2[x] = generateMarkov(transCount2[x]);
     }
     
+    MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
     System.out.println("Starting melody");
     
     //We now have our transition matrix transProbs
     //playMelody(notes, transProbs);
-    playMelody(notes, transProbs, times, transProbs2);
+    
+    if(fixedRhythm){
+      playMelody(notes, transProbs/*, times, transProbs2*/); //4 args for rhythm, 2 for not
+    }
+    else{
+      playMelody(notes, transProbs, times, transProbs2); //4 args for rhythm, 2 for not
+    }
   }
 }
 
 void playMelody(ArrayList<Integer> notes, double[][]T){
-  Orchestra output = new Orchestra(0); //Test output port
+  
   
   int note = notes.get((int)(Math.random()*notes.size()));
   while(true){
      note = getNextNote(note, notes, T);
-     NoteMessage temp = new NoteMessage(note, 127, 0);
-     output.sendMidiNote(temp);
+     note = note%12 + 60;
+     Note temp = new Note(channel, note, 127);
+     output.sendNoteOn(temp);
      delay((int)(notelen*legato));
-     output.sendNoteOff(temp);
+     //output.sendNoteOff(temp);
      delay((int)(notelen*(1-legato)));
   }
 }
 
 void playMelody(ArrayList<Integer> notes, double[][]T, ArrayList<Long> lengths, double[][]T2){
-  Orchestra output = new Orchestra(0); //Test output port
   
   int note = notes.get((int)(Math.random()*notes.size()));
   long len = lengths.get((int)(Math.random()*lengths.size()));
   while(true){
      note = getNextNote(note, notes, T);
+     note = note%12 + 60;
      len = getNextLength(len, lengths, T2);
-     NoteMessage temp = new NoteMessage(note, 127, 0);
-     output.sendMidiNote(temp);
+     Note temp = new Note(channel, note, 127);
+     output.sendNoteOn(temp);
      delay((int)(len*legato));
-     output.sendNoteOff(temp);
+     //output.sendNoteOff(temp);
      delay((int)(len*(1-legato)));
   }
 }

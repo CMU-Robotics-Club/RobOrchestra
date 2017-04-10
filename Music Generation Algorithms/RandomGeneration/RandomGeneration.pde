@@ -12,6 +12,7 @@ int velocity = 120; //melody note volume
 int noteLen = 1000; //set chord length in milliseconds
 boolean playing = true;
 boolean isMajor = true;
+boolean noteOff = true;
 
 int tonicCount = 10; //Number of whole-note tonics to play before stopping
 
@@ -22,6 +23,8 @@ int[] minorOffsets = {0, 2, 3, 5, 7, 8, 10, 12};
 int[][] rhythms = {{1}, {2, 2}, {4, 4, 4, 4}};
 float[] rhythmProbs = {1.0, 0.0, 0.0};
 int[] nextRhythm = {}; //Start on a whole note
+int[] nextRhythmSnare = {}; //Start on a whole note
+int[] nextRhythmTom = {}; //Start on a whole note
 float shortNoteBias = 0.0;
 
 float a = 1, b = 1, c = 1, d = 1, e = 1, f = 1, g = 1;
@@ -69,14 +72,37 @@ void setup() {
     .setValue(0)
     .setSliderMode(0)
   ;
+  cp5.addSlider("shortNoteBiasTom")
+    .setPosition(100, 350)
+    .setSize(200, 19)
+    .setRange(0, 10)
+    .setValue(0)
+    .setSliderMode(0)
+  ;
+  cp5.addSlider("shortNoteBiasSnare")
+    .setPosition(100, 400)
+    .setSize(200, 19)
+    .setRange(0, 10)
+    .setValue(0)
+    .setSliderMode(0)
+  ;
   /*LogSlider ls = new LogSlider(cp5, "noteLen");
   ls.setPosition(100, 250)
     .setSize(200, 19)
-    .setRange(500, 2000)
-    .setValue(1000)
+    .setRange(log(100), log(10000))
+    .setValue(log(1000))
+    .setSliderMode(0)
+  ;
+  /*LogSlider ls2 = new LogSlider(cp5, "shortNoteBias");
+  ls.setPosition(100, 250)
+    .setSize(200, 19)
+    .setRange(log(0), log(10))
+    .setValue(log(0))
     .setSliderMode(0)
   ;*/
   thread("playMelody");
+    thread("playSnare");
+      thread("playTom");
 }
 
 
@@ -112,7 +138,9 @@ void playMelody(){
         }
       }
       int pitch = tonic + scaleOffsets[offset];
-      int len = noteLen / getNextRhythm();
+      pitch = pitch%12 + 60; //For xylobot
+      int len = ( noteLen) / getNextRhythm(nextRhythm);
+      //len = (int) exp(len); //Because log scale
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
       
@@ -125,7 +153,44 @@ void playMelody(){
          }
       }
       delay(len);
-      myBus.sendNoteOff(note);
+      if(noteOff){
+        myBus.sendNoteOff(note);
+      }
+    }
+    else{
+      delay(10); //Stop looping infinitely fast when not playing; it causes problems
+    }
+  }
+}
+
+void playSnare(){
+  while(true){
+    if(playing) {
+      int pitch = 36;
+      int len = ( noteLen) / getNextRhythm(nextRhythmSnare);
+      Note note = new Note(channel, pitch, velocity, len);
+      myBus.sendNoteOn(note);
+      delay(len);
+      if(noteOff){
+        myBus.sendNoteOff(note);
+      }
+    }
+    else{
+      delay(10); //Stop looping infinitely fast when not playing; it causes problems
+    }
+  }
+}
+void playTom(){
+  while(true){
+    if(playing) {
+      int pitch = 37;
+      int len = ( noteLen) / getNextRhythm(nextRhythmTom);
+      Note note = new Note(channel, pitch, velocity, len);
+      myBus.sendNoteOn(note);
+      delay(len);
+      if(noteOff){
+        myBus.sendNoteOff(note);
+      }
     }
     else{
       delay(10); //Stop looping infinitely fast when not playing; it causes problems
@@ -146,7 +211,7 @@ public void Pause(int val) {
 }
 
 //Gets the next rhythm for use in the melody. Generates more if needed.
-int getNextRhythm(){
+int getNextRhythm(int[] nextRhythm){
   if(nextRhythm.length == 0){
     nextRhythm = rhythms[0]; //Failsafe in case some race condition messes up the probability array
     double rand = random(1);
@@ -174,10 +239,11 @@ void recomputeRhythmProbs(){
   //0 means all quarter notes
   //1 means equal probability of quarter, eighth, sixteenth
   //Above 1 makes 16ths more common, quarter/eighths equally likely but less common
+  float k = shortNoteBias; //exp(shortNoteBias); //Because log scale
 
   rhythmProbs[0] = 1; //Constant at 1
-  rhythmProbs[1] = min(shortNoteBias, 1); //Linear scale, capped at 1
-  rhythmProbs[2] = shortNoteBias*shortNoteBias; //Quadratic scale, no cap
+  rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
+  rhythmProbs[2] = k*k; //Quadratic scale, no cap
   rhythmProbs = normalize(rhythmProbs);
 }
 
