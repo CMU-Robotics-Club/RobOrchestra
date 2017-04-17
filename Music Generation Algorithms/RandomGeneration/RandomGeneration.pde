@@ -9,7 +9,7 @@ ControlP5 cp5;
 MidiBus myBus; //Creates a MidiBus object
 int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
-int noteLen = 1000; //set chord length in milliseconds
+float noteLen = 1000; //set chord length in milliseconds
 boolean playing = true;
 boolean isMajor = true;
 boolean noteOff = true;
@@ -28,6 +28,8 @@ int[] nextRhythm = {}; //Start on a whole note
 int[] nextRhythmSnare = {}; //Start on a whole note
 int[] nextRhythmTom = {}; //Start on a whole note
 float shortNoteBias = 0.0;
+float shortNoteBiasSnare = 0.0;
+float shortNoteBiasTom = 0.0;
 
 float a = 1, b = 1, c = 1, d = 1, e = 1, f = 1, g = 1;
 float[] p = {1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7};
@@ -60,51 +62,39 @@ void setup() {
     .setValue(60)
     .setSliderMode(0)
   ;
-  cp5.addSlider("noteLen")
-    .setPosition(100, 250)
-    .setSize(200, 19)
-    .setRange(500, 2000) //I'd like a log scale...
-    .setValue(1000)
-    .setSliderMode(0)
-  ;
-  cp5.addSlider("shortNoteBias")
-    .setPosition(100, 300)
-    .setSize(200, 19)
-    .setRange(0, 10)
-    .setValue(0)
-    .setSliderMode(0)
-  ;
-  cp5.addSlider("shortNoteBiasTom")
-    .setPosition(100, 350)
-    .setSize(200, 19)
-    .setRange(0, 10)
-    .setValue(0)
-    .setSliderMode(0)
-  ;
-  cp5.addSlider("shortNoteBiasSnare")
-    .setPosition(100, 400)
-    .setSize(200, 19)
-    .setRange(0, 10)
-    .setValue(0)
-    .setSliderMode(0)
-  ;
-  /*LogSlider ls = new LogSlider(cp5, "noteLen");
+  
+  //Log scales
+  LogSlider ls = new LogSlider(cp5, "noteLen");
   ls.setPosition(100, 250)
     .setSize(200, 19)
-    .setRange(log(100), log(10000))
+    .setRange(log(500), log(2000))
     .setValue(log(1000))
     .setSliderMode(0)
   ;
-  /*LogSlider ls2 = new LogSlider(cp5, "shortNoteBias");
-  ls.setPosition(100, 250)
+  LogSlider ls2 = new LogSlider(cp5, "shortNoteBias");
+  ls2.setPosition(100, 300)
     .setSize(200, 19)
-    .setRange(log(0), log(10))
-    .setValue(log(0))
+    .setRange(log(0.01), log(100))
+    .setValue(log(0.01))
     .setSliderMode(0)
-  ;*/
+  ;
+  ls2 = new LogSlider(cp5, "shortNoteBiasTom");
+  ls2.setPosition(100, 350)
+    .setSize(200, 19)
+    .setRange(log(0.01), log(100))
+    .setValue(log(0.01))
+    .setSliderMode(0)
+  ;
+  ls2 = new LogSlider(cp5, "shortNoteBiasSnare");
+  ls2.setPosition(100, 400)
+    .setSize(200, 19)
+    .setRange(log(0.01), log(100))
+    .setValue(log(0.01))
+    .setSliderMode(0)
+  ;
   thread("playMelody");
-    thread("playSnare");
-      thread("playTom");
+  thread("playSnare");
+  thread("playTom");
 }
 
 
@@ -140,9 +130,14 @@ void playMelody(){
         }
       }
       int pitch = tonic + scaleOffsets[offset];
-      pitch = pitch%12 + 60; //For xylobot
-      int len = ( noteLen) / getNextRhythm(nextRhythm, rhythmProbs);
-      //len = (int) exp(len); //Because log scale
+      if(!noteOff){
+        pitch = pitch%12 + 60; //For xylobot
+      }
+      nextRhythm = getNextRhythms(nextRhythm, rhythmProbs);
+      int val = nextRhythm[0];
+      nextRhythm = removeFirst(nextRhythm);
+      int len = (int)(exp(noteLen)/val);
+      
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
       
@@ -169,7 +164,10 @@ void playSnare(){
   while(true){
     if(playing) {
       int pitch = 36;
-      int len = ( noteLen) / getNextRhythm(nextRhythmSnare, rhythmProbsSnare);
+      nextRhythmSnare = getNextRhythms(nextRhythmSnare, rhythmProbsSnare);
+      int val = nextRhythmSnare[0];
+      nextRhythmSnare = removeFirst(nextRhythmSnare);
+      int len = (int)(exp(noteLen)/val);
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
       delay(len);
@@ -186,7 +184,10 @@ void playTom(){
   while(true){
     if(playing) {
       int pitch = 37;
-      int len = ( noteLen) / getNextRhythm(nextRhythmTom, rhythmProbsTom);
+      nextRhythmTom = getNextRhythms(nextRhythmTom, rhythmProbsTom);
+      int val = nextRhythmTom[0];
+      nextRhythmTom = removeFirst(nextRhythmTom);
+      int len = (int)(exp(noteLen)/val);
       Note note = new Note(channel, pitch, velocity, len);
       myBus.sendNoteOn(note);
       delay(len);
@@ -213,26 +214,28 @@ public void Pause(int val) {
 }
 
 //Gets the next rhythm for use in the melody. Generates more if needed.
-int getNextRhythm(int[] nextRhythm, float[] rhythmProbs){
-  if(nextRhythm.length == 0){
-    nextRhythm = rhythms[0]; //Failsafe in case some race condition messes up the probability array
+int[] getNextRhythms(int[] nextRhythms, float[] rhythmProbs){
+  if(nextRhythms.length == 0){
+    nextRhythms = rhythms[0]; //Failsafe in case some race condition messes up the probability array
     double rand = random(1);
     for(int x = 0; x < rhythmProbs.length; x++){
       rand -= (double)rhythmProbs[x];
       if(rand <= 0){
-        nextRhythm = rhythms[x];
+        nextRhythms = rhythms[x];
         break;
       }
     }
   }
-  int out = nextRhythm[0];
-  //Rebuild the array without the first element
-  int[] temp = new int[nextRhythm.length-1];
-  for(int x = 1; x < nextRhythm.length; x++){
-    temp[x-1] = nextRhythm[x];
+  return nextRhythms;
+  
+}
+
+int[] removeFirst(int[] nextRhythms){
+  int[] temp = new int[nextRhythms.length-1];
+  for(int x = 1; x < nextRhythms.length; x++){
+    temp[x-1] = nextRhythms[x];
   }
-  nextRhythm = temp;
-  return out;
+  return temp;
 }
 
 //Updates rhythm probabilities depending on the shortNoteBias value
@@ -241,26 +244,28 @@ void recomputeRhythmProbs(){
   //0 means all quarter notes
   //1 means equal probability of quarter, eighth, sixteenth
   //Above 1 makes 16ths more common, quarter/eighths equally likely but less common
-  float k = shortNoteBias; //exp(shortNoteBias); //Because log scale
+  float k = exp(shortNoteBias); //Because log scale
 
   rhythmProbs[0] = 1; //Constant at 1
   rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
   rhythmProbs[2] = k*k; //Quadratic scale, no cap
   rhythmProbs = normalize(rhythmProbs);
+
+  //Snare
+  k = exp(shortNoteBiasSnare);
   
-  k = shortNoteBiasSnare; //exp(shortNoteBias); //Because log scale
-
-  rhythmProbs[0] = 1; //Constant at 1
-  rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
-  rhythmProbs[2] = k*k; //Quadratic scale, no cap
-  rhythmProbs = normalize(rhythmProbs);
+  rhythmProbsSnare[0] = 1; //Constant at 1
+  rhythmProbsSnare[1] = min(k, 1); //Linear scale, capped at 1
+  rhythmProbsSnare[2] = k*k; //Quadratic scale, no cap
+  rhythmProbsSnare = normalize(rhythmProbsSnare);
   
-  k = shortNoteBiasTom; //exp(shortNoteBias); //Because log scale
+  //Tom
+  k = exp(shortNoteBiasTom);
 
-  rhythmProbs[0] = 1; //Constant at 1
-  rhythmProbs[1] = min(k, 1); //Linear scale, capped at 1
-  rhythmProbs[2] = k*k; //Quadratic scale, no cap
-  rhythmProbs = normalize(rhythmProbs);
+  rhythmProbsTom[0] = 1; //Constant at 1
+  rhythmProbsTom[1] = min(k, 1); //Linear scale, capped at 1
+  rhythmProbsTom[2] = k*k; //Quadratic scale, no cap
+  rhythmProbsTom = normalize(rhythmProbsTom);
 }
 
 //Normalizes an array to sum to 1
@@ -288,4 +293,11 @@ void delay(int time) {
   while (millis () < current+time){
     Thread.yield();
   } 
+}
+
+void printArray(int[] o){
+   for(int x = 0; x < o.length; x++){
+      print(o[x] + " "); 
+   }
+   println(" ");
 }

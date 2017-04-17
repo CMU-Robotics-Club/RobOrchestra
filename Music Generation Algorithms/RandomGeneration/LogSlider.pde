@@ -1,3 +1,8 @@
+//Want to somehow override all the position stuff but not the underlying value
+//Documentation for Slider: https://github.com/sojamo/controlp5/blob/master/src/controlP5/Slider.java
+//Instead, I just overwrote the label. So the underlying values are the natural logs of what they should be
+//So use exp(value) when reading from here
+
 import controlP5.*; //For GUI stuff
 
 public class LogSlider extends Slider{
@@ -16,17 +21,9 @@ public class LogSlider extends Slider{
     _myValue = ( _myValue >= _myMax ) ? _myMax : _myValue;
     _myValuePosition = ( ( _myValue - _myMin ) / _myUnit );
     _myValueLabel.set( adjustValue( exp(getValue( )) ) );
-    _myValue = exp(_myValue);
-    _myInternalValue = exp(_myInternalValue);
     if ( triggerId == PRESSED ) {
       broadcast( FLOAT );
     }
     return this;
-  }
-  
-  //Want to somehow override all the position stuff but not the underlying value
-  //Documentation for Slider: https://github.com/sojamo/controlp5/blob/master/src/controlP5/Slider.java
-  //Not sure what exactly needs to be overwritten
-  
-  
+  }  
 }
