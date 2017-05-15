@@ -5,27 +5,35 @@
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-int solenoidPin = 50;
-//int solenoidPin2 = 52;
+int solenoidPin = 52;
+int solenoidPin2 = 50;
+int solenoidPin3 = 48;
+int solenoidPin4 = 46;
 
 
 void noteOn(byte channel, byte note, byte velocity)
 {
   if(velocity>0){
-    digitalWrite(solenoidPin, HIGH);
-    //digitalWrite(solenoidPin2, HIGH);
+    if(note == 52) digitalWrite(solenoidPin, HIGH);
+    else if(note == 50) digitalWrite(solenoidPin2, HIGH);
+    else if(note == 48) digitalWrite(solenoidPin3, HIGH);
+    else if(note == 46) digitalWrite(solenoidPin4, HIGH);
   }
   
   else{
-    digitalWrite(solenoidPin, LOW);
-    //digitalWrite(solenoidPin2, LOW);
+    if(note == 52) digitalWrite(solenoidPin, LOW);
+    else if(note == 50) digitalWrite(solenoidPin2, LOW);
+    else if(note == 48) digitalWrite(solenoidPin3, LOW);
+    else if(note == 46) digitalWrite(solenoidPin4, LOW);
   }
 }
 
 void noteOff(byte channel, byte note, byte velocity)
 {
-    digitalWrite(solenoidPin, LOW);
-    //digitalWrite(solenoidPin2, LOW);
+    if(note == 52) digitalWrite(solenoidPin, LOW);
+    else if(note == 50) digitalWrite(solenoidPin2, LOW);
+    else if(note == 48) digitalWrite(solenoidPin3, LOW);
+    else if(note == 46) digitalWrite(solenoidPin4, LOW);
 }
 
 void setup (){
@@ -33,9 +41,13 @@ void setup (){
   MIDI.setHandleNoteOn(noteOn);
   MIDI.setHandleNoteOff(noteOff);
   pinMode(solenoidPin, OUTPUT);   
-  //pinMode(solenoidPin2, OUTPUT);    
+  pinMode(solenoidPin2, OUTPUT);
+  pinMode(solenoidPin3, OUTPUT);  
+  pinMode(solenoidPin4, OUTPUT);  
   digitalWrite(solenoidPin, LOW); 
-  //digitalWrite(solenoidPin2, LOW);
+  digitalWrite(solenoidPin2, LOW);
+  digitalWrite(solenoidPin3, LOW);
+  digitalWrite(solenoidPin4, LOW);
 
 }
 

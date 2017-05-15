@@ -8,7 +8,7 @@ Servo myservo2;
 void setup() {
   //pinMode(LED, OUTPUT);
   //Serial3.begin(115200);
-  myservo2.attach(4);
+  myservo2.attach(5);
 
 }
 

@@ -3,12 +3,12 @@ import java.lang.Math; //To get random numbers
 
 MidiBus myBus; //Creates a MidiBus object
 MidiBus compBus;
-int noteLen = 1000; //set chord length in milliseconds
+int noteLen = 800; //set chord length in milliseconds
 int tonic = 60; //set key to C major
 int next = 0; //keeps track of next chord. Always start with tonic
 int[] divisions = {1, 2, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
 int tonicCount = 0; //How many times a tonic chord has been played with a quarter note melody
-int tonicTotal = 4; //Music stops when we reach this number of tonic chord/quarter note melodies (-1 for infinite loop)
+int tonicTotal = -1; //Music stops when we reach this number of tonic chord/quarter note melodies (-1 for infinite loop)
 
 //Chord attributes relocated to make them global
 int channel = 0; //set channel. 0 for speakers
@@ -84,7 +84,7 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
 
   myBus = new MidiBus(this, 0, 1); 
-  compBus = new MidiBus(this, 0, 1);
+  compBus = new MidiBus(this, 0, 2);
   initializeText();
   roboLogo = loadImage("rc_logo.png");
   System.out.println("Starting");

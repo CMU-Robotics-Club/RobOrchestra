@@ -15,8 +15,8 @@ boolean playing = true;
 int tonic = 60; //set key to C major
 int currentNote = 7;
 int beatIndex = 0;
-int snareMIDI = 37;
-int tomMIDI = 36;
+int snareMIDI = 36;
+int tomMIDI = 37;
 int[] scaleOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
 int[] majorOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
 int[] minorOffsets = {0, 2, 3, 5, 7, 8, 10, 12};
@@ -32,8 +32,8 @@ float tomDensity = 0.0;
 
 int phraseLen = 16;
 float[] xylo = {1.0, 0.00, 0.00, 0.00, 1.0, 0.00, 0.0, 0.0, 1.0, 0.00, 0.0, 0.00, 1.0, 0.0, 0.0, 0.0};
-float[] tom = {1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0};
-float[] snare = {0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0};
+float[] tom = {1.0, -1.0, 0.0, -1.0, 0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0, 0.5, 0.0, -1.0, 0.0};
+float[] snare = {0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0, 0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0};
 
 
 
@@ -70,8 +70,8 @@ void setup() {
   cp5.addSlider("noteLen")
     .setPosition(100, 200)
     .setSize(200, 19)
-    .setRange(20, 500) //I'd like a log scale...
-    .setValue(200)
+    .setRange(100, 500) //I'd like a log scale...
+    .setValue(250)
   ;
   cp5.addSlider("xyloDensity")
     .setPosition(100, 250)
@@ -130,6 +130,21 @@ void playMelody(){
     double snareThresh = Math.min(snare[beatIndex] + snareDensity, 1.0);
     double tomThresh = Math.min(tom[beatIndex] + tomDensity, 1.0);
      //System.out.println("snarePlay = " + snarePlay + " threshold = " + snareThresh);
+    if(snarePlay <= snareThresh) {
+      int pitchSnare = snareMIDI;
+      Note noteSnare = new Note(0, pitchSnare, 100);
+      System.out.println("snare\n");
+      myBus.sendNoteOn(noteSnare);
+        
+    }
+    delay(2);
+    if(tomPlay <= tomThresh) {
+      int pitchTom = tomMIDI;
+      Note noteTom = new Note(0, pitchTom, 100);
+      myBus.sendNoteOn(noteTom);
+        
+    }
+    delay(2);
     if(xyloPlay <= xyloThresh) {
       for(int x = 0; x < 7; x++){
         r -= p[x];
@@ -141,21 +156,8 @@ void playMelody(){
       int pitch = tonic + scaleOffsets[offset];
       
       
-      Note note = new Note(channel, pitch, velocity);
-      myBus.sendNoteOn(note);
-        
-    }
-    if(snarePlay <= snareThresh) {
-      int pitch = snareMIDI;
-      Note note = new Note(channel, pitch, velocity);
-      myBus.sendNoteOn(note);
-        
-    }
-    if(tomPlay <= tomThresh) {
-      int pitch = tomMIDI;
-      Note note = new Note(channel, pitch, velocity);
-      myBus.sendNoteOn(note);
-        
+      Note noteXylo = new Note(channel, pitch, velocity);
+      myBus.sendNoteOn(noteXylo);  
     }
     delay(noteLen);
     beatIndex = (beatIndex + 1) % phraseLen;

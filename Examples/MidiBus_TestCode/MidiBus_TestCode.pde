@@ -38,17 +38,23 @@ void setup() {
 void draw() {
   
   //plays every chromatic note in the range
-  for(int x = lo; x < hi; x++){
-    System.out.println("Testing note with MIDI value " + x);
-    
-    //creates a note object
-    Note mynote = new Note(channel, x, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);
-    
-    //time between each note
-    delay(noteLen);
+  for(int i = 0; i < 6; i++)
+  {
+    for(int x = 46; x < 53; x += 2){
+      System.out.println("Testing note with MIDI value " + x);
+      
+      //creates a note object
+      Note mynote = new Note(channel, x, 100);
+      Note off = new Note(channel, x, 0);
+      
+      //sends note to Xylobot 
+      myBus.sendNoteOn(mynote);
+      
+      //time between each note
+      delay(1000);
+      myBus.sendNoteOn(off);
+      delay(500);
+    }
   }
 
 }
