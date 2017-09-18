@@ -2,6 +2,7 @@ import themidibus.*; //Import midi library
 import java.lang.Math; //To get random numbers
 import java.io.*; //For outputting stuff
 
+//MODIFY THIS ARRAY!!!
 //Phrases to be played
 //Positive numbers mean make a new phrase of that many measures
 //Non-positive numbers mean absolute value and grab the phrase at that index
@@ -83,7 +84,7 @@ int[] degreeToNote = {tonic, tonic + 2, tonic + 4, tonic + 5, tonic + 7, tonic +
 boolean disableTonic = true;
 
 //IO stuff
-File outputFile = new File("RobOrchestra/output.txt");
+File outputFile = new File("RobOrchestra/Music Generation Algorithms/PlayPhrasesNew/output.txt");
 FileWriter writer;
 
 //sets up screen

@@ -14,7 +14,7 @@ boolean playing = true;
 boolean isMajor = true;
 boolean noteOff = true;
 
-int tonicCount = 10; //Number of whole-note tonics to play before stopping
+int tonicCount = -1; //Number of whole-note tonics to play before stopping; -1 for infinite loop
 
 int tonic = 60; //set key to C major
 int[] scaleOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
@@ -33,6 +33,8 @@ float shortNoteBiasTom = 0.0;
 
 float a = 1, b = 1, c = 1, d = 1, e = 1, f = 1, g = 1;
 float[] p = {1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7};
+
+float tol = 0.01; //Tolerance for equality checks and exp/log stuff
 
 //sets up screen
 void setup() {
@@ -142,7 +144,7 @@ void playMelody(){
       myBus.sendNoteOn(note);
       
       //Tonic count stuff
-      if(pitch == tonic && len == noteLen){
+      if(pitch == tonic && abs(len - exp(noteLen)) < tol){
          tonicCount--;
          print("t");
          if(tonicCount == 0){

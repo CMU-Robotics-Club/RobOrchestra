@@ -25,11 +25,11 @@ ArrayList<Long> times = new ArrayList();
 ArrayList<ArrayList<Long>> transitions2 = new ArrayList();
 
 boolean printThings = true;
-boolean fixedRhythm = true;
+boolean fixedRhythm = false;
 
 int channel = 0;
 
-double legato = .5;
+double legato = 1;
 int notelen = 200;
 
 double mspertick = -1;
@@ -38,9 +38,10 @@ void setup() {
   output = new MidiBus(this, 0, 1);
   
   try{  
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
     //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
     //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/C Major Stuff.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/twinkle_twinkle.mid"));
 
     
     mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
@@ -222,15 +223,17 @@ void playMelody(ArrayList<Integer> notes, double[][]T){
 void playMelody(ArrayList<Integer> notes, double[][]T, ArrayList<Long> lengths, double[][]T2){
   
   int note = notes.get((int)(Math.random()*notes.size()));
+  int outnote;
   long len = lengths.get((int)(Math.random()*lengths.size()));
+  printArray(notes);
   while(true){
      note = getNextNote(note, notes, T);
-     note = note%12 + 60;
+     outnote = note%12 + 60;
      len = getNextLength(len, lengths, T2);
-     Note temp = new Note(channel, note, 127);
+     Note temp = new Note(channel, outnote, 127);
      output.sendNoteOn(temp);
      delay((int)(len*legato));
-     //output.sendNoteOff(temp);
+     output.sendNoteOff(temp);
      delay((int)(len*(1-legato)));
   }
 }
@@ -258,7 +261,7 @@ int getNextNote(int note, ArrayList<Integer> notes, double[][]T){
    return out;
 }
 
-//Return the new note for Markov chaining
+//Return the new length for Markov chaining
 //Variable names are awful because this is mostly copy-paste from getNextNote
 long getNextLength(long note, ArrayList<Long> notes, double[][]T){
    int i = notes.indexOf(note);
@@ -310,6 +313,15 @@ double[] generateMarkov(long[] tcounts){
 //Array util
 
 void printArray(Object[] A) {
+  print("{");
+  for (int x = 0; x < A.length; x++) {
+    print(A[x]); 
+    if (x < A.length - 1) print(", ");
+  }
+  println("}");
+}
+
+void printArray(int[] A) {
   print("{");
   for (int x = 0; x < A.length; x++) {
     print(A[x]); 
