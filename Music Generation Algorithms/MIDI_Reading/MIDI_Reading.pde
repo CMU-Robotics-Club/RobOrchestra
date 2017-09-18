@@ -5,6 +5,8 @@ import themidibus.*; //Import midi library
 import java.io.File;
 import java.util.Arrays;
 
+import java.io.PrintWriter;
+
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
@@ -38,11 +40,10 @@ void setup() {
   output = new MidiBus(this, 0, 1);
   
   try{  
-    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
-    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/Songs/EyeOfTheTiger.mid"));
-    //Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/C Major Stuff.mid"));
-    Sequence sequence = MidiSystem.getSequence(new File("/Users/davidneiman/RobOrchestra/MarkovTesting/twinkle_twinkle.mid"));
-
+    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/Songs/EyeOfTheTiger.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/C Major Stuff.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/twinkle_twinkle.mid"));
     
     mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
     mspertick /= 2; //Fudge to make it sound better
