@@ -43,17 +43,18 @@ void setup() {
     //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
     //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/Songs/EyeOfTheTiger.mid"));
     //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/C Major Stuff.mid"));
-    Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/twinkle_twinkle.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/twinkle_twinkle.mid"));
+    Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/canon4.mid"));
     
     mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
-    mspertick /= 2; //Fudge to make it sound better
+    //mspertick /= 2; //Fudge to make it sound better
     
     int trackNumber = 0;
     
     Track[] tracks = sequence.getTracks();
-    int[] toRead = {1, 3, 4, 6, 7};
-    //for(int x: toRead){
-    for (int x = 0; x < tracks.length; x++) {
+    int[] toRead = {1};
+    for(int x: toRead){
+    //for (int x = 0; x < tracks.length; x++) {
         Track track = tracks[x];
         int prevNote = -1;
         long prevLen = -1;
@@ -227,10 +228,12 @@ void playMelody(ArrayList<Integer> notes, double[][]T, ArrayList<Long> lengths, 
   int outnote;
   long len = lengths.get((int)(Math.random()*lengths.size()));
   printArray(notes);
+  printArray(lengths);
   while(true){
      note = getNextNote(note, notes, T);
      outnote = note%12 + 60;
      len = getNextLength(len, lengths, T2);
+     println(len);
      Note temp = new Note(channel, outnote, 127);
      output.sendNoteOn(temp);
      delay((int)(len*legato));
@@ -246,6 +249,7 @@ int getNextNote(int note, ArrayList<Integer> notes, double[][]T){
    
    //Run Markov chain
    double rand = Math.random();
+   double startrand = rand;
    for(int x = 0; x < notes.size(); x++){
       rand -= T[i][x];
       if(rand < 0){
@@ -256,7 +260,15 @@ int getNextNote(int note, ArrayList<Integer> notes, double[][]T){
    
    //In the event of rounding error, just try again
    if(out == -1){
+     if(Double.isNaN(rand)){
+       out = notes.get((int)(Math.random()*notes.size()));
+       println("No transitions; picking next note randomly");
+       
+     }
+     else{
+      println("Warning, some kind of Markov chain error?");
       out = getNextNote(note, notes, T); 
+     }
    }
    
    return out;
@@ -270,6 +282,7 @@ long getNextLength(long note, ArrayList<Long> notes, double[][]T){
    
    //Run Markov chain
    double rand = Math.random();
+   double startrand = rand;
    for(int x = 0; x < notes.size(); x++){
       rand -= T[i][x];
       if(rand < 0){
@@ -277,10 +290,19 @@ long getNextLength(long note, ArrayList<Long> notes, double[][]T){
          break;
       }
    }
-   
-   //In the event of rounding error, just try again
+     
    if(out == -1){
-      out = getNextLength(note, notes, T); 
+     //In the event of rounding error, just try again
+     if(Double.isNaN(rand)){
+       out = notes.get((int)(Math.random()*notes.size()));
+       println("No transitions; picking next note randomly");
+     }
+     else{
+       println(rand);
+       println(startrand);
+       println("Warning, some kind of Markov chain error?");
+       out = getNextLength(note, notes, T); 
+     }
    }
    return out;
 }
