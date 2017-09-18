@@ -296,10 +296,3 @@ void delay(int time) {
     Thread.yield();
   } 
 }
-
-void printArray(int[] o){
-   for(int x = 0; x < o.length; x++){
-      print(o[x] + " "); 
-   }
-   println(" ");
-}
