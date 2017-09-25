@@ -60,6 +60,7 @@ void setup() {
         long prevLen = -1;
         long prevTime = -1;
         int firstNote = -1;
+        long firstLen = -1;
         
         trackNumber++;
         System.out.println("Track " + trackNumber + ": size = " + track.size());
@@ -88,10 +89,10 @@ void setup() {
                       }
                       //Update previous note for future transitions
                       prevNote = key;
-                      if(firstNote == -1) firstNote = key;
+                      if(firstNote == -1)firstNote = key;
                       
                       
-                      if(prevTime != -1 && prevTime != timestamp){
+                      if(prevTime != -1 /*&& prevTime != timestamp*/){
                         long newLen = timestamp - prevTime;
                         newLen *= mspertick;
                         
@@ -102,6 +103,7 @@ void setup() {
                         if(prevLen != -1){
                            transitions2.get(times.indexOf(prevLen)).add(newLen);
                         }
+                        if(firstLen == -1)firstLen = newLen;
                         prevLen = newLen;
                       }
                       //Update previous note for future transitions
@@ -136,6 +138,10 @@ void setup() {
         //Map the last note to the first note
         if(firstNote != -1){
            transitions.get(notes.indexOf(prevNote)).add(firstNote);
+           //This is technically not the "right" way to do this but guarantees a loop
+           //I'm actually looping the length of the second-to-last note back to the first...
+           transitions2.get(times.indexOf(prevLen)).add(firstLen);
+           
         }
     }
   }
@@ -233,7 +239,6 @@ void playMelody(ArrayList<Integer> notes, double[][]T, ArrayList<Long> lengths, 
      note = getNextNote(note, notes, T);
      outnote = note%12 + 60;
      len = getNextLength(len, lengths, T2);
-     println(len);
      Note temp = new Note(channel, outnote, 127);
      output.sendNoteOn(temp);
      delay((int)(len*legato));
