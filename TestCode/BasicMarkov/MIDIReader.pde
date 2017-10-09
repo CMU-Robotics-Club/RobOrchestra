@@ -26,12 +26,12 @@ public class MIDIReader{
   ArrayList<ArrayList<State>> transitions2;
   double mspertick;
   
-  public ReadMIDI(File file){
+  public MIDIReader(File file){
     this(file, new int[] {1});
   }
   
   //Defaults to a 1 note state and a 1 length state
-  public ReadMIDI(File file, int[] toRead){
+  public MIDIReader(File file, int[] toRead){
     try{  
       Sequence sequence = MidiSystem.getSequence(file);
       
