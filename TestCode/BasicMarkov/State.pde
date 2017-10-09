@@ -2,9 +2,18 @@ public class State implements Comparable<State>{
   public int[] pitches;
   public int[] lengths;
   
+  public State(){
+    pitches = new int[] {};
+    lengths = new int[] {};
+  }
+  
   public State(int[] p, int[] l){
     pitches = p;
     lengths = l;
+  }
+  
+  public boolean equals(State s){
+    return this.compareTo(s)==0;
   }
   
   public int compareTo(State s){

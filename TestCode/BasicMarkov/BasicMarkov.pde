@@ -14,10 +14,10 @@ void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   
-  File myFile = new File("stuff.txt");
+  File myFile = new File(dataPath("MarkovTesting/canon4.mid"));
   MIDIReader reader = new MIDIReader(myFile, new int[] {1});
   mc = new MarkovChain(reader.notes, reader.transitions);
-  mystate = mc.objects.get( (int) mc.objects.size() );
+  mystate = mc.objects.get( (int) mc.objects.size()-1 );
 }
 
 void draw(){
