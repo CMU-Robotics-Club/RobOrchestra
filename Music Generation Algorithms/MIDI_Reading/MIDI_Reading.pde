@@ -40,11 +40,11 @@ void setup() {
   output = new MidiBus(this, 0, 1);
   
   try{  
-    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/Classical/Beethoven2.mid"));
-    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/Songs/EyeOfTheTiger.mid"));
-    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/C Major Stuff.mid"));
-    //Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/twinkle_twinkle.mid"));
-    Sequence sequence = MidiSystem.getSequence(new File("RobOrchestra/MarkovTesting/canon4.mid"));
+    //Sequence sequence = MidiSystem.getSequence(new File(dataPath("MarkovTesting/Classical/Beethoven2.mid")));
+    //Sequence sequence = MidiSystem.getSequence(new File(dataPath("Songs/EyeOfTheTiger.mid")));
+    //Sequence sequence = MidiSystem.getSequence(new File(dataPath("MarkovTesting/C Major Stuff.mid")));
+    //Sequence sequence = MidiSystem.getSequence(new File(dataPath("MarkovTesting/twinkle_twinkle.mid")));
+    Sequence sequence = MidiSystem.getSequence(new File(dataPath("MarkovTesting/canon4.mid")));
     
     mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
     //mspertick /= 2; //Fudge to make it sound better
