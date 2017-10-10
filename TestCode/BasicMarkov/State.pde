@@ -12,8 +12,9 @@ public class State implements Comparable<State>{
     lengths = l;
   }
   
-  public boolean equals(State s){
-    return this.compareTo(s)==0;
+  public boolean equals(Object o){
+    if(o.getClass() != this.getClass()) return false;
+    return this.compareTo((State)o)==0;
   }
   
   public int compareTo(State s){
@@ -25,6 +26,28 @@ public class State implements Comparable<State>{
     }
     if(i == pitches.length && j != s.pitches.length) return -1;
     if(j == s.pitches.length && i != pitches.length) return 1;
+    while(i < lengths.length && j < s.lengths.length){
+      if(lengths[i] != s.lengths[i]) return lengths[i]-s.lengths[i];
+      i++;
+      j++;
+    }
+    if(i == lengths.length && j != s.lengths.length) return -1;
+    if(j == s.lengths.length && i != lengths.length) return 1;
     return 0;
+  }
+  
+  public String toString(){
+    String s = "Pitches: [";
+    for(int x = 0; x < pitches.length; x++){
+      s += pitches[x];
+      if(x < pitches.length-1)s += ", ";
+    }
+    s += "], lengths: [";
+    for(int x = 0; x < lengths.length; x++){
+      s += lengths[x];
+      if(x < lengths.length-1)s += ", ";
+    }
+    s += "]";
+    return s;
   }
 }

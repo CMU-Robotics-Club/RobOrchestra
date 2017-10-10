@@ -27,7 +27,7 @@ public class MIDIReader{
   double mspertick;
   
   public MIDIReader(File file){
-    this(file, new int[] {1});
+    this(file, new int[] {0});
   }
   
   //Defaults to a 1 note state and a 1 length state
@@ -40,7 +40,8 @@ public class MIDIReader{
       int trackNumber = 0;
       
       Track[] tracks = sequence.getTracks();
-      for(int x: toRead){
+      for(int x = 0; x < tracks.length; x++){
+      //for(int x: toRead){
           Track track = tracks[x];
           int prevNote = -1;
           int prevLen = -1;
@@ -51,7 +52,7 @@ public class MIDIReader{
           trackNumber++;
           System.out.println("Track " + trackNumber + ": size = " + track.size());
           System.out.println();
-          for (int i=0; i < track.size(); i++) { 
+          for (int i=0; i < track.size(); i++) {
               MidiEvent event = track.get(i);
               long timestamp = event.getTick();
               qprint("@" + event.getTick() + " ");
@@ -71,23 +72,22 @@ public class MIDIReader{
                            transitions.add(new ArrayList());
                         }
                         if(prevNote != -1){
-                           transitions.get(notes.indexOf(prevNote)).add(new State(new int[] {key}, new int[] {}));
+                           transitions.get(notes.indexOf(new State(new int[] {prevNote}, new int[] {}))).add(new State(new int[] {key}, new int[] {}));
                         }
                         //Update previous note for future transitions
                         prevNote = key;
                         if(firstNote == -1)firstNote = key;
-                        
                         
                         if(prevTime != -1 /*&& prevTime != timestamp*/){
                           int newLen = (int) (timestamp - prevTime);
                           newLen *= mspertick;
                           
                           if(!lengths.contains(new State(new int[] {}, new int[] {newLen}))){
-                           lengths.add(new State(new int[] {}, new int[] {newLen}));
-                           transitions2.add(new ArrayList());
+                            lengths.add(new State(new int[] {}, new int[] {newLen}));
+                            transitions2.add(new ArrayList());
                           }
                           if(prevLen != -1){
-                             transitions2.get(lengths.indexOf(prevLen)).add(new State(new int[] {}, new int[] {newLen}));
+                             transitions2.get(lengths.indexOf(new State(new int[] {}, new int[] {prevLen}))).add(new State(new int[] {}, new int[] {newLen}));
                           }
                           if(firstLen == -1){firstLen = newLen;}
                           prevLen = newLen;
@@ -95,27 +95,26 @@ public class MIDIReader{
                         //Update previous note for future transitions
                         prevTime = timestamp;
                       }
-                      
                       String noteName = NOTE_NAMES[note];
                       int velocity = sm.getData2();
-                      System.out.println("Note on, " + noteName + octave + " key=" + key + " velocity: " + velocity);
+                      qprint("Note on, " + noteName + octave + " key=" + key + " velocity: " + velocity);
+
                   } else if (sm.getCommand() == NOTE_OFF) {
                       int key = sm.getData1();
                       int octave = (key / 12)-1;
                       int note = key % 12;
                       String noteName = NOTE_NAMES[note];
                       int velocity = sm.getData2();
-                      System.out.println("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
+                      qprint("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
                   } else {
                       qprint("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
                   }
               } else {
                 if(message instanceof MetaMessage){
                    byte[] data = ((MetaMessage)message).getData();
-                   println("Type: " + ((MetaMessage)message).getType());
-                   printArray(data);
+                   qprint("Type: " + ((MetaMessage)message).getType());
                 }
-                System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
+                qprint("Other message: " + message.getClass()); //Ignore random miscellaneous messages
               }
           }
   
@@ -174,19 +173,20 @@ public class MIDIReader{
                       int octave = (key / 12)-1;
                       int note = key % 12;
                       if(prevNote != -1){
-                        cappedAdd(pitchbuffer, prevNote, stateLength); //Off by 1 because lengths
+                        pitchbuffer = cappedAdd(pitchbuffer, prevNote, stateLength); //Off by 1 because lengths
                       }
+                      
                       if(firstPitches.size() < stateLength){
-                        firstPitches.add(key);
+                        firstPitches.add(new Integer(key));
                       }
                       if(sm.getData2() > 0){ //Make sure you're not just setting the velocity to 0...
                         //key is the numerical value for the pitch
                         if(prevTime != -1 /*&& prevTime != timestamp*/){
                           int newLen = (int) (timestamp - prevTime);
                           newLen *= mspertick;
-                          cappedAdd(lengthbuffer, newLen, stateLength);
+                          lengthbuffer = cappedAdd(lengthbuffer, newLen, stateLength);
                           if(firstLengths.size() < stateLength){
-                            firstLengths.add(newLen);
+                            firstLengths.add(new Integer(newLen));
                           }
                           prevLen = newLen;
                         }
@@ -194,45 +194,62 @@ public class MIDIReader{
                         prevTime = timestamp;
                       }
                       prevNote = key;
-                      
-                      State newState = new State(pitchbuffer, lengthbuffer);
-                      if(!notes.contains(newState)){
-                        notes.add(newState);
-                        transitions.add(new ArrayList<State>());
+                      if(pitchbuffer.length == stateLength){
+                        State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
+                        if(!notes.contains(newState) && pitchbuffer.length == stateLength){
+                          notes.add(newState);
+                          transitions.add(new ArrayList<State>());
+                        }
+                        if(!prevState.equals(new State())){ //If we have a prevState...
+                          transitions.get(notes.indexOf(prevState)).add(newState);
+                        }
+                        prevState = newState;
                       }
-                      if(!prevState.equals(new State())){ //If we have a prevState...
-                        transitions.get(notes.indexOf(prevState)).add(newState);
-                      }
-                      prevState = newState;
                       
                       //Print stuff
                       String noteName = NOTE_NAMES[note];
                       int velocity = sm.getData2();
-                      System.out.println("Note on, " + noteName + octave + " key=" + key + " velocity: " + velocity);
-                  } else if (sm.getCommand() == NOTE_OFF) {
+                      qprint("Note on, " + noteName + octave + " key=" + key + " velocity: " + velocity);  
+            } else if (sm.getCommand() == NOTE_OFF) {
                       int key = sm.getData1();
                       int octave = (key / 12)-1;
                       int note = key % 12;
                       String noteName = NOTE_NAMES[note];
                       int velocity = sm.getData2();
-                      System.out.println("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
+                      qprint("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
                   } else {
                       qprint("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
                   }
               } else {
                 if(message instanceof MetaMessage){
                    byte[] data = ((MetaMessage)message).getData();
-                   println("Type: " + ((MetaMessage)message).getType());
-                   printArray(data);
+                   qprint("Type: " + ((MetaMessage)message).getType());
                 }
-                System.out.println("Other message: " + message.getClass()); //Ignore random miscellaneous messages
+                qprint("Other message: " + message.getClass()); //Ignore random miscellaneous messages
               }
           }
-  
           System.out.println();
           
           //TODO: Rerun the first notes
+          for(int y = 0; y < stateLength; y++){
+            int key = firstPitches.get(y);
+            pitchbuffer = cappedAdd(pitchbuffer, key, stateLength);
+            int newLen = firstLengths.get(y);
+            lengthbuffer = cappedAdd(lengthbuffer, newLen, stateLength);
+            State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
+            if(!notes.contains(newState) && pitchbuffer.length == stateLength){
+              notes.add(newState);
+              transitions.add(new ArrayList<State>());
+            }
+            if(!prevState.equals(new State())){ //If we have a prevState...
+              transitions.get(notes.indexOf(prevState)).add(newState);
+            }
+            prevState = newState;
+          }
           
+          //Copy arrays in case we disagree on which to use...
+          lengths = notes;
+          transitions2 = transitions;
       }
     }
     catch(Exception e){exit();}
@@ -244,24 +261,34 @@ public class MIDIReader{
     }
   }
   
-  private void cappedAdd(int[] array, int newval, int maxlen){
+  private int[] cappedAdd(int[] array, int newval, int maxlen){
     if(array.length < maxlen){
       int[] temp = new int[array.length + 1];
       for(int x = 0; x < array.length; x++){
         temp[x] = array[x];
       }
-      temp[temp.length] = newval;
+      temp[temp.length-1] = newval;
+      return temp;
     }
     else{
-      shiftArrayBack(array, newval);
+      return shiftArrayBack(array, newval);
     }
   }
   
+  private int[] copy(int[] A){
+    int[] temp = new int[A.length];
+    for(int x = 0; x < A.length; x++){
+      temp[x] = A[x];
+    }
+    return temp;
+  }
+  
   //Pretty sure this'll modify the actual array, not just a copy.
-  private void shiftArrayBack(int[] array, int newval){
+  private int[] shiftArrayBack(int[] array, int newval){
     for(int x = 0; x < array.length-1; x++){
       array[x] = array[x+1];
     }
     array[array.length-1] = newval;
+    return array;
   }
 }
