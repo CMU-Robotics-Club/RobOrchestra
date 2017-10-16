@@ -192,18 +192,23 @@ public class MIDIReader{
                         }
                         //Update previous note for future transitions
                         prevTime = timestamp;
+                        prevNote = key;
+                        
+                        //Store states in arrays
+                        if(pitchbuffer.length == stateLength){
+                          State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
+                          if(!notes.contains(newState) && pitchbuffer.length == stateLength){
+                            notes.add(newState);
+                            transitions.add(new ArrayList<State>());
+                          }
+                          if(!prevState.equals(new State())){ //If we have a prevState...
+                            transitions.get(notes.indexOf(prevState)).add(newState);
+                          }
+                          prevState = newState;
+                        }
                       }
-                      prevNote = key;
-                      if(pitchbuffer.length == stateLength){
-                        State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
-                        if(!notes.contains(newState) && pitchbuffer.length == stateLength){
-                          notes.add(newState);
-                          transitions.add(new ArrayList<State>());
-                        }
-                        if(!prevState.equals(new State())){ //If we have a prevState...
-                          transitions.get(notes.indexOf(prevState)).add(newState);
-                        }
-                        prevState = newState;
+                      else{
+                        //Note is actually 0 velocity; do something clever
                       }
                       
                       //Print stuff
