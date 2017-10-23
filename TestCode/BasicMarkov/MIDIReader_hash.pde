@@ -3,6 +3,11 @@ import java.util.Arrays;
 
 import java.io.PrintWriter;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiMessage;
@@ -16,6 +21,7 @@ private static boolean printThings = false;
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+public static Map<Long, ArrayList<ShortMessage>> mMap = new HashMap<Long, ArrayList<ShortMessage>>();
 
 public class MIDIReader_hash{
   
@@ -59,6 +65,10 @@ public class MIDIReader_hash{
               MidiMessage message = event.getMessage();
               if (message instanceof ShortMessage) {
                   ShortMessage sm = (ShortMessage) message;
+                  /* MY CODE STARTS */
+                  mMap.put(timestamp, {sm}.ToList());
+
+                  
                   qprint("Channel: " + sm.getChannel() + " ");
                   if (sm.getCommand() == NOTE_ON) {
                       int key = sm.getData1();
