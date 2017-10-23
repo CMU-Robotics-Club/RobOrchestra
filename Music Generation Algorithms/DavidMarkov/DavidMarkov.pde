@@ -43,6 +43,10 @@ void playPercussion(){
     myBus.sendNoteOn(bassNote);
     myBus.sendNoteOn(tomNote);
     delay(percussionLen);
+    myBus.sendNoteOn(snareNote);
+    //myBus.sendNoteOn(bassNote);
+    //myBus.sendNoteOn(tomNote);
+    delay(percussionLen);
   }
 }
 
