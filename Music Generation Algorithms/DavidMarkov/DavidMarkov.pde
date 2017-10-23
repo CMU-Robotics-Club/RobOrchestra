@@ -19,7 +19,6 @@ void setup(){
   
   File myFile = new File(dataPath("MarkovTesting/canon4.mid"));
   MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 10);
-  println(reader.notes);
   mc = new MarkovChain(reader.notes, reader.transitions);
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
@@ -35,17 +34,15 @@ void setup(){
 
 void playPercussion(){
   int percChannel = 2;
-  Note snareNote = new Note(percChannel, 37, 100);
+  Note snareNote = new Note(percChannel, 36, 100);
   Note bassNote = new Note(percChannel, 35, 100);
-  Note tomNote = new Note(percChannel, 36, 100);
+  Note tomNote = new Note(percChannel, 37, 100);
   while(true){
     myBus.sendNoteOn(snareNote);
     myBus.sendNoteOn(bassNote);
     myBus.sendNoteOn(tomNote);
     delay(percussionLen);
     myBus.sendNoteOn(snareNote);
-    //myBus.sendNoteOn(bassNote);
-    //myBus.sendNoteOn(tomNote);
     delay(percussionLen);
   }
 }
@@ -53,11 +50,12 @@ void playPercussion(){
 void draw(){
   mystate = mc.getNext(mystate);
   int pitch = mystate.pitches[mystate.pitches.length-1];
+  pitch = pitch%12 + 60;
   int len = mystate.lengths[mystate.lengths.length-1];
   Note note = new Note(channel, pitch, velocity);
   myBus.sendNoteOn(note);
   delay((int)(lenmult*len*legato));
-  myBus.sendNoteOff(note);
+  //myBus.sendNoteOff(note);
   delay((int)(lenmult*len*(1-legato)));
 }
 

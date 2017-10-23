@@ -1,13 +1,29 @@
-public class TempNote implements Comparable<Note>{
+public class PartialNote implements Comparable<Note>{
 
   int pitch;
   int len;
   int delay;
+  long startTime;
   
-  public TempNote(int p, int l, int d){
+  public PartialNote(int p, int l, int d, long t){
     pitch = p;
     len = l;
     delay = d;
+    startTime = t;
+  }
+  
+  public PartialNote(int p, long t){
+    pitch = p;
+    len = -1;
+    delay = -1;
+    startTime = t;
+  }
+  
+  public PartialNote(int p){
+    pitch = p;
+    len = -1;
+    delay = -1;
+    startTime = -1;
   }
   
   public int compareTo(Note n){
