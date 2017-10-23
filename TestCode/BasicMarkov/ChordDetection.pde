@@ -10,7 +10,6 @@ import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
-import java.util.Dictionary;
 
 public class ChordDetection{
   
@@ -51,12 +50,6 @@ public class ChordDetection{
     
     return lastResort[0] % 12;
   }
-  /*
-  public ShortMessage[] detectChordNotes(Dictionary D, int timeStampChord)
-  {
-    //Use whatever lookup function to get: ShortMessage[] chordArr = D.lookup(timeStampChord)
-    //return chordArr    
-  }
-*/
+
 
 }
