@@ -1,4 +1,4 @@
-public class PartialNote implements Comparable<Note>{
+public class PartialNote extends Object implements Comparable<PartialNote> {
 
   int pitch;
   int len;
@@ -26,12 +26,20 @@ public class PartialNote implements Comparable<Note>{
     startTime = -1;
   }
   
-  public int compareTo(Note n){
+  public int compareTo(PartialNote n){
     return pitch - n.pitch;
   }
   
-  public boolean equals(Note n){
-    return compareTo(n) == 0;
+  public boolean equals(Object o){
+    if(o.getClass() != this.getClass()) return false;
+    return this.compareTo((PartialNote)o)==0;
   }
   
+  public int hashCode(){
+    return 0;
+  }
+  
+  public String toString(){
+    return("Note: " + pitch + "; length: " + len + "; delay: " + delay + "; startTime: " + startTime);
+  }
 }

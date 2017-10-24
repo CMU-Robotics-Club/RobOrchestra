@@ -107,7 +107,7 @@ public class MIDIReader{
                         
                         //Store states in arrays
                         if(pitchbuffer.length == stateLength){
-                          State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
+                          State newState = new State(pitchbuffer, lengthbuffer);
                           if(!notes.contains(newState) && pitchbuffer.length == stateLength){
                             notes.add(newState);
                             transitions.add(new ArrayList<State>());
@@ -145,13 +145,12 @@ public class MIDIReader{
               }
           }
           System.out.println();
-          
           for(int y = 0; y < stateLength; y++){
             int key = firstPitches.get(y);
             pitchbuffer = cappedAdd(pitchbuffer, key, stateLength);
             int newLen = firstLengths.get(y);
             lengthbuffer = cappedAdd(lengthbuffer, newLen, stateLength);
-            State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
+            State newState = new State(pitchbuffer, lengthbuffer);
             if(!notes.contains(newState) && pitchbuffer.length == stateLength){
               notes.add(newState);
               transitions.add(new ArrayList<State>());
@@ -167,7 +166,14 @@ public class MIDIReader{
           transitions2 = transitions;
       }
     }
-    catch(Exception e){exit();}
+    catch(InvalidMidiDataException e){
+      println("Bad file input");
+      exit();
+    }
+    catch(IOException e){
+      println("Bad file input");
+      exit();
+    }
   }
   
   private void qprint(String toPrint){
@@ -188,14 +194,6 @@ public class MIDIReader{
     else{
       return shiftArrayBack(array, newval);
     }
-  }
-  
-  private int[] copy(int[] A){
-    int[] temp = new int[A.length];
-    for(int x = 0; x < A.length; x++){
-      temp[x] = A[x];
-    }
-    return temp;
   }
   
   //Pretty sure this'll modify the actual array, not just a copy.

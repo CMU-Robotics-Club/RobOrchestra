@@ -16,20 +16,22 @@ import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
+import javax.sound.midi.InvalidMidiDataException;
 
 public class MIDIReader2{
   
   File MIDIfile;
-  ArrayList<State> notes = new ArrayList<State>();
-  ArrayList<State> lengths = new ArrayList<State>();
+  ArrayList<State> states = new ArrayList<State>();
   ArrayList<ArrayList<State>> transitions = new ArrayList<ArrayList<State>>();
-  ArrayList<ArrayList<State>> transitions2 = new ArrayList<ArrayList<State>>();
   double mspertick;
+  int noteCount;
   
   private ArrayList<PartialNote> activeNotes = new ArrayList<PartialNote>();
-  private int[] pitchbuffer = new int[0];
-  private int[] lengthbuffer = new int[0];
+  private int[] pitchBuffer = new int[0];
+  private int[] lengthBuffer = new int[0];
+  private int[] delayBuffer = new int[0];
   private State prevState = null;
+  private ArrayList<PartialNote> initialNotes = new ArrayList<PartialNote>();
   
   public MIDIReader2(File file){
     this(file, new int[] {0}, 1);
@@ -37,12 +39,8 @@ public class MIDIReader2{
   
   //One state, storing stateLength notes/pitches. Assumes they overlap
   public MIDIReader2(File file, int[] toRead, int stateLength){
-    
-    //Going to ignore the last note (no length measurement) and reuse the first stateLength of them
-    ArrayList<Integer> firstPitches = new ArrayList<Integer>();
-    ArrayList<Integer> firstLengths = new ArrayList<Integer>();
-    
-    try{  
+    noteCount = 0;
+    try{
       Sequence sequence = MidiSystem.getSequence(file);
       
       mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
@@ -53,10 +51,6 @@ public class MIDIReader2{
       for(int x: toRead){
           Track track = tracks[x];
           int prevNote = -1;
-          int prevLen = -1;
-          long prevTime = -1;
-          int messageCount = 0;
-          State prevState = new State();
           
           trackNumber++;
           System.out.println("Track " + trackNumber + ": size = " + track.size());
@@ -79,65 +73,25 @@ public class MIDIReader2{
                         
                         //Add a new note for the new pitch
                         activeNotes.add(new PartialNote(key, timestamp));
-                        
                         //Update the delay for the previous pitch
-                        PartialNote p = activeNotes.get(activeNotes.indexOf(new PartialNote(key)));
-                        p.delay = (int)(timestamp - p.startTime);
-                        
+                        if(prevNote != -1){
+                          PartialNote p = activeNotes.get(activeNotes.indexOf(new PartialNote(prevNote)));
+                          p.delay = (int)(timestamp - p.startTime);
+                          p.delay*=mspertick;
+                        }
                         //Check if notes finished
-                        checkCompletedNotes();
-                        
-                        //TODO: Might need to add to starting notes; not sure where to do that...
-                        
+                        checkCompletedNotes(stateLength);
                         //Update the previous pitch
                         prevNote = key;
-                        
-                        /*
-                        //Code for processing a note
-                        //Add pitch to relevant buffers
-                        //Off-by-one here because length is length of previous note
-                        if(prevNote != -1){
-                          pitchbuffer = cappedAdd(pitchbuffer, prevNote, stateLength); //Off by 1 because lengths
-                        }
-                        
-                        //Store first notes so we can use them at the end to make a cycle
-                        if(firstPitches.size() < stateLength){
-                          firstPitches.add(new Integer(key));
-                        }
-                        
-                        //Compute lengths
-                        if(prevTime != -1){
-                          int newLen = (int) (timestamp - prevTime);
-                          newLen *= mspertick;
-                          lengthbuffer = cappedAdd(lengthbuffer, newLen, stateLength);
-                          if(firstLengths.size() < stateLength){
-                            firstLengths.add(new Integer(newLen));
-                          }
-                          prevLen = newLen;
-                        }
-                        //Update previous note for future transitions
-                        prevTime = timestamp;
-                        prevNote = key;
-                        
-                        //Store states in arrays
-                        if(pitchbuffer.length == stateLength){
-                          State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
-                          if(!notes.contains(newState) && pitchbuffer.length == stateLength){
-                            notes.add(newState);
-                            transitions.add(new ArrayList<State>());
-                          }
-                          if(!prevState.equals(new State())){ //If we have a prevState...
-                            transitions.get(notes.indexOf(prevState)).add(newState);
-                          }
-                          prevState = newState;
-                        }*/
+                        noteCount++;
                       }
                       else{
                         //Note is actually 0 velocity
                         //Compute length of whatever note stopped
                         PartialNote p = activeNotes.get(activeNotes.indexOf(new PartialNote(key)));
                         p.len = (int)(timestamp - p.startTime);
-                        checkCompletedNotes();
+                        p.len *= mspertick;
+                        checkCompletedNotes(stateLength);
                       }
                       
                       //Print stuff
@@ -152,7 +106,8 @@ public class MIDIReader2{
                       //Compute length of whatever note stopped
                       PartialNote p = activeNotes.get(activeNotes.indexOf(new PartialNote(key)));
                       p.len = (int)(timestamp - p.startTime);
-                      checkCompletedNotes();
+                      p.len *= mspertick;
+                      checkCompletedNotes(stateLength);
                       
                       String noteName = NOTE_NAMES[note];
                       int velocity = sm.getData2();
@@ -170,39 +125,49 @@ public class MIDIReader2{
           }
           System.out.println();
           
-          
-          //TODO: This needs to change
-          for(int y = 0; y < stateLength; y++){
-            int key = firstPitches.get(y);
-            pitchbuffer = cappedAdd(pitchbuffer, key, stateLength);
-            int newLen = firstLengths.get(y);
-            lengthbuffer = cappedAdd(lengthbuffer, newLen, stateLength);
-            State newState = new State(copy(pitchbuffer), copy(lengthbuffer));
-            if(!notes.contains(newState) && pitchbuffer.length == stateLength){
-              notes.add(newState);
-              transitions.add(new ArrayList<State>());
-            }
-            if(!prevState.equals(new State())){ //If we have a prevState...
-              transitions.get(notes.indexOf(prevState)).add(newState);
-            }
-            prevState = newState;
-          }
-          
-          //Copy arrays in case we disagree on which to use...
-          lengths = notes;
-          transitions2 = transitions;
+          //At this point we've read the entire track. Last note should be tied up in activeNotes, everything else done
+          activeNotes.get(0).delay = activeNotes.get(0).len;
+          checkCompletedNotes(stateLength);
+          //Rerun initial notes so the piece loops
+          activeNotes = new ArrayList<PartialNote>(initialNotes); //Shallow copy is fine here
+          checkCompletedNotes(stateLength); //Re-process starting notes to close the loop
       }
     }
-    catch(Exception e){exit();}
+    catch(InvalidMidiDataException e){
+      println("Bad file input");
+      exit();
+    }
+    catch(IOException e){
+      println("Bad file input");
+      exit();
+    }
   }
   
-  private void checkCompletedNotes(){
+  private void checkCompletedNotes(int stateLength){
     //Process any notes that are done (have to go in order, so stop at first incomplete)
-    while(true){
+    while(activeNotes.size() != 0){
       PartialNote p = activeNotes.get(0);
       if(p.delay >= 0 && p.len >= 0){
-        //Note is done; process it
-        //TODO: Process note
+        //Note is done; put it in buffers, and possibly state/transition arrays
+        pitchBuffer = cappedAdd(pitchBuffer, p.pitch, stateLength);
+        lengthBuffer = cappedAdd(lengthBuffer, p.len, stateLength);
+        delayBuffer = cappedAdd(delayBuffer, p.delay, stateLength);
+        if(pitchBuffer.length == stateLength){
+          State s = new State(pitchBuffer, lengthBuffer, delayBuffer);
+          if(prevState != null){
+            transitions.get(states.indexOf(prevState)).add(s);
+          }
+          if(!states.contains(s)){
+            states.add(s);
+            transitions.add(new ArrayList<State>());
+          }
+          prevState = s;
+        }
+        
+        //If it's one of the first notes, store it
+        if(initialNotes.size() < stateLength){
+          initialNotes.add(p);
+        }
         
         activeNotes.remove(p);
       }
@@ -232,15 +197,6 @@ public class MIDIReader2{
     }
   }
   
-  private int[] copy(int[] A){
-    int[] temp = new int[A.length];
-    for(int x = 0; x < A.length; x++){
-      temp[x] = A[x];
-    }
-    return temp;
-  }
-  
-  //Pretty sure this'll modify the actual array, not just a copy.
   private int[] shiftArrayBack(int[] array, int newval){
     for(int x = 0; x < array.length-1; x++){
       array[x] = array[x+1];
