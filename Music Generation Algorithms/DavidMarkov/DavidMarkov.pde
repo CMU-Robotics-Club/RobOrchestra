@@ -20,15 +20,8 @@ void setup(){
   
   File myFile = new File(dataPath("twinkle_twinkle.mid"));
   
-  boolean newReader = true;
-  if(newReader){
-    MIDIReader2 reader = new MIDIReader2(myFile, new int[]{1}, 15);
-    mc = new MarkovChain(reader.states, reader.transitions);
-  }
-  else{
-    MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 15);
-    mc = new MarkovChain(reader.notes, reader.transitions);
-  }
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 15);
+  mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
