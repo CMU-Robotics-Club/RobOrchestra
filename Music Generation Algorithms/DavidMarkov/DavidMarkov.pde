@@ -8,7 +8,7 @@ int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 
 double legato = 0.9;
-double lenmult = 1; //Note length multiplier (to speed up/slow down output)
+double lenmult = 0.5; //Note length multiplier (to speed up/slow down output)
 boolean sendNoteOffCommands = false;
 
 int percussionLen = 1000; //Overwritten in setup
@@ -45,7 +45,7 @@ void draw(){
   Note note = new Note(channel, pitch, velocity);
   PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands);
   t.start();
-  delay(mystate.delays[mystate.delays.length-1]);
+  delay((int)(lenmult*mystate.delays[mystate.delays.length-1]));
 }
 
 void playPercussion(){
