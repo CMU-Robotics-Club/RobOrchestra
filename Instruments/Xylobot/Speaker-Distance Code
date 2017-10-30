@@ -113,7 +113,7 @@ int SENSOR(int trigPinSensor, int echoPinSensor){
   delay(10);
   digitalWrite(trigPinSensor, LOW);
 
-  int duration = pulseIn(echoPinSensor, HIGH);\
+  int duration = pulseIn(echoPinSensor, HIGH);
   int distance = (duration/2) /29.1;
   return (distance);
 }
