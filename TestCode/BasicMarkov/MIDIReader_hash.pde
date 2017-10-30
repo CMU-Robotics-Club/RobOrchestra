@@ -17,12 +17,13 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 
-public static Map<Long, ArrayList<ShortMessage>> mMap = new HashMap<Long, ArrayList<ShortMessage>>();
 
 public class MIDIReader_hash{
   
   File MIDIfile;
   double mspertick;
+  
+  public Map<Long, ArrayList<ShortMessage>> mMap = new HashMap<Long, ArrayList<ShortMessage>>();
   
   public MIDIReader_hash(File file){
     this(file, new int[] {0});

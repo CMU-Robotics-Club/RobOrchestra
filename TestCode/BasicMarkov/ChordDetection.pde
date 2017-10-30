@@ -11,9 +11,10 @@ import javax.sound.midi.Sequence;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 
-public class ChordDetection{
+public static class ChordDetection{
   
-  public int findChord(ShortMessage[] arr, boolean major)
+  //Returns a number between 0 and 11 (C is 0), for the tonic
+  public static int findChord(ShortMessage[] arr, boolean major)
   {
     int[] chordTest = new int[3];
     int[] lastResort = new int[3];
