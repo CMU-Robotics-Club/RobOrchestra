@@ -52,13 +52,13 @@ public class MIDIReader_hash{
                 /* MY CODE STARTS */
                 ArrayList<ShortMessage> temp = new ArrayList<ShortMessage>();
                 temp.add(sm);
-                if(mMap.get(timestamp) == null) mMap.put(timestamp, temp);
+                if(mMap.get(timestamp/100*100) == null) mMap.put(timestamp/100*100, temp);
                 else
                 {
                 
                   if (sm.getCommand() == NOTE_ON) {                     
                       if(sm.getData2() > 0){                   
-                        mMap.get(timestamp).add(sm);  
+                        mMap.get(timestamp/100*100).add(sm);  
                       }
                   }
                 }
