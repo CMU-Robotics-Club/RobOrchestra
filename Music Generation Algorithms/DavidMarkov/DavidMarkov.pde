@@ -18,9 +18,9 @@ void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   
-  File myFile = new File(dataPath("twinkle_twinkle.mid"));
+  File myFile = new File(dataPath("./twinkle_twinkle.mid"));
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 15);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 1);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
@@ -57,9 +57,9 @@ void playPercussion(){
     myBus.sendNoteOn(snareNote);
     myBus.sendNoteOn(bassNote);
     myBus.sendNoteOn(tomNote);
-    delay(percussionLen);
+    delay(4*percussionLen);
     myBus.sendNoteOn(snareNote);
-    delay(percussionLen);
+    delay(4*percussionLen);
   }
 }
 

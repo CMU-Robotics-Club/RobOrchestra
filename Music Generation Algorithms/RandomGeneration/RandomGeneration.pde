@@ -12,7 +12,7 @@ int velocity = 120; //melody note volume
 float noteLen = 1000; //set chord length in milliseconds
 boolean playing = true;
 boolean isMajor = true;
-boolean noteOff = true;
+boolean noteOff = false;
 
 int tonicCount = -1; //Number of whole-note tonics to play before stopping; -1 for infinite loop
 
