@@ -18,7 +18,7 @@ void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   
-  File myFile = new File(dataPath("CMajChordTest.mid"));
+  File myFile = new File(dataPath("pachelbel_canon.mid"));
   
   //MIDIReader reader = new MIDIReader(myFile, new int[]{0}, 1);
   //mc = new MarkovChain(reader.states, reader.transitions);
@@ -34,7 +34,7 @@ void setup(){
     times[x] = (Long)timestamps[x];
   }
   Arrays.sort(times);
-  for(int x = 0; x < timestamps.length; x++){
+  for(int x = 0; x < times.length; x++){
     ShortMessage[] chordArray = hashreader.mMap.get(times[x]).toArray(new ShortMessage[hashreader.mMap.get(times[x]).size()]);
     println("Chord is: " + ChordDetection.findChord(chordArray, true));
   }

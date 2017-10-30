@@ -19,10 +19,12 @@ public static class ChordDetection{
     int[] chordTest = new int[3];
     int[] lastResort = new int[3];
     int count = 0;
+    
+        
     for(int i = 0; i < arr.length; i++){
       if (arr[i].getCommand() == NOTE_ON) {
         int key = arr[i].getData1();
-        int note = key % 12;
+        int note = key%12;
         if(count < 3 && note != chordTest[0] && note != chordTest[1]){ 
           chordTest[count] = note;
           lastResort[count] = key;
@@ -30,8 +32,8 @@ public static class ChordDetection{
         count++;
       }
     }
-    Arrays.sort(chordTest);
-    Arrays.sort(lastResort);
+    //Arrays.sort(chordTest);
+    //Arrays.sort(lastResort);
     if(major){
       if(chordTest[0] == (chordTest[1] - 3) % 12 && chordTest[2] == (chordTest[0] - 4) % 12) return chordTest[2];
       else if(chordTest[0] == (chordTest[1] - 4) % 12 && chordTest[1] == (chordTest[2] - 3) % 12) return chordTest[0];
