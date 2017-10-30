@@ -90,19 +90,21 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 #define NOTE_CS8 4435
 #define NOTE_D8  4699
 #define NOTE_DS8 4978
-int speaker = 9;
 int button = 8;
 int trigPin = 33;
-int echoPin = 31;
+int echoPin = 31; // goes to out 
 
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(speaker, OUTPUT);
+  Serial.begin(9600);
+  delay(200);
+  Serial.println("starting");
+  delay(200);
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  Serial.begin(9600);
-  MIDI.begin(MIDI_CHANNEL_OMNI);
+  
+  //MIDI.begin(MIDI_CHANNEL_OMNI);
 }
 
 
@@ -113,7 +115,7 @@ int SENSOR(int trigPinSensor, int echoPinSensor){
   delay(10);
   digitalWrite(trigPinSensor, LOW);
 
-  int duration = pulseIn(echoPinSensor, HIGH);
+  int duration = pulseIn(echoPinSensor, HIGH);\
   int distance = (duration/2) /29.1;
   return (distance);
 }
@@ -121,58 +123,76 @@ int SENSOR(int trigPinSensor, int echoPinSensor){
 void loop() {
   // put your main code here, to run repeatedly:
   int ultra = SENSOR(trigPin, echoPin);
-  Serial.println(ultra);
-  if (ultra < 5) {
-    Serial.println(ultra);
-    MIDI.sendNoteOn(60, 127, 1);
-  if (ultra < 7) {
+  if (ultra < 10) {
+      Serial.println(ultra);
+      MIDI.sendNoteOn(60, 127, 1);
+    }
+
+  delay(200);
+}
+  /*if (ultra < 7) {
     Serial.println(ultra);
     MIDI.sendNoteOn(61, 127, 1);
+    }
   if (ultra < 9) {
     Serial.println(ultra);
     MIDI.sendNoteOn(62, 127, 1);
+    }
   if (ultra < 11) {
     Serial.println(ultra);
     MIDI.sendNoteOn(63, 127, 1);
+    }
   if (ultra < 13) {
     Serial.println(ultra);
     MIDI.sendNoteOn(64, 127, 1);
+    }
   if (ultra < 15) {
     Serial.println(ultra);
     MIDI.sendNoteOn(65, 127, 1);
+    }
   if (ultra < 17) {
     Serial.println(ultra);
     MIDI.sendNoteOn(66, 127, 1);
+    }
   if (ultra < 19) {
     Serial.println(ultra);
     MIDI.sendNoteOn(67, 127, 1);
+    }
   if (ultra < 21) {
     Serial.println(ultra);
     MIDI.sendNoteOn(68, 127, 1);
+    }
   if (ultra < 23) {
     Serial.println(ultra);
     MIDI.sendNoteOn(69, 127, 1);
+    }
   if (ultra < 25) {
     Serial.println(ultra);
     MIDI.sendNoteOn(70, 127, 1);
+    }
   if (ultra < 27) {
     Serial.println(ultra);
     MIDI.sendNoteOn(71, 127, 1);
+    }
   if (ultra < 29) {
     Serial.println(ultra);
     MIDI.sendNoteOn(72, 127, 1);
+  }
   if (ultra < 31) {
     Serial.println(ultra);
     MIDI.sendNoteOn(73, 127, 1);
+  }
   if (ultra < 33) {
     Serial.println(ultra);
     MIDI.sendNoteOn(74, 127, 1);
+  }
   if (ultra < 35) {
     Serial.println(ultra);
     MIDI.sendNoteOn(75, 127, 1);
+  }
   if (ultra < 37) {
     Serial.println(ultra);
     MIDI.sendNoteOn(76, 127, 1);
   }
-}
+}*/
 
