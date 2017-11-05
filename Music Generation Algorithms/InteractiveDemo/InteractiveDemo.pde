@@ -1,207 +1,259 @@
-import themidibus.*; //Import midi library
-import java.lang.Math; //To get random numbers
-import controlP5.*; //For GUI stuff
+import controlP5.*;
+import themidibus.*;
 
 ControlP5 cp5;
+MidiBus myBus;
 
-//Open SimpleSynth to play on Mac
+Button onOff;
+Button scaleCycle;
+Button subScaleCycle;
 
-MidiBus myBus; //Creates a MidiBus object
-int channel = 0; //set channel. 0 for speakers
-int velocity = 120; //melody note volume
-int noteLen = 100; //set chord length in milliseconds
-boolean playing = true;
- 
-int tonic = 60; //set key to C major
-int currentNote = 7;
+Slider xyloSlider;
+Slider snareSlider;
+Slider tomSlider;
+
+Knob tonicKnob;
+Knob lengthKnob;
+
+int snarePitchMIDI = 36;
+int tomPitchMIDI = 37;
+int channel = 0;
+int velocity = 120;
+
+String[] scaleNames = {"Major", "Minor", "Chromatic"};
+String[][] subScaleNames = {{"Blah1", "Blah2"}, {"Meh1", "Meh2", "Meh3"}, {"Ugh1", "Ugh2"}};
+int[][][] scaleOffsets = {
+  {{0, 2, 4, 5, 7, 9, 11, 12},
+   {0, 2, 4, 5, 7, 9, 11, 12}},
+  
+  {{0, 2, 3, 5, 7, 8, 10, 12},
+   {0, 2, 3, 5, 7, 8, 10, 12},
+   {0, 2, 3, 5, 7, 8, 10, 12}},
+   
+  {{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+   {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}}
+};
+int curScale = 0;
+int curSubScale = 0;
+
+boolean isPlaying = true;
+
 int beatIndex = 0;
-int snareMIDI = 36;
-int tomMIDI = 37;
-int[] scaleOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
-int[] majorOffsets = {0, 2, 4, 5, 7, 9, 11, 12};
-int[] minorOffsets = {0, 2, 3, 5, 7, 8, 10, 12};
-int[][] rhythms = {{1}, {2, 2}, {4, 4, 4, 4}};
-int[] nextRhythm = {}; //Start on a whole note
+int tonic = 0;
+int len = 0;
 
-float a = 1, b = 1, c = 1, d = 1, e = 1, f = 1, g = 1;
-float[] p = {1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7};
+String[] noteNames = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+float[] notes = {};
+float[] probs = {};
 
 float xyloDensity = 0.0;
 float snareDensity = 0.0;
 float tomDensity = 0.0;
 
-int phraseLen = 16;
+int measureLength = 16;
 float[] xylo = {1.0, 0.00, 0.00, 0.00, 1.0, 0.00, 0.0, 0.0, 1.0, 0.00, 0.0, 0.00, 1.0, 0.0, 0.0, 0.0};
 float[] tom = {1.0, -1.0, 0.0, -1.0, 0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0, 0.5, 0.0, -1.0, 0.0};
 float[] snare = {0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0, 0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0};
 
-
-
-//sets up screen
 void setup() {
-
-  MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 1);
-  
-  size(400, 750);
+  size(380, 278);
   cp5 = new ControlP5(this);
+  myBus = new MidiBus(this, 0, 1);
+    
+  cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9, true), 9));
   
-  cp5.addButton("Major")
-    .setBroadcast(false)
-    .setValue(0)
-    .setPosition(100, 50)
-    .setSize(200, 19)
-    .setBroadcast(true)
+  resetArrays();
+  
+  onOff = cp5.addButton("togglePlay")
+    .setPosition(30, 30)
+    .setSize(35, 73)
+    .setFont(new ControlFont(createFont("Power.ttf", 15, true), 15))
+    .setCaptionLabel("\u23FB")
   ;
-  cp5.addButton("Minor")
-    .setBroadcast(false)
-    .setValue(0)
-    .setPosition(100, 100)
-    .setSize(200, 19)
-    .setBroadcast(true)
+  
+  scaleCycle = cp5.addButton("changeScale")
+    .setPosition(70, 30)
+    .setSize(70, 34)
   ;
-  cp5.addButton("Stop")
-    .setBroadcast(false)
-    .setValue(0)
-    .setPosition(100, 150)
-    .setSize(200, 19)
-    .setBroadcast(true)
+  subScaleCycle = cp5.addButton("changeSubScale")
+    .setPosition(70, 69)
+    .setSize(70, 34)
   ;
-  cp5.addSlider("noteLen")
-    .setPosition(100, 200)
-    .setSize(200, 19)
-    .setRange(100, 500) //I'd like a log scale...
+  
+  xyloSlider = cp5.addSlider("xyloDensity")
+    .setPosition(155, 30)
+    .setSize(195, 21)
+    .setRange(0.0, 1.0)
+    .setValue(0.55)
+  ;
+  xyloSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10);
+  xyloSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10);
+  
+  snareSlider = cp5.addSlider("snareDensity")
+    .setPosition(155, 56)
+    .setSize(195, 21)
+    .setRange(0.0, 1.0)
+    .setValue(0.70);
+  ;
+  snareSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10);
+  snareSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10);
+  
+  tomSlider = cp5.addSlider("tomDensity")
+    .setPosition(155, 82)
+    .setSize(195, 21)
+    .setRange(0.0, 1.0)
+    .setValue(0.45);
+  ;
+  tomSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10);
+  tomSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10);
+  
+  tonicKnob = cp5.addKnob("tonic")
+    .setRange(0, 100)
+    .setValue(60)
+    .setPosition(30, 118)
+    .setRadius(30)
+    .setDragDirection(Knob.VERTICAL)
+  ;
+  tonicKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-42).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7, true), 7));
+  tonicKnob.getValueLabel().setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 8, true), 8));
+
+  lengthKnob = cp5.addKnob("len")
+    .setRange(100, 500)
     .setValue(250)
+    .setPosition(30, 188)
+    .setRadius(30)
+    .setDragDirection(Knob.VERTICAL)
   ;
-  cp5.addSlider("xyloDensity")
-    .setPosition(100, 250)
-    .setSize(200, 19)
-    .setRange(0.0, 1.0)
-    .setValue(0.0)
-  ;
-  cp5.addSlider("snareDensity")
-    .setPosition(100, 300)
-    .setSize(200, 19)
-    .setRange(0.0, 1.0)
-    .setValue(0.0)
-  ;
-  cp5.addSlider("tomDensity")
-    .setPosition(100, 350)
-    .setSize(200, 19)
-    .setRange(0.0, 1.0)
-    .setValue(0.0)
-  ;
-  for(int x = 'a'; x < 'h'; x++){
-     cp5.addSlider(str((char)x))
-    .setPosition(100, 400 + 50*(x - 'a'))
-    .setSize(200, 19)
+  lengthKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-42).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7, true), 7));
+  lengthKnob.getValueLabel().setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 8, true), 8));
+}
+
+int curTime = 0;
+void draw() {
+  float sum = 0.0;
+  for (int i = 0; i < notes.length; i++)
+    sum += notes[i];
+  for (int i = 0; i < notes.length; i++)
+    probs[i] = notes[i] / sum;
+  
+  background(255, 255, 255);
+  
+  onOff.setColorBackground(isPlaying ? color(204, 0, 43) : color(240, 240, 240));
+  onOff.setColorForeground(isPlaying ? color(204, 0, 43) : color(240, 240, 240));
+  onOff.setColorActive(isPlaying ? color(235, 0, 43) : color(230, 230, 230));
+  onOff.setColorLabel(isPlaying ? color(255, 255, 255) : color(204, 0, 43));
+  
+  scaleCycle.setCaptionLabel(scaleNames[curScale]);
+  scaleCycle.setColorBackground(color(24, 100, 204));
+  scaleCycle.setColorForeground(color(24, 100, 204));
+  scaleCycle.setColorActive(color(49, 144, 225));
+  
+  subScaleCycle.setCaptionLabel(subScaleNames[curScale][curSubScale]);
+  subScaleCycle.setColorBackground(color(9, 35, 70));
+  subScaleCycle.setColorForeground(color(9, 35, 70));
+  subScaleCycle.setColorActive(color(30, 80, 150));
+  
+  xyloSlider.setCaptionLabel("Xylo Density");
+  xyloSlider.setColorBackground(color(103, 0, 0));
+  xyloSlider.setColorForeground(color(204, 0, 43));
+  xyloSlider.setColorActive(color(204, 0, 43));
+  
+  snareSlider.setCaptionLabel("Snare Density");
+  snareSlider.setColorBackground(color(103, 0, 0));
+  snareSlider.setColorForeground(color(204, 0, 43));
+  snareSlider.setColorActive(color(204, 0, 43));
+  
+  tomSlider.setCaptionLabel("Tom Density");
+  tomSlider.setColorBackground(color(103, 0, 0));
+  tomSlider.setColorForeground(color(204, 0, 43));
+  tomSlider.setColorActive(color(204, 0, 43));
+  
+  tonicKnob.setCaptionLabel("Tone");
+  tonicKnob.setColorBackground(color(103, 0, 0));
+  tonicKnob.setColorForeground(color(204, 0, 43));
+  tonicKnob.setColorActive(color(204, 0, 43));
+  
+  lengthKnob.setCaptionLabel("Delay");
+  lengthKnob.setColorForeground(color(24, 100, 204));
+  lengthKnob.setColorActive(color(24, 100, 204));
+
+  if(isPlaying && millis() > curTime + len) {
+    playMelody();
+    curTime = millis();
+  }
+}
+
+void playMelody() {
+  double r = Math.random();
+  double xyloPlay = Math.random();
+  double snarePlay = Math.random();
+  double tomPlay = Math.random();
+  
+  double xyloThresh = Math.min(xylo[beatIndex] + xyloDensity, 1.0);
+  double snareThresh = Math.min(snare[beatIndex] + snareDensity, 1.0);
+  double tomThresh = Math.min(tom[beatIndex] + tomDensity, 1.0);
+  
+  if(snarePlay <= snareThresh) {
+    myBus.sendNoteOn(new Note(0, snarePitchMIDI, 100));  
+  }
+   
+  delay(2);
+  if(tomPlay <= tomThresh) {
+    myBus.sendNoteOn(new Note(0, tomPitchMIDI, 100));   
+  }
+    
+  delay(2);
+  if(xyloPlay <= xyloThresh) {
+    for(int i = 0; i < scaleOffsets[curScale][curSubScale].length; i++) {
+      r -= probs[i];
+      if(r < 0) {
+        myBus.sendNoteOn(new Note(channel, tonic + scaleOffsets[curScale][curSubScale][i], velocity));  
+        break;
+      }
+    }      
+  }
+  beatIndex = (beatIndex + 1) % measureLength;
+}
+
+void togglePlay() {
+  isPlaying = !isPlaying;
+}
+
+void resetArrays() {
+  for(int i = 0; i < notes.length; i++) {
+    cp5.remove(Integer.toString(i));
+  }
+  int newLength = scaleOffsets[curScale][curSubScale].length;
+  notes = new float[newLength];
+  probs = new float[newLength];
+  
+  for(int i = 0; i < newLength; i++) {
+    notes[i] = 1.0;
+    probs[i] = 1/7;
+  }
+  Slider[] noteSliders = new Slider[notes.length];
+  for(int i = 0; i < notes.length; i++) {
+    noteSliders[i] = cp5.addSlider(Integer.toString(i))
+    .setPosition(350 - (260 / notes.length) * (notes.length - i - 1) - (260 / notes.length - 5), 118)
+    .setSize(260 / notes.length - 5, 130)
     .setRange(0, 1)
     .setValue(1)
-  ; 
+    .setColorForeground(color(24, 100, 204))
+    .setColorActive(color(24, 100, 204))
+    .setCaptionLabel(noteNames[(scaleOffsets[curScale][curSubScale][i] - scaleOffsets[curScale][curSubScale][0]) % 12]);
+   ;
+   noteSliders[i].getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-17);
+   noteSliders[i].setValueLabel("");
   }
-  thread("playMelody");
 }
 
-
-//this function repeats indefinitely
-void draw() {
-  float sum = a + b + c + d + e + f + g;
-  if(sum == 0){
-    println("Problem!!!");
-    return;
-  }
-  p[0] = a/sum;
-  p[1] = b/sum;
-  p[2] = c/sum;
-  p[3] = d/sum;
-  p[4] = e/sum;
-  p[5] = f/sum;
-  p[6] = g/sum;
+void changeScale() {
+  curSubScale = 0;
+  curScale = (curScale + 1) % scaleNames.length;
+  resetArrays();
 }
 
-void playMelody(){
-  while(playing){
-    int offset = 0;
-    double r = Math.random();
-    double xyloPlay = Math.random();
-    double snarePlay = Math.random();
-    double tomPlay = Math.random();
-    double xyloThresh = Math.min(xylo[beatIndex] + xyloDensity, 1.0);
-    double snareThresh = Math.min(snare[beatIndex] + snareDensity, 1.0);
-    double tomThresh = Math.min(tom[beatIndex] + tomDensity, 1.0);
-     //System.out.println("snarePlay = " + snarePlay + " threshold = " + snareThresh);
-    if(snarePlay <= snareThresh) {
-      int pitchSnare = snareMIDI;
-      Note noteSnare = new Note(0, pitchSnare, 100);
-      System.out.println("snare\n");
-      myBus.sendNoteOn(noteSnare);
-        
-    }
-    delay(2);
-    if(tomPlay <= tomThresh) {
-      int pitchTom = tomMIDI;
-      Note noteTom = new Note(0, pitchTom, 100);
-      myBus.sendNoteOn(noteTom);
-        
-    }
-    delay(2);
-    if(xyloPlay <= xyloThresh) {
-      for(int x = 0; x < 7; x++){
-        r -= p[x];
-        if(r < 0){
-          offset = x;
-          break;
-        }
-      }
-      int pitch = tonic + scaleOffsets[offset];
-      
-      
-      Note noteXylo = new Note(channel, pitch, velocity);
-      myBus.sendNoteOn(noteXylo);  
-    }
-    delay(noteLen);
-    beatIndex = (beatIndex + 1) % phraseLen;
-  }
-
-  exit();
-}
-
-public void Major(int val){
-  //This magically runs when the button gets clicked. I'm not sure how.
-  scaleOffsets = majorOffsets;
-  println("In major");
-}
-
-public void Minor(int val){
-  //This magically runs when the button gets clicked. I'm not sure how.
-  scaleOffsets = minorOffsets;
-  println("In minor");
-}
-
-public void Stop(int val) {
-  playing = false;
-}
-
-int getNextRhythm(){
-  int in = (int)(Math.random()*rhythms.length);
-  
-  int[] temp = new int[max(nextRhythm.length-1, 0) + rhythms[in].length];
-  
-  int index = 0;
-  for(int x = 1; x < nextRhythm.length; x++){
-     temp[index++] = nextRhythm[x]; 
-  }
-  for(int x = 0; x < rhythms[in].length; x++){
-     temp[index++] = rhythms[in][x]; 
-  }
-  nextRhythm = temp;
-  return nextRhythm[0];
-}
-
-//processes delay in milliseconds
-void delay(int time) {
-  int current = millis();
-  while (millis () < current+time){
-    Thread.yield();
-  } 
+void changeSubScale() {
+  curSubScale = (curSubScale + 1) % subScaleNames[curScale].length;
+  resetArrays();
 }
