@@ -15,6 +15,8 @@ Slider tomSlider;
 Knob tonicKnob;
 Knob lengthKnob;
 
+Slider[] noteSliders = {};
+
 int snarePitchMIDI = 36;
 int tomPitchMIDI = 37;
 int channel = 0;
@@ -74,10 +76,16 @@ void setup() {
   scaleCycle = cp5.addButton("changeScale")
     .setPosition(70, 30)
     .setSize(70, 34)
+    .setColorBackground(color(24, 100, 204))
+    .setColorForeground(color(24, 100, 204))
+    .setColorActive(color(49, 144, 225))
   ;
   subScaleCycle = cp5.addButton("changeSubScale")
     .setPosition(70, 69)
     .setSize(70, 34)
+    .setColorBackground(color(9, 35, 70))
+    .setColorForeground(color(9, 35, 70))
+    .setColorActive(color(30, 80, 150))
   ;
   
   xyloSlider = cp5.addSlider("xyloDensity")
@@ -85,6 +93,10 @@ void setup() {
     .setSize(195, 21)
     .setRange(0.0, 1.0)
     .setValue(0.55)
+    .setCaptionLabel("Xylo Density")
+    .setColorBackground(color(103, 0, 0))
+    .setColorForeground(color(204, 0, 43))
+    .setColorActive(color(204, 0, 43))
   ;
   xyloSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10);
   xyloSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10);
@@ -93,7 +105,11 @@ void setup() {
     .setPosition(155, 56)
     .setSize(195, 21)
     .setRange(0.0, 1.0)
-    .setValue(0.70);
+    .setValue(0.70)
+    .setCaptionLabel("Snare Density")
+    .setColorBackground(color(103, 0, 0))
+    .setColorForeground(color(204, 0, 43))
+    .setColorActive(color(204, 0, 43))
   ;
   snareSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10);
   snareSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10);
@@ -102,17 +118,25 @@ void setup() {
     .setPosition(155, 82)
     .setSize(195, 21)
     .setRange(0.0, 1.0)
-    .setValue(0.45);
+    .setValue(0.45)
+    .setCaptionLabel("Tom Density")
+    .setColorBackground(color(103, 0, 0))
+    .setColorForeground(color(204, 0, 43))
+    .setColorActive(color(204, 0, 43))
   ;
   tomSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10);
   tomSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10);
   
   tonicKnob = cp5.addKnob("tonic")
-    .setRange(0, 100)
-    .setValue(60)
+    .setRange(60, 72)
+    .setValue(70)
     .setPosition(30, 118)
     .setRadius(30)
     .setDragDirection(Knob.VERTICAL)
+    .setCaptionLabel("Tone")
+    .setColorBackground(color(103, 0, 0))
+    .setColorForeground(color(204, 0, 43))
+    .setColorActive(color(204, 0, 43))
   ;
   tonicKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-42).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7, true), 7));
   tonicKnob.getValueLabel().setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 8, true), 8));
@@ -123,6 +147,9 @@ void setup() {
     .setPosition(30, 188)
     .setRadius(30)
     .setDragDirection(Knob.VERTICAL)
+    .setCaptionLabel("Delay")
+    .setColorForeground(color(24, 100, 204))
+    .setColorActive(color(24, 100, 204))
   ;
   lengthKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-42).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7, true), 7));
   lengthKnob.getValueLabel().setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 8, true), 8));
@@ -144,38 +171,11 @@ void draw() {
   onOff.setColorLabel(isPlaying ? color(255, 255, 255) : color(204, 0, 43));
   
   scaleCycle.setCaptionLabel(scaleNames[curScale]);
-  scaleCycle.setColorBackground(color(24, 100, 204));
-  scaleCycle.setColorForeground(color(24, 100, 204));
-  scaleCycle.setColorActive(color(49, 144, 225));
-  
   subScaleCycle.setCaptionLabel(subScaleNames[curScale][curSubScale]);
-  subScaleCycle.setColorBackground(color(9, 35, 70));
-  subScaleCycle.setColorForeground(color(9, 35, 70));
-  subScaleCycle.setColorActive(color(30, 80, 150));
   
-  xyloSlider.setCaptionLabel("Xylo Density");
-  xyloSlider.setColorBackground(color(103, 0, 0));
-  xyloSlider.setColorForeground(color(204, 0, 43));
-  xyloSlider.setColorActive(color(204, 0, 43));
-  
-  snareSlider.setCaptionLabel("Snare Density");
-  snareSlider.setColorBackground(color(103, 0, 0));
-  snareSlider.setColorForeground(color(204, 0, 43));
-  snareSlider.setColorActive(color(204, 0, 43));
-  
-  tomSlider.setCaptionLabel("Tom Density");
-  tomSlider.setColorBackground(color(103, 0, 0));
-  tomSlider.setColorForeground(color(204, 0, 43));
-  tomSlider.setColorActive(color(204, 0, 43));
-  
-  tonicKnob.setCaptionLabel("Tone");
-  tonicKnob.setColorBackground(color(103, 0, 0));
-  tonicKnob.setColorForeground(color(204, 0, 43));
-  tonicKnob.setColorActive(color(204, 0, 43));
-  
-  lengthKnob.setCaptionLabel("Delay");
-  lengthKnob.setColorForeground(color(24, 100, 204));
-  lengthKnob.setColorActive(color(24, 100, 204));
+  for(int i = 0; i < notes.length; i++) {
+    noteSliders[i].setCaptionLabel(noteNames[(tonic + scaleOffsets[curScale][curSubScale][i]) % 12]);
+  }
 
   if(isPlaying && millis() > curTime + len) {
     playMelody();
@@ -221,7 +221,7 @@ void togglePlay() {
 
 void resetArrays() {
   for(int i = 0; i < notes.length; i++) {
-    cp5.remove(Integer.toString(i));
+    cp5.remove("note"+Integer.toString(i));
   }
   int newLength = scaleOffsets[curScale][curSubScale].length;
   notes = new float[newLength];
@@ -231,19 +231,20 @@ void resetArrays() {
     notes[i] = 1.0;
     probs[i] = 1/7;
   }
-  Slider[] noteSliders = new Slider[notes.length];
+  noteSliders = new Slider[notes.length];
   for(int i = 0; i < notes.length; i++) {
-    noteSliders[i] = cp5.addSlider(Integer.toString(i))
+    noteSliders[i] = cp5.addSlider("note"+Integer.toString(i))
     .setPosition(350 - (260 / notes.length) * (notes.length - i - 1) - (260 / notes.length - 5), 118)
     .setSize(260 / notes.length - 5, 130)
     .setRange(0, 1)
     .setValue(1)
     .setColorForeground(color(24, 100, 204))
     .setColorActive(color(24, 100, 204))
-    .setCaptionLabel(noteNames[(scaleOffsets[curScale][curSubScale][i] - scaleOffsets[curScale][curSubScale][0]) % 12]);
    ;
    noteSliders[i].getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-17);
    noteSliders[i].setValueLabel("");
+   noteSliders[i].setValue(notes[i]);
+   noteSliders[i].setId(i);
   }
 }
 
@@ -256,4 +257,15 @@ void changeScale() {
 void changeSubScale() {
   curSubScale = (curSubScale + 1) % subScaleNames[curScale].length;
   resetArrays();
+}
+
+void controlEvent(ControlEvent theEvent) {
+  if (theEvent.isController()) {
+    if (theEvent.getName().startsWith("note")) {
+      int id = theEvent.getId();
+      if (id >= 0 && id < notes.length) {
+        notes[id] = theEvent.getValue();
+      }
+    }
+  }
 }
