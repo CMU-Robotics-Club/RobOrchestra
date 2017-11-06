@@ -36,6 +36,7 @@ public class MIDIReader{
   private int[] pitchBuffer = new int[0];
   private int[] lengthBuffer = new int[0];
   private int[] delayBuffer = new int[0];
+  private long[] timeBuffer = new long[0];
   private State prevState = null;
   private ArrayList<PartialNote> initialNotes = new ArrayList<PartialNote>();
   
@@ -132,8 +133,10 @@ public class MIDIReader{
           System.out.println();
           
           //At this point we've read the entire track. Last note should be tied up in activeNotes, everything else done
-          activeNotes.get(0).delay = activeNotes.get(0).len;
-          checkCompletedNotes(stateLength);
+          if(activeNotes.size() > 0){
+            activeNotes.get(0).delay = activeNotes.get(0).len;
+            checkCompletedNotes(stateLength);
+          }
           //Rerun initial notes so the piece loops
           activeNotes = new ArrayList<PartialNote>(initialNotes); //Shallow copy is fine here
           checkCompletedNotes(stateLength); //Re-process starting notes to close the loop
@@ -158,8 +161,9 @@ public class MIDIReader{
         pitchBuffer = cappedAdd(pitchBuffer, p.pitch, stateLength);
         lengthBuffer = cappedAdd(lengthBuffer, p.len, stateLength);
         delayBuffer = cappedAdd(delayBuffer, p.delay, stateLength);
+        timeBuffer = cappedAdd(timeBuffer, p.startTime, stateLength);
         if(pitchBuffer.length == stateLength){
-          State s = new State(pitchBuffer, lengthBuffer, delayBuffer);
+          State s = new State(pitchBuffer, lengthBuffer, delayBuffer, timeBuffer);
           if(prevState != null){
             transitions.get(states.indexOf(prevState)).add(s);
           }
@@ -203,7 +207,29 @@ public class MIDIReader{
     }
   }
   
+  private long[] cappedAdd(long[] array, long newval, int maxlen){
+    if(array.length < maxlen){
+      long[] temp = new long[array.length + 1];
+      for(int x = 0; x < array.length; x++){
+        temp[x] = array[x];
+      }
+      temp[temp.length-1] = newval;
+      return temp;
+    }
+    else{
+      return shiftArrayBack(array, newval);
+    }
+  }
+  
   private int[] shiftArrayBack(int[] array, int newval){
+    for(int x = 0; x < array.length-1; x++){
+      array[x] = array[x+1];
+    }
+    array[array.length-1] = newval;
+    return array;
+  }
+  
+  private long[] shiftArrayBack(long[] array, long newval){
     for(int x = 0; x < array.length-1; x++){
       array[x] = array[x+1];
     }

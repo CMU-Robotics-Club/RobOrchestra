@@ -2,6 +2,7 @@ public class State extends Object implements Comparable<State>{
   public int[] pitches;
   public int[] lengths;
   public int[] delays; //Delay after the last note
+  public long[] starttimes; //For chords
   
   //NOTE: We deep-copy all arrays in the constructor to avoid weird stuff happening
   //(This is probably not the standard way to deal with that, but whatever.)
@@ -21,6 +22,13 @@ public class State extends Object implements Comparable<State>{
     pitches = copy(p);
     lengths = copy(l);
     delays = copy(d);
+  }
+  
+  public State(int[] p, int[] l, int[] d, long[] t){
+    pitches = copy(p);
+    lengths = copy(l);
+    delays = copy(d);
+    starttimes = copy(t);
   }
   
   public boolean equals(Object o){
@@ -56,6 +64,16 @@ public class State extends Object implements Comparable<State>{
     //println("Comparing delay lengths");
     if(i == delays.length && j != s.delays.length) return -1;
     if(j == s.delays.length && i != delays.length) return 1;
+    //println("Comparing start times");
+    i = 0; j = 0;
+    while(i < starttimes.length && j < s.starttimes.length){
+      if(starttimes[i] != s.starttimes[j]) return (int)((starttimes[i]-s.starttimes[j])/abs(starttimes[i]-s.starttimes[j]));
+      i++;
+      j++;
+    }
+    //println("Comparing start time lengths");
+    if(i == starttimes.length && j != s.starttimes.length) return -1;
+    if(j == s.starttimes.length && i != starttimes.length) return 1;
     //println("Returning 0");
     return 0;
   }
@@ -76,12 +94,25 @@ public class State extends Object implements Comparable<State>{
       s += delays[x];
       if(x < delays.length-1)s += ", ";
     }
+    s += "], start times: [";
+    for(int x = 0; x < starttimes.length; x++){
+      s += starttimes[x];
+      if(x < starttimes.length-1)s += ", ";
+    }
     s += "]";
     return s;
   }
   
   private int[] copy(int[] A){
     int[] temp = new int[A.length];
+    for(int x = 0; x < A.length; x++){
+      temp[x] = A[x];
+    }
+    return temp;
+  }
+  
+  private long[] copy(long[] A){
+    long[] temp = new long[A.length];
     for(int x = 0; x < A.length; x++){
       temp[x] = A[x];
     }

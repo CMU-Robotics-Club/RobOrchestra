@@ -63,8 +63,6 @@ public class MIDIReader_hash{
               for(long y = oldtimestamp/precision*precision; y < timestamp/precision*precision; y += precision){
                 ArrayList<ShortMessage> temp = (ArrayList<ShortMessage>)notesPlaying.clone();
                 mMap.put(y, temp);
-                println("Size is: " + notesPlaying.size() + "; time is: " + y);
-                println(mMap.get(y));
               }
               oldtimestamp = timestamp;
               
