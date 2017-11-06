@@ -23,14 +23,23 @@ public class MIDIReader_hash{
   File MIDIfile;
   double mspertick;
   
+  int precision;
+  
   public Map<Long, ArrayList<ShortMessage>> mMap = new HashMap<Long, ArrayList<ShortMessage>>();
+  
+  public ArrayList<ShortMessage> notesPlaying = new ArrayList<ShortMessage>();
   
   public MIDIReader_hash(File file){
     this(file, new int[] {0});
   }
   
-  //Defaults to a 1 note state and a 1 length state
   public MIDIReader_hash(File file, int[] toRead){
+    this(file, toRead, 100);
+  }
+  
+  //Defaults to a 1 note state and a 1 length state
+  public MIDIReader_hash(File file, int[] toRead, int p){
+    precision = p;
     try{  
       Sequence sequence = MidiSystem.getSequence(file);
       
@@ -39,43 +48,78 @@ public class MIDIReader_hash{
       int trackNumber = 0;
       
       Track[] tracks = sequence.getTracks();
-      for(int x = 0; x < tracks.length; x++){
+      for(int x: toRead){
+      //for(int x = 0; x < tracks.length; x++){
           Track track = tracks[x];          
           trackNumber++;
           System.out.println("Track " + trackNumber + ": size = " + track.size());
           System.out.println();
+          long oldtimestamp = 0;
           for (int i=0; i < track.size(); i++) {
               MidiEvent event = track.get(i);
               long timestamp = event.getTick();
+              
+              //Update hash map
+              for(long y = oldtimestamp/precision*precision; y < timestamp/precision*precision; y += precision){
+                ArrayList<ShortMessage> temp = (ArrayList<ShortMessage>)notesPlaying.clone();
+                mMap.put(y, temp);
+                println("Size is: " + notesPlaying.size() + "; time is: " + y);
+                println(mMap.get(y));
+              }
+              oldtimestamp = timestamp;
+              
+              //Read new message
               MidiMessage message = event.getMessage();
               if (message instanceof ShortMessage) {
                 ShortMessage sm = (ShortMessage) message;
                 /* MY CODE STARTS */
-                ArrayList<ShortMessage> temp = new ArrayList<ShortMessage>();
+                
+                //Trying to keep old code mostly intact...
+                /*ArrayList<ShortMessage> temp = new ArrayList<ShortMessage>();
                 temp.add(sm);
-                if(mMap.get(timestamp/200*200) == null) mMap.put(timestamp/200*200, temp);
+                if(mMap.get(timestamp/precision*precision) == null) mMap.put(timestamp/precision*precision, temp);
                 else
-                {
+                {*/
                 
                   if (sm.getCommand() == NOTE_ON) {                     
-                      if(sm.getData2() > 0){                   
-                        mMap.get(timestamp/200*200).add(sm);  
+                      if(sm.getData2() > 0){         
+                        notesPlaying.add(sm);
+                        //mMap.get(timestamp/precision*precision).add(sm);  
+                      }
+                      else{
+                        //It's a note off
+                        notesPlaying = removeStuff(notesPlaying, sm);
                       }
                   }
-                }
+                  else if(sm.getCommand() == NOTE_OFF){
+                    //It's a note off
+                    notesPlaying = removeStuff(notesPlaying, sm);
+                  }
+                //}
               }
               else {
                 if(message instanceof MetaMessage){
                    byte[] data = ((MetaMessage)message).getData();
                 }
               }
-           }  
+           }
          }
   
           System.out.println();
-          
-          //Map the last note to the first note
        }
-    catch(Exception e){exit();}
+    catch(Exception e){println("Suppressed an error"); exit();}
+  }
+  
+  private ArrayList<ShortMessage> removeStuff(ArrayList<ShortMessage> notesPlaying, ShortMessage sm){
+    //Do stuff
+    int key = sm.getData1();
+    for(int x = 0; x < notesPlaying.size(); x++){
+      int tempkey = notesPlaying.get(x).getData1();
+      if(tempkey == key){
+        notesPlaying.remove(x);
+        break;
+      }
+    }
+    return notesPlaying;
   }
 }

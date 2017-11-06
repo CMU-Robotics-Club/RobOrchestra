@@ -16,6 +16,9 @@ public static class ChordDetection{
   //Returns a number between 0 and 11 (C is 0), for the tonic
   public static int findChord(ShortMessage[] arr, boolean major)
   {
+    
+    //println("Number of notes is: " + arr.length);
+    
     int[] chordTest = new int[3];
     int[] lastResort = new int[3];
     int count = 0;
@@ -32,6 +35,9 @@ public static class ChordDetection{
         count++;
       }
     }
+    
+    //printArray(chordTest);
+    
     //Arrays.sort(chordTest);
     //Arrays.sort(lastResort);
     if(major){

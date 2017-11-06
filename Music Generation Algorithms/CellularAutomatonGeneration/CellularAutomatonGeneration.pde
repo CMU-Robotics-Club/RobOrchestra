@@ -39,6 +39,7 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   
+  //Overwrites starting seeds
   ca = generateSeed(0.9);
   ca2 = generateSeed(0.9);
   
@@ -111,7 +112,7 @@ void printArray(int[] out){
 }
 
 int getPitch(int[] in){
-   //Grab the first three digits, get a number from 0 to 7, adjust and add to tonic
+   //Sum the row, mod by 8, get a number from 0 to 7, adjust and add to tonic
    int temp = (sum(in) + 1) % 8; //Always start with the tonic, but we seed with 1
    int pitch;
    if(!minor){
