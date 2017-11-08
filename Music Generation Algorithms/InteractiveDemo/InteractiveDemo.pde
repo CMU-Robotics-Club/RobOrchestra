@@ -287,7 +287,15 @@ void playMelody() {
     for(int i = 0; i < scaleOffsets[curScale][curSubScale].length; i++) {
       r -= probs[i];
       if(r < 0) {
-        myBus.sendNoteOn(new Note(channel, tonic + scaleOffsets[curScale][curSubScale][i], velocity));  
+        int noteToPlay = tonic + scaleOffsets[curScale][curSubScale][i];
+        if(noteToPlay > 76) {
+          noteToPlay = (noteToPlay % 12) + 60;
+        }
+        if(noteToPlay > 76 || noteToPlay < 60) {
+          print("ERROR: NOTE OUT OF RANGE\n");
+        }
+        
+        myBus.sendNoteOn(new Note(channel, noteToPlay, velocity));  
         break;
       }
     }      
