@@ -126,6 +126,7 @@ void setup() {
   surface.setSize(380 * scale, 278 * scale);
   cp5 = new ControlP5(this);
   myBus = new MidiBus(this, 0, 1);
+  MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
   
@@ -237,7 +238,7 @@ void draw() {
     sum += notes[i];
   for (int i = 0; i < notes.length; i++)
     probs[i] = notes[i] / sum;
-  
+      
   background(255, 255, 255);
   
   onOff.setColorBackground(isPlaying ? color(204, 0, 43) : color(240, 240, 240));
@@ -282,6 +283,7 @@ void playMelody() {
     
   delay(2);
   if(xyloPlay <= xyloThresh) {
+    //print("You should play\n");
     for(int i = 0; i < scaleOffsets[curScale][curSubScale].length; i++) {
       r -= probs[i];
       if(r < 0) {
@@ -318,6 +320,8 @@ void resetArrays() {
    ;
    noteSliders[i].getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-17 * scale);
    noteSliders[i].getValueLabel().setVisible(false);
+   
+   notes[i] = noteSliders[i].getValue();
   }
 }
 
