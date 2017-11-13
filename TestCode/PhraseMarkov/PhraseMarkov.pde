@@ -22,13 +22,28 @@ MidiBus output;
 String key = "D";
 int xylo_channel = 1;
 int noteLen = 333;    // Length of eighth note
-int num_phrases = 4;
+int num_phrases = 100;
+
+//Length of states
+int stateLength = 2;
+
+State mystate;
+MarkovChain<State> mc;
+
+int channel = 1;
+int velocity = 100;
+boolean sendNoteOffCommands = true;
+double lenmult = 1;
+double legato = 0.9;
+
+MidiBus myBus;
 
 void setup() {
   
   MidiBus.list();
   System.out.println("");
   output = new MidiBus(this, 0, 1);
+  myBus = new MidiBus(this, 0, 1);
   
   for(int i=0; i<num_phrases; i++) {
     ArrayList<Integer> temp_rhythms = new ArrayList<Integer>(); 
@@ -41,11 +56,75 @@ void setup() {
     xylo_patterns.add(xylo_phrases(temp_rhythms.size()));
   }
   
+  State prevState = null;
+  ArrayList<State> states = new ArrayList<State>();
+  ArrayList<ArrayList<State>> transitions = new ArrayList<ArrayList<State>>();
+  
+  ArrayList<Integer> initialpitches = new ArrayList<Integer>();
+  ArrayList<Integer> initiallengths = new ArrayList<Integer>();
+  
+  int[] pitchBuffer = new int[0];
+  int[] lengthBuffer = new int[0];
+  
+  for(int i = 0; i < xylo_patterns.size(); i++){
+    for(int j = 0; j < xylo_patterns.get(i).size(); j++){
+      
+      pitchBuffer = cappedAdd(pitchBuffer, xylo_patterns.get(i).get(j), stateLength);
+      lengthBuffer = cappedAdd(lengthBuffer, noteLen*rhythm_array.get(i).get(j), stateLength);
+      if(pitchBuffer.length == stateLength){
+        State s = new State(pitchBuffer, lengthBuffer, lengthBuffer);
+        if(prevState != null){
+          transitions.get(states.indexOf(prevState)).add(s);
+        }
+        if(!states.contains(s)){
+          states.add(s);
+          transitions.add(new ArrayList<State>());
+        }
+        prevState = s;
+      }
+      
+      //If it's one of the first notes, store it
+      if(initialpitches.size() < stateLength){
+        initialpitches.add(xylo_patterns.get(i).get(j));
+        initiallengths.add(rhythm_array.get(i).get(j));
+      }
+      
+    }
+  }
+  
+  //Rerun first notes
+  
+  for(int i = 0; i < initialpitches.size(); i++){
+    pitchBuffer = cappedAdd(pitchBuffer, initialpitches.get(i), stateLength);
+    lengthBuffer = cappedAdd(lengthBuffer, noteLen*initiallengths.get(i), stateLength);
+    if(pitchBuffer.length == stateLength){
+      State s = new State(pitchBuffer, lengthBuffer, lengthBuffer);
+      if(prevState != null){
+        transitions.get(states.indexOf(prevState)).add(s);
+      }
+      if(!states.contains(s)){
+        states.add(s);
+        transitions.add(new ArrayList<State>());
+      }
+      prevState = s;
+    }
+    
+  }
+  
+  mc = new MarkovChain(states, transitions);
+  mystate = states.get(0);
 }
 
 void draw() {
-  
-  for(int i=0; i<25; i++) {
+  mystate = (State) mc.getNext(mystate);
+  int pitch = mystate.pitches[mystate.pitches.length-1];
+  pitch = pitch%12 + 60;
+  int len = mystate.lengths[mystate.lengths.length-1];
+  Note note = new Note(channel, pitch, velocity);
+  PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands);
+  t.start();
+  delay((int)(lenmult*mystate.delays[mystate.delays.length-1]));
+  /*for(int i=0; i<25; i++) {
     
     int phrase = (int)(Math.random()*num_phrases);
     ArrayList<Integer> rand_pattern = xylo_patterns.get(phrase);
@@ -58,7 +137,7 @@ void draw() {
       output.sendNoteOff(mynote);
     }
     //delay(noteLen * 4);
-  }
+  }*/
 }
 
 
@@ -128,4 +207,66 @@ ArrayList<Integer> rhythm() {
   */
   
   return rhythm_array;
+}
+
+
+//Utility function from MIDIReader
+private int[] cappedAdd(int[] array, int newval, int maxlen){
+  if(array.length < maxlen){
+    int[] temp = new int[array.length + 1];
+    for(int x = 0; x < array.length; x++){
+      temp[x] = array[x];
+    }
+    temp[temp.length-1] = newval;
+    return temp;
+  }
+  else{
+    return shiftArrayBack(array, newval);
+  }
+}
+
+private long[] cappedAdd(long[] array, long newval, int maxlen){
+  if(array.length < maxlen){
+    long[] temp = new long[array.length + 1];
+    for(int x = 0; x < array.length; x++){
+      temp[x] = array[x];
+    }
+    temp[temp.length-1] = newval;
+    return temp;
+  }
+  else{
+    return shiftArrayBack(array, newval);
+  }
+}
+
+private int[] shiftArrayBack(int[] array, int newval){
+  for(int x = 0; x < array.length-1; x++){
+    array[x] = array[x+1];
+  }
+  array[array.length-1] = newval;
+  return array;
+}
+
+private long[] shiftArrayBack(long[] array, long newval){
+  for(int x = 0; x < array.length-1; x++){
+    array[x] = array[x+1];
+  }
+  array[array.length-1] = newval;
+  return array;
+}
+
+private int[] copy(int[] A){
+  int[] temp = new int[A.length];
+  for(int x = 0; x < A.length; x++){
+    temp[x] = A[x];
+  }
+  return temp;
+}
+
+private long[] copy(long[] A){
+  long[] temp = new long[A.length];
+  for(int x = 0; x < A.length; x++){
+    temp[x] = A[x];
+  }
+  return temp;
 }

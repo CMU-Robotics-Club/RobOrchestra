@@ -7,14 +7,18 @@ import java.io.*; //For outputting stuff
 //Positive numbers mean make a new phrase of that many measures
 //Non-positive numbers mean absolute value and grab the phrase at that index
 //So 0 grabs the first phrase, -1 grabs the second, etc.
-int[] input = {2, 2, 2, 2};
+int[] input = {2, 2, 0, -1, 0, -1, 0, -1};
 
-Orchestra myBus; //Creates a MidiBus object
-Orchestra compBus;
+//Orchestra myBus; //Creates a MidiBus object
+//Orchestra compBus;
+
+MidiBus myBus;
+MidiBus compBus;
+
 int noteLen = 1000; //set chord length in milliseconds
 int tonic = 60; //set key to C major
 int next = 0; //keeps track of next chord. Always start with tonic. Updates in generateChord()
-int[] divisions = {1, 1, 2, 2, 3, 4, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
+int[] divisions = {1, 1, 2, 2, 4, 4}; //Possible number of melody nodes per chord(quarter, 2 eighths, 4 sixteenths)
 int tonicCount = 0; //How many times a tonic chord has been played with a quarter note melody
 int tonicTotal = 4; //Music stops when we reach this number of tonic chord/quarter note melodies (-1 for infinite loop)
 
@@ -94,8 +98,8 @@ void setup() {
 
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
 
-  myBus = new Orchestra(0); 
-  compBus = new Orchestra(0);
+  myBus = new MidiBus(this, 0, 1); 
+  compBus = new MidiBus(this, 0, 1);
   initializeText();
   roboLogo = loadImage("rc_logo.png");
   println("Starting");
@@ -436,12 +440,12 @@ Measure generateMeasure(int numTonic){
      
      //Stop previous notes
      for(int x = 0; x < melodyNotes.size(); x++){
-        compBus.sendNoteOff(melodyNotes.get(x)); 
+        compBus.sendNoteOff(NoteMessageToNote(melodyNotes.get(x))); 
      }
      melodyNotes = new ArrayList();
      if(i == 0){
        for(int x = 0; x < chordNotes.size(); x++){
-          compBus.sendNoteOff(chordNotes.get(x)); 
+          compBus.sendNoteOff(NoteMessageToNote(chordNotes.get(x))); 
        }
        chordNotes = new ArrayList();
      }
@@ -451,7 +455,7 @@ Measure generateMeasure(int numTonic){
      ArrayList<NoteMessage> toPlay = b.earlynotes[i];
      for(int x = 0; x < toPlay.size(); x++){
        chordNotes.add(toPlay.get(x));
-       compBus.sendMidiNote(toPlay.get(x));
+       compBus.sendNoteOn(NoteMessageToNote(toPlay.get(x)));
      }
      delay(fudgetime);
      
@@ -461,7 +465,7 @@ Measure generateMeasure(int numTonic){
      boolean bclear = true;
      for(int x = 0; x < toPlay.size(); x++){
        melodyNotes.add(toPlay.get(x));
-       myBus.sendMidiNote(toPlay.get(x));
+       myBus.sendNoteOn(NoteMessageToNote(toPlay.get(x)));
        
        //Check for percussion notes
        if(toPlay.get(x).channel == pchannel1 && toPlay.get(x).pitch == 36){
@@ -708,4 +712,9 @@ int[] beatsToNBeats(float[] D) {
     temp[x] = beatToNBeat(D[x]);
   }
   return temp;
+}
+
+Note NoteMessageToNote(NoteMessage m){
+  Note n = new Note(m.channel, m.pitch, m.volume);
+  return n;
 }
