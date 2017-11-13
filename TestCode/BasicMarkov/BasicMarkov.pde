@@ -26,7 +26,7 @@ void setup(){
   
   File myFile = new File(dataPath("auldlangsyne.mid"));
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 1);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 10);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
