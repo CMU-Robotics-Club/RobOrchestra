@@ -13,10 +13,10 @@ Slider snareSlider;
 Slider tomSlider;
 
 Knob tonicKnob;
-Knob lengthKnob;
+Knob tempoKnob;
 
 Textlabel rootNote;
-Textlabel noteLength;
+Textlabel tempoBPM;
 
 Slider[] noteSliders = {};
 
@@ -107,7 +107,7 @@ boolean isPlaying = true;
 
 int beatIndex = 0;
 int tonic = 0;
-int len = 0;
+int tempo = 0;
 
 String[] noteNames = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 float[] notes = {};
@@ -212,23 +212,23 @@ void setup() {
   ;
   rootNote.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 
-  lengthKnob = cp5.addKnob("len")
+  tempoKnob = cp5.addKnob("tempo")
     .setPosition(30 * scale, 188 * scale)
     .setRadius(30 * scale)
-    .setRange(100, 500)
-    .setValue(250)
+    .setRange(60, 400)
+    .setValue(120)
     .setDragDirection(Knob.VERTICAL)
-    .setCaptionLabel("Delay")
+    .setCaptionLabel("BPM")
     .setColorForeground(color(24, 100, 204))
     .setColorActive(color(24, 100, 204))
   ;
-  lengthKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-41 * scale).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7 * scale, true), 7 * scale));
-  lengthKnob.getValueLabel().setVisible(false);
+  tempoKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-41 * scale).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7 * scale, true), 7 * scale));
+  tempoKnob.getValueLabel().setVisible(false);
   
-  noteLength = cp5.addTextlabel("noteLength")
+  tempoBPM = cp5.addTextlabel("tempoBPM")
     .setPosition(10 * scale, 215 * scale)  
   ;
-  noteLength.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
+  tempoBPM.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 }
 
 int curTime = 0;
@@ -250,13 +250,13 @@ void draw() {
   subScaleCycle.setCaptionLabel(subScaleNames[curScale][curSubScale]);
   
   rootNote.setText(noteNames[tonic % 12]);
-  noteLength.setText(Integer.toString(len));
+  tempoBPM.setText(Integer.toString(tempo));
       
   for(int i = 0; i < notes.length; i++) {
     noteSliders[i].setCaptionLabel(noteNames[(tonic + scaleOffsets[curScale][curSubScale][i]) % 12]);
   }
 
-  if(isPlaying && millis() > curTime + len) {
+  if(isPlaying && millis() > curTime + (60000 / tempo)) {
     playMelody();
     curTime = millis();
   }
