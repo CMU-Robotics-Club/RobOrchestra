@@ -15,20 +15,52 @@ static final String KEY = "D";
 static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 static final int[] KEY_NOTES = {0,2,4,5,7,9,11,12};
 
-ArrayList<ArrayList<Integer>> pattern_list = new ArrayList<ArrayList<Integer>>();
+ArrayList<ArrayList<Integer>> xylo_patterns = new ArrayList<ArrayList<Integer>>();
+ArrayList<ArrayList<Integer>> xylo_rhythms = new ArrayList<ArrayList<Integer>>();
 
 MidiBus output;
 String key = "D";
-int channel = 0;
-int noteLen = 333;
-int phrase_length = 4;
-int num_phrases = 10;
+int xylo_channel = 1;
+int noteLen = 333;    // Length of eighth note
+int num_phrases = 4;
 
 void setup() {
   
   MidiBus.list();
   System.out.println("");
   output = new MidiBus(this, 0, 1);
+  
+  
+  
+  // Generates phrases of notes for XyloBot
+  xylo_phrases();
+  
+  
+  System.out.println(rhythm());
+  
+  
+}
+
+void draw() {
+  
+  for(int i=0; i<25; i++) {
+    
+    int phrase = (int)(Math.random()*num_phrases);
+    ArrayList<Integer> rand_pattern = xylo_patterns.get(phrase);
+    
+    for(int j=0; j<rand_pattern.size(); j++) {
+      Note mynote = new Note(xylo_channel, rand_pattern.get(j), 100);
+      
+      output.sendNoteOn(mynote);
+      delay(noteLen);
+      output.sendNoteOff(mynote);
+    }
+  }
+}
+
+
+// Generates phrases of notes for XyloBot
+void xylo_phrases(int phrase_length) {
   
   // Whole array of notes
   ArrayList<Integer> notes = new ArrayList<Integer>();
@@ -40,7 +72,7 @@ void setup() {
     notes.add((KEY_NOTES[(int)(Math.random()*8)]+k)+60);
   }
   
-  // Split up notes into (num_phrases) arrays stored in pattern_list
+  // Splits up notes into (num_phrases) arrays stored in xylo_patterns
   for(int i=phrase_length; i<=notes.size(); i+=phrase_length) {  
     ArrayList<Integer> pattern = new ArrayList<Integer>();
     
@@ -48,23 +80,37 @@ void setup() {
       pattern.add(notes.get(j));
     }
     
-    pattern_list.add(pattern);
+    xylo_patterns.add(pattern);
   }
 }
 
-void draw() {
+ArrayList<Integer> rhythm() {
+  ArrayList<Integer> rhythm_array = new ArrayList<Integer>();
+  ArrayList<Integer> temp_array = new ArrayList<Integer>();
   
-  for(int i=0; i<25; i++) {
-    
-    int phrase = (int)(Math.random()*num_phrases);
-    ArrayList<Integer> rand_pattern = pattern_list.get(phrase);
-    
-    for(int j=0; j<phrase_length; j++) {
-      Note mynote = new Note(channel, rand_pattern.get(j), 100);
-      
-      output.sendNoteOn(mynote);
-      delay(noteLen);
-      output.sendNoteOff(mynote);
+  temp_array.add(1);
+  
+  for(int i=0; i<15; i++) {
+    if((int)(Math.random()*2)>0) {
+      temp_array.add(0);
+    }
+    else { temp_array.add(1); }
+  }
+  
+  System.out.println(temp_array);
+  
+  int inc = 1;
+  
+  for(int i=1; i<16; i++) {
+    if(temp_array.get(i) == 0) {
+      inc++;
+    } else {
+      rhythm_array.add(inc);
+      inc = 1;
     }
   }
+  
+  rhythm_array.add(inc);
+  
+  return rhythm_array;
 }
