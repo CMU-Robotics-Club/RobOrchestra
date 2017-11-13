@@ -295,6 +295,13 @@ void playMelody() {
           print("ERROR: NOTE OUT OF RANGE\n");
         }
         
+        if(noteToPlay == 61) {
+          noteToPlay = 73;
+        }
+        else if(noteToPlay == 75) {
+          noteToPlay = 63;
+        }
+        
         myBus.sendNoteOn(new Note(channel, noteToPlay, velocity));  
         break;
       }
