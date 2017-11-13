@@ -1,10 +1,10 @@
 class PlayNoteThread extends Thread{
   Note note;
   int len;
-  int chord;
+  int[] chord;
   boolean noteOff;
   
-  public PlayNoteThread(Note n, int l, boolean b, int c){
+  public PlayNoteThread(Note n, int l, boolean b, int[] c){
     note = n;
     len = l;
     noteOff = b;
@@ -30,7 +30,7 @@ class PlayNoteThread extends Thread{
     delay((int)(lenmult*len*(1-legato)));
   }
   
-  private void scaleOn(int c){
+  private void scaleOn(int[] c){
     if(c!=-1){
       compBus.sendNoteOn(new Note(1, (c%12)+60, 100));
       if(c == 9) {
@@ -43,7 +43,7 @@ class PlayNoteThread extends Thread{
     }
   }
   
-  private void scaleOff(int c){
+  private void scaleOff(int[] c){
     if(c!=-1){
       compBus.sendNoteOff(new Note(1, (c%12)+60, 100));
       compBus.sendNoteOff(new Note(1, ((c+4)%12)+60, 100));

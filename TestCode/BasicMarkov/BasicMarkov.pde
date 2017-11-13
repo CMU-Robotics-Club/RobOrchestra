@@ -58,7 +58,7 @@ void draw(){
   Note note = new Note(channel, pitch, velocity);
   
   ShortMessage[] chordArray = hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).toArray(new ShortMessage[hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).size()]);
-  PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands, ChordDetection.findChord(chordArray, true));
+  PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands, ChordDetection.findChord(chordArray));
   t.start();
   
   delay((int)(lenmult*mystate.delays[mystate.delays.length-1]));
