@@ -16,7 +16,7 @@ static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "
 static final int[] KEY_NOTES = {0,2,4,5,7,9,11,12};
 
 ArrayList<ArrayList<Integer>> xylo_patterns = new ArrayList<ArrayList<Integer>>();
-ArrayList<ArrayList<Integer>> xylo_rhythms = new ArrayList<ArrayList<Integer>>();
+ArrayList<ArrayList<Integer>> rhythm_array = new ArrayList<ArrayList<Integer>>();
 
 MidiBus output;
 String key = "D";
@@ -30,14 +30,16 @@ void setup() {
   System.out.println("");
   output = new MidiBus(this, 0, 1);
   
-  
-  
-  // Generates phrases of notes for XyloBot
-  xylo_phrases();
-  
-  
-  System.out.println(rhythm());
-  
+  for(int i=0; i<num_phrases; i++) {
+    ArrayList<Integer> temp_rhythms = new ArrayList<Integer>(); 
+    
+    temp_rhythms = rhythm();
+    
+    rhythm_array.add(temp_rhythms);
+    
+    // Generates phrases of notes for XyloBot
+    xylo_patterns.add(xylo_phrases(temp_rhythms.size()));
+  }
   
 }
 
@@ -52,15 +54,16 @@ void draw() {
       Note mynote = new Note(xylo_channel, rand_pattern.get(j), 100);
       
       output.sendNoteOn(mynote);
-      delay(noteLen);
+      delay(noteLen * rhythm_array.get(phrase).get(j));
       output.sendNoteOff(mynote);
     }
+    delay(noteLen * 4);
   }
 }
 
 
 // Generates phrases of notes for XyloBot
-void xylo_phrases(int phrase_length) {
+ArrayList<Integer> xylo_phrases(int phrase_length) {
   
   // Whole array of notes
   ArrayList<Integer> notes = new ArrayList<Integer>();
@@ -68,20 +71,13 @@ void xylo_phrases(int phrase_length) {
   int k = Arrays.asList(NOTE_NAMES).indexOf(KEY);
   
   // Adds random notes in the given key to the notes array 
-  for(int i=0; i<phrase_length*num_phrases; i++) {
+  for(int i=0; i<phrase_length; i++) {
     notes.add((KEY_NOTES[(int)(Math.random()*8)]+k)+60);
   }
   
-  // Splits up notes into (num_phrases) arrays stored in xylo_patterns
-  for(int i=phrase_length; i<=notes.size(); i+=phrase_length) {  
-    ArrayList<Integer> pattern = new ArrayList<Integer>();
-    
-    for(int j=i-phrase_length; j<i; j++) {
-      pattern.add(notes.get(j));
-    }
-    
-    xylo_patterns.add(pattern);
-  }
+  notes.set(phrase_length-1, KEY_NOTES[0]+k+60);
+  
+  return notes;
 }
 
 ArrayList<Integer> rhythm() {
@@ -91,13 +87,13 @@ ArrayList<Integer> rhythm() {
   temp_array.add(1);
   
   for(int i=0; i<15; i++) {
-    if((int)(Math.random()*2)>0) {
+    if((int)(Math.random()*4)>2) {
       temp_array.add(0);
     }
     else { temp_array.add(1); }
   }
   
-  System.out.println(temp_array);
+  temp_array.set(15,0);
   
   int inc = 1;
   
