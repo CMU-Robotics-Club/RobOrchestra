@@ -11,7 +11,7 @@ int velocity = 120; //melody note volume
 double legato = 0.9;
 double lenmult = 1; //Note length multiplier (to speed up/slow down output)
 boolean sendNoteOffCommands = false;
-boolean percussionNoteOff = true;
+boolean percussionNoteOff = false;
 
 int percussionLen = 1000; //Overwritten in setup
 
@@ -22,11 +22,11 @@ void setup(){
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 1);
+  compBus = new MidiBus(this, 0, 2);
   
   File myFile = new File(dataPath("auldlangsyne.mid"));
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 10);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 1);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
@@ -56,9 +56,11 @@ void draw(){
   pitch = pitch%12 + 60;
   int len = mystate.lengths[mystate.lengths.length-1];
   Note note = new Note(channel, pitch, velocity);
+  
   ShortMessage[] chordArray = hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).toArray(new ShortMessage[hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).size()]);
   PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands, ChordDetection.findChord(chordArray, true));
   t.start();
+  
   delay((int)(lenmult*mystate.delays[mystate.delays.length-1]));
 }
 
@@ -68,21 +70,44 @@ void playPercussion(){
   Note bassNote = new Note(percChannel, 35, 100);
   Note tomNote = new Note(percChannel, 37, 100);
   while(true){
-    myBus.sendNoteOn(snareNote);
-    myBus.sendNoteOn(bassNote);
-    myBus.sendNoteOn(tomNote);
-    delay(percussionLen);
-    if(percussionNoteOff){
-      myBus.sendNoteOff(snareNote);
-      myBus.sendNoteOff(bassNote);
-      myBus.sendNoteOff(tomNote);
+    
+    double randomCheck = Math.random();
+    
+    if(randomCheck < 0.5) {
+      myBus.sendNoteOn(snareNote);
+      myBus.sendNoteOn(bassNote);
+      myBus.sendNoteOn(tomNote);
+      delay(int(percussionLen * 2 * 0.75));
+      if(percussionNoteOff){
+        myBus.sendNoteOff(snareNote);
+        myBus.sendNoteOff(bassNote);
+        myBus.sendNoteOff(tomNote);
+      }
+      myBus.sendNoteOn(tomNote);
+      delay(int(percussionLen * 2 * 0.25));
+      if(percussionNoteOff){
+        myBus.sendNoteOff(snareNote);
+      }
     }
-    myBus.sendNoteOn(snareNote);
-    delay(percussionLen);
-    if(percussionNoteOff){
-      myBus.sendNoteOff(snareNote);
+    
+    else {
+      myBus.sendNoteOn(snareNote);
+      myBus.sendNoteOn(bassNote);
+      myBus.sendNoteOn(tomNote);
+      delay(int(percussionLen));
+      if(percussionNoteOff){
+        myBus.sendNoteOff(snareNote);
+        myBus.sendNoteOff(bassNote);
+        myBus.sendNoteOff(tomNote);
+      }
+      myBus.sendNoteOn(tomNote);
+      delay(int(percussionLen));
+      if(percussionNoteOff){
+        myBus.sendNoteOff(snareNote);
+      }
     }
   }
+  
 }
 
 //processes delay in milliseconds

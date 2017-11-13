@@ -123,11 +123,15 @@ void loop() {
   int ultra = SENSOR(trigPin, echoPin);
   Serial.println(ultra);
   int x = 5.625*(ultra-10) + 60;
-  if (ultra >= 10 and ultra <= 100){
-    Serial.println(ultra);
-    MIDI.sendNoteOn(x, 127, 1);
-    delay(100);
+  if(ultra < 10) {
+    MIDI.sendNoteOn(60, 127, 1);
+    delay(500);
   }
-  }
+  //if (ultra >= 10 and ultra <= 100){
+   // Serial.println(ultra);
+    //MIDI.sendNoteOn(x, 127, 1);
+   //delay(100);
+  //}
+}
 
 
