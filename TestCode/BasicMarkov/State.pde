@@ -65,7 +65,7 @@ public class State extends Object implements Comparable<State>{
     if(i == delays.length && j != s.delays.length) return -1;
     if(j == s.delays.length && i != delays.length) return 1;
     //println("Comparing start times");
-    i = 0; j = 0;
+    /*i = 0; j = 0;
     while(i < starttimes.length && j < s.starttimes.length){
       if(starttimes[i] != s.starttimes[j]) return (int)((starttimes[i]-s.starttimes[j])/abs(starttimes[i]-s.starttimes[j]));
       i++;
@@ -73,7 +73,7 @@ public class State extends Object implements Comparable<State>{
     }
     //println("Comparing start time lengths");
     if(i == starttimes.length && j != s.starttimes.length) return -1;
-    if(j == s.starttimes.length && i != starttimes.length) return 1;
+    if(j == s.starttimes.length && i != starttimes.length) return 1;*/
     //println("Returning 0");
     return 0;
   }
