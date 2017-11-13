@@ -57,15 +57,15 @@ void draw() {
       delay(noteLen * rhythm_array.get(phrase).get(j));
       output.sendNoteOff(mynote);
     }
-    delay(noteLen * 4);
+    //delay(noteLen * 4);
   }
 }
 
 
-// Generates phrases of notes for XyloBot
+// Generates phrases of notes
 ArrayList<Integer> xylo_phrases(int phrase_length) {
   
-  // Whole array of notes
+  // Array of note pitches to be stored in xylo_patterns
   ArrayList<Integer> notes = new ArrayList<Integer>();
   
   int k = Arrays.asList(NOTE_NAMES).indexOf(KEY);
@@ -75,6 +75,7 @@ ArrayList<Integer> xylo_phrases(int phrase_length) {
     notes.add((KEY_NOTES[(int)(Math.random()*8)]+k)+60);
   }
   
+  // Sets last note as the tonic
   notes.set(phrase_length-1, KEY_NOTES[0]+k+60);
   
   return notes;
@@ -82,8 +83,25 @@ ArrayList<Integer> xylo_phrases(int phrase_length) {
 
 ArrayList<Integer> rhythm() {
   ArrayList<Integer> rhythm_array = new ArrayList<Integer>();
-  ArrayList<Integer> temp_array = new ArrayList<Integer>();
+  // ArrayList<Integer> temp_array = new ArrayList<Integer>();
   
+  for(int j=0; j<3; j++) {
+    int rand = (int)(Math.random()*2);
+    if(rand == 0) {
+      rhythm_array.add(2);
+      rhythm_array.add(2);
+    }
+    if(rand == 1) {
+      rhythm_array.add(1);
+      rhythm_array.add(1);
+      rhythm_array.add(1);
+      rhythm_array.add(1);
+    }
+  }
+  
+  rhythm_array.add(4);
+  
+  /*
   temp_array.add(1);
   
   for(int i=0; i<15; i++) {
@@ -107,6 +125,7 @@ ArrayList<Integer> rhythm() {
   }
   
   rhythm_array.add(inc);
+  */
   
   return rhythm_array;
 }
