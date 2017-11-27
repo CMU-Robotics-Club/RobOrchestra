@@ -19,7 +19,6 @@ MIDIReader_hash hashreader;
 int precision = 20;
 
 void setup(){
-  
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 2);

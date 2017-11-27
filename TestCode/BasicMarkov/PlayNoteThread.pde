@@ -34,34 +34,36 @@ class PlayNoteThread extends Thread{
   }
   
   private void scaleOn(int[] c){
-    //This is where we have problems. We'd want a reverse chord-detection thing here.
-    
-    //TODO: Stop assuming all major chords
+    //Hopefully this works; mostly written with if statements and Wikipedia, and no idea what's supposed to happen, so...
     if(c[0]!=-1){
-      //Do
+      //Tonic
       chordNotes.add(new Note(1, (c[0]%12)+60, 100));
       
-      //Mi
-      if(c[1] == 1 || c[1] == 3 || c[1] == 5 || c[1] == 7) {
+      //Third
+      if(c[1] == 2 || c[1] == 3 || c[1] == 4 || c[1] == 6 || c[1] == 7) {
         chordNotes.add(new Note(1, ((c[0]+3)%12)+60, 100));
       }
-      if(c[1] == 2 || c[1] == 6) {
+      if(c[1] == 1 || c[1] == 5) {
         chordNotes.add(new Note(1, ((c[0]+4)%12)+60, 100));
       }
       
-      //So
-      chordNotes.add(new Note(1, ((c[0]+7)%12)+60, 100));
+      //Fifth
+      if(c[1] == 4 || c[1] == 7){
+        chordNotes.add(new Note(1, ((c[0]+6)%12)+60, 100));
+      }
+      if(c[1] == 1 || c[1] == 2 || c[1] == 3 || c[1] == 5 || c[1] == 6){
+        chordNotes.add(new Note(1, ((c[0]+7)%12)+60, 100));
+      }
       
+      //Seventh
       if(c[1] == 7){
         chordNotes.add(new Note(1, ((c[0]+9)%12)+60, 100));
       }
       
-      if(c[1] == 3){
+      if(c[1] == 3 || c[1] == 6){
         chordNotes.add(new Note(1, ((c[0]+10)%12)+60, 100));
       }
-      
-      //Seventh stuff
-      if(c[1] == 5 || c[1] == 6){
+      if(c[1] == 5){
         chordNotes.add(new Note(1, ((c[0]+11)%12)+60, 100));
       }
     }
