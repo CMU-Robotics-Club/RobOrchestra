@@ -10,6 +10,7 @@ class PlayNoteThread extends Thread{
     len = l;
     noteOff = b;
     chord = c;
+    chordNotes = new ArrayList<Note>();
   }
   
   public void run(){
