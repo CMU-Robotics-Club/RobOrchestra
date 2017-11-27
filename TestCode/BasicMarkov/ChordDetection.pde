@@ -56,13 +56,13 @@ public static class ChordDetection{
     if(chordTest[0] == -1) return new int[]{-1, -1};
     
     //If only one note is detected
-    if(chordTest[1] == -1)
+    else if(chordTest[1] == -1)
     {
       return new int[]{chordTest[0], -1}; 
     }
     
     //If two notes are detected
-    if(chordTest[2] == -1)
+    else if(chordTest[2] == -1)
     {
       if((chordTest[0] + 4) % 12 == chordTest[1]) return new int[]{chordTest[0], 1};
       else if((chordTest[0] + 3) % 12 == chordTest[1]) return new int[]{chordTest[0], 2};
@@ -78,7 +78,7 @@ public static class ChordDetection{
     }
     
     //If three notes are detected
-    if(chordTest[3] == -1)
+    else if(chordTest[3] == -1)
     {
       //Checking when to return index 0 as root
       if((chordTest[0] + 4) % 12 == chordTest[1])
@@ -177,20 +177,25 @@ public static class ChordDetection{
     }
     
     
-    //if four notes are detected
-    //If three notes are detected
-    if(chordTest[3] == -1)
-    {
-      //Checking when to return index 0 as root
+    
+    
+    
+    
+    
+    
+    
+    //If four notes are detected
+    else {
+      //testing if index 0 is tonic
       if((chordTest[0] + 4) % 12 == chordTest[1])
       {
-        if((chordTest[1] + 6) % 12 == chordTest[2]) return new int[]{chordTest[0], 3};
-        if((chordTest[1] + 7) % 12 == chordTest[2]) return new int[]{chordTest[0], 5};
+        if((chordTest[1] + 6) % 12 == chordTest[2] || (chordTest[1] + 6) % 12 == chordTest[3]) return new int[]{chordTest[0], 3};
+        if((chordTest[1] + 7) % 12 == chordTest[2] || (chordTest[1] + 7) % 12 == chordTest[3]) return new int[]{chordTest[0], 5};
         return new int[]{chordTest[0], 1};
       }
       else if((chordTest[0] + 3) % 12 == chordTest[1])
       {
-        if((chordTest[1] + 7) % 12 == chordTest[2]) return new int[]{chordTest[0], 6};
+        if((chordTest[1] + 7) % 12 == chordTest[2] || (chordTest[1] + 7) % 12 == chordTest[3]) return new int[]{chordTest[0], 6};
         return new int[]{chordTest[0], 2};
       }
       else if((chordTest[0] + 10) % 12 == chordTest[1]) return new int[]{chordTest[0], 3};
@@ -198,13 +203,13 @@ public static class ChordDetection{
       
       if((chordTest[0] + 4) % 12 == chordTest[2])
       {
-        if((chordTest[2] + 6) % 12 == chordTest[1]) return new int[]{chordTest[0], 3};
-        if((chordTest[2] + 7) % 12 == chordTest[1]) return new int[]{chordTest[0], 5};
+        if((chordTest[2] + 6) % 12 == chordTest[1] || (chordTest[2] + 6) % 12 == chordTest[3]) return new int[]{chordTest[0], 3};
+        if((chordTest[2] + 7) % 12 == chordTest[1] || (chordTest[2] + 7) % 12 == chordTest[3]) return new int[]{chordTest[0], 5};
         return new int[]{chordTest[0], 1};
       }
       else if((chordTest[0] + 3) % 12 == chordTest[2])
       {
-        if((chordTest[2] + 7) % 12 == chordTest[1]) return new int[]{chordTest[0], 6};
+        if((chordTest[2] + 7) % 12 == chordTest[1] || (chordTest[2] + 7) % 12 == chordTest[3]) return new int[]{chordTest[0], 6};
         return new int[]{chordTest[0], 2};
       }
       else if((chordTest[0] + 10) % 12 == chordTest[2]) return new int[]{chordTest[0], 3};
@@ -212,13 +217,13 @@ public static class ChordDetection{
       
       if((chordTest[0] + 4) % 12 == chordTest[3])
       {
-        if((chordTest[3] + 6) % 12 == chordTest[1]) return new int[]{chordTest[0], 3};
-        if((chordTest[3] + 7) % 12 == chordTest[1]) return new int[]{chordTest[0], 5};
+        if((chordTest[3] + 6) % 12 == chordTest[1] || (chordTest[3] + 6) % 12 == chordTest[1]) return new int[]{chordTest[0], 3};
+        if((chordTest[3] + 7) % 12 == chordTest[1] || (chordTest[3] + 7) % 12 == chordTest[1]) return new int[]{chordTest[0], 5};
         return new int[]{chordTest[0], 1};
       }
       else if((chordTest[0] + 3) % 12 == chordTest[3])
       {
-        if((chordTest[3] + 7) % 12 == chordTest[1]) return new int[]{chordTest[0], 6};
+        if((chordTest[3] + 7) % 12 == chordTest[1] || (chordTest[3] + 7) % 12 == chordTest[2]) return new int[]{chordTest[0], 6};
         return new int[]{chordTest[0], 2};
       }
       else if((chordTest[0] + 10) % 12 == chordTest[3]) return new int[]{chordTest[0], 3};
@@ -227,18 +232,16 @@ public static class ChordDetection{
       
       
       
-      
-      
       //Checking when to return index 1 as root
       if((chordTest[1] + 4) % 12 == chordTest[0])
       {
-        if((chordTest[0] + 6) % 12 == chordTest[2]) return new int[]{chordTest[1], 3};
-        if((chordTest[0] + 7) % 12 == chordTest[2]) return new int[]{chordTest[1], 5};
+        if((chordTest[0] + 6) % 12 == chordTest[2] || (chordTest[0] + 6) % 12 == chordTest[3]) return new int[]{chordTest[1], 3};
+        if((chordTest[0] + 7) % 12 == chordTest[2] || (chordTest[0] + 7) % 12 == chordTest[3]) return new int[]{chordTest[1], 5};
         return new int[]{chordTest[1], 1};
       }
       else if((chordTest[1] + 3) % 12 == chordTest[0])
       {
-        if((chordTest[0] + 7) % 12 == chordTest[2]) return new int[]{chordTest[1], 6};
+        if((chordTest[0] + 7) % 12 == chordTest[2] || (chordTest[0] + 7) % 12 == chordTest[3]) return new int[]{chordTest[1], 6};
         return new int[]{chordTest[1], 2};
       }
       else if((chordTest[1] + 10) % 12 == chordTest[0]) return new int[]{chordTest[1], 3};
@@ -246,51 +249,123 @@ public static class ChordDetection{
       
       if((chordTest[1] + 4) % 12 == chordTest[2])
       {
-        if((chordTest[2] + 6) % 12 == chordTest[0]) return new int[]{chordTest[1], 3};
-        if((chordTest[2] + 7) % 12 == chordTest[0]) return new int[]{chordTest[1], 5};
+        if((chordTest[2] + 6) % 12 == chordTest[0] || (chordTest[2] + 6) % 12 == chordTest[3]) return new int[]{chordTest[1], 3};
+        if((chordTest[2] + 7) % 12 == chordTest[0] || (chordTest[2] + 7) % 12 == chordTest[3]) return new int[]{chordTest[1], 5};
         return new int[]{chordTest[1], 1};
       }
       else if((chordTest[1] + 3) % 12 == chordTest[2])
       {
-        if((chordTest[2] + 7) % 12 == chordTest[0]) return new int[]{chordTest[1], 6};
+        if((chordTest[2] + 7) % 12 == chordTest[0] || (chordTest[2] + 7) % 12 == chordTest[3]) return new int[]{chordTest[1], 6};
         return new int[]{chordTest[1], 2};
       }
       else if((chordTest[1] + 10) % 12 == chordTest[2]) return new int[]{chordTest[1], 3};
       else if((chordTest[1] + 11) % 12 == chordTest[2]) return new int[]{chordTest[1], 5};
       
+      if((chordTest[1] + 4) % 12 == chordTest[3])
+      {
+        if((chordTest[3] + 6) % 12 == chordTest[0] || (chordTest[3] + 6) % 12 == chordTest[0]) return new int[]{chordTest[1], 3};
+        if((chordTest[3] + 7) % 12 == chordTest[0] || (chordTest[3] + 7) % 12 == chordTest[0]) return new int[]{chordTest[1], 5};
+        return new int[]{chordTest[1], 1};
+      }
+      else if((chordTest[1] + 3) % 12 == chordTest[3])
+      {
+        if((chordTest[3] + 7) % 12 == chordTest[0] || (chordTest[3] + 7) % 12 == chordTest[2]) return new int[]{chordTest[1], 6};
+        return new int[]{chordTest[1], 2};
+      }
+      else if((chordTest[1] + 10) % 12 == chordTest[3]) return new int[]{chordTest[1], 3};
+      else if((chordTest[1] + 11) % 12 == chordTest[3]) return new int[]{chordTest[1], 5};
+      
+      
       
       
       //checking when to return index 2 as root
-      if((chordTest[2] + 4) % 12 == chordTest[1])
-      {
-        if((chordTest[1] + 6) % 12 == chordTest[0]) return new int[]{chordTest[2], 3};
-        if((chordTest[1] + 7) % 12 == chordTest[0]) return new int[]{chordTest[2], 5};
-        return new int[]{chordTest[2], 1};
-      }
-      else if((chordTest[2] + 3) % 12 == chordTest[1])
-      {
-        if((chordTest[1] + 7) % 12 == chordTest[0]) return new int[]{chordTest[2], 6};
-        return new int[]{chordTest[2], 2};
-      }
-      else if((chordTest[2] + 10) % 12 == chordTest[1]) return new int[]{chordTest[2], 3};
-      else if((chordTest[2] + 11) % 12 == chordTest[1]) return new int[]{chordTest[2], 5};
-      
       if((chordTest[2] + 4) % 12 == chordTest[0])
       {
-        if((chordTest[0] + 6) % 12 == chordTest[1]) return new int[]{chordTest[2], 3};
-        if((chordTest[0] + 7) % 12 == chordTest[1]) return new int[]{chordTest[2], 5};
+        if((chordTest[0] + 6) % 12 == chordTest[1] || (chordTest[0] + 6) % 12 == chordTest[3]) return new int[]{chordTest[2], 3};
+        if((chordTest[0] + 7) % 12 == chordTest[1] || (chordTest[0] + 7) % 12 == chordTest[3]) return new int[]{chordTest[2], 5};
         return new int[]{chordTest[2], 1};
       }
       else if((chordTest[2] + 3) % 12 == chordTest[0])
       {
-        if((chordTest[0] + 7) % 12 == chordTest[1]) return new int[]{chordTest[2], 6};
+        if((chordTest[0] + 7) % 12 == chordTest[1] || (chordTest[0] + 7) % 12 == chordTest[3]) return new int[]{chordTest[2], 6};
         return new int[]{chordTest[2], 2};
       }
       else if((chordTest[2] + 10) % 12 == chordTest[0]) return new int[]{chordTest[2], 3};
       else if((chordTest[2] + 11) % 12 == chordTest[0]) return new int[]{chordTest[2], 5};
       
+      if((chordTest[2] + 4) % 12 == chordTest[1])
+      {
+        if((chordTest[1] + 6) % 12 == chordTest[0] || (chordTest[1] + 6) % 12 == chordTest[3]) return new int[]{chordTest[2], 3};
+        if((chordTest[1] + 7) % 12 == chordTest[0] || (chordTest[1] + 7) % 12 == chordTest[3]) return new int[]{chordTest[2], 5};
+        return new int[]{chordTest[2], 1};
+      }
+      else if((chordTest[2] + 3) % 12 == chordTest[1])
+      {
+        if((chordTest[1] + 7) % 12 == chordTest[0] || (chordTest[1] + 7) % 12 == chordTest[3]) return new int[]{chordTest[2], 6};
+        return new int[]{chordTest[2], 2};
+      }
+      else if((chordTest[2] + 10) % 12 == chordTest[1]) return new int[]{chordTest[2], 3};
+      else if((chordTest[2] + 11) % 12 == chordTest[1]) return new int[]{chordTest[2], 5};
+      
+      if((chordTest[2] + 4) % 12 == chordTest[3])
+      {
+        if((chordTest[3] + 6) % 12 == chordTest[0] || (chordTest[3] + 6) % 12 == chordTest[0]) return new int[]{chordTest[2], 3};
+        if((chordTest[3] + 7) % 12 == chordTest[0] || (chordTest[3] + 7) % 12 == chordTest[0]) return new int[]{chordTest[2], 5};
+        return new int[]{chordTest[2], 1};
+      }
+      else if((chordTest[2] + 3) % 12 == chordTest[3])
+      {
+        if((chordTest[3] + 7) % 12 == chordTest[0] || (chordTest[3] + 7) % 12 == chordTest[1]) return new int[]{chordTest[2], 6};
+        return new int[]{chordTest[2], 2};
+      }
+      else if((chordTest[2] + 10) % 12 == chordTest[3]) return new int[]{chordTest[2], 3};
+      else if((chordTest[2] + 11) % 12 == chordTest[3]) return new int[]{chordTest[2], 5};
+      
+      
+      //checking when to return index 3 as root
+      if((chordTest[3] + 4) % 12 == chordTest[0])
+      {
+        if((chordTest[0] + 6) % 12 == chordTest[1] || (chordTest[0] + 6) % 12 == chordTest[2]) return new int[]{chordTest[3], 3};
+        if((chordTest[0] + 7) % 12 == chordTest[1] || (chordTest[0] + 7) % 12 == chordTest[2]) return new int[]{chordTest[3], 5};
+        return new int[]{chordTest[3], 1};
+      }
+      else if((chordTest[3] + 3) % 12 == chordTest[0])
+      {
+        if((chordTest[0] + 7) % 12 == chordTest[1] || (chordTest[0] + 7) % 12 == chordTest[2]) return new int[]{chordTest[3], 6};
+        return new int[]{chordTest[3], 2};
+      }
+      else if((chordTest[3] + 10) % 12 == chordTest[0]) return new int[]{chordTest[3], 3};
+      else if((chordTest[3] + 11) % 12 == chordTest[0]) return new int[]{chordTest[3], 5};
+      
+      if((chordTest[3] + 4) % 12 == chordTest[1])
+      {
+        if((chordTest[1] + 6) % 12 == chordTest[0] || (chordTest[1] + 6) % 12 == chordTest[2]) return new int[]{chordTest[3], 3};
+        if((chordTest[1] + 7) % 12 == chordTest[0] || (chordTest[1] + 7) % 12 == chordTest[2]) return new int[]{chordTest[3], 5};
+        return new int[]{chordTest[3], 1};
+      }
+      else if((chordTest[3] + 3) % 12 == chordTest[1])
+      {
+        if((chordTest[1] + 7) % 12 == chordTest[0] || (chordTest[1] + 7) % 12 == chordTest[2]) return new int[]{chordTest[3], 6};
+        return new int[]{chordTest[3], 2};
+      }
+      else if((chordTest[3] + 10) % 12 == chordTest[1]) return new int[]{chordTest[3], 3};
+      else if((chordTest[3] + 11) % 12 == chordTest[1]) return new int[]{chordTest[3], 5};
+      
+      if((chordTest[3] + 4) % 12 == chordTest[2])
+      {
+        if((chordTest[2] + 6) % 12 == chordTest[0] || (chordTest[2] + 6) % 12 == chordTest[0]) return new int[]{chordTest[3], 3};
+        if((chordTest[2] + 7) % 12 == chordTest[0] || (chordTest[2] + 7) % 12 == chordTest[0]) return new int[]{chordTest[3], 5};
+        return new int[]{chordTest[3], 1};
+      }
+      else if((chordTest[3] + 3) % 12 == chordTest[2])
+      {
+        if((chordTest[2] + 7) % 12 == chordTest[0] || (chordTest[2] + 7) % 12 == chordTest[1]) return new int[]{chordTest[3], 6};
+        return new int[]{chordTest[3], 2};
+      }
+      else if((chordTest[3] + 10) % 12 == chordTest[2]) return new int[]{chordTest[3], 3};
+      else if((chordTest[3] + 11) % 12 == chordTest[2]) return new int[]{chordTest[3], 5};
+      
     }
-   
    
     //println("COULDN'T CHORD");
     return new int[]{-1, -1};
