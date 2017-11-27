@@ -21,11 +21,12 @@ Code for types of chords
 5 - major seventh
 6 - minor seventh
 7 - diminished seventh
+-1 - not sure what chord it is
 */
 
 public static class ChordDetection{
   
-  //Returns first number between 0 and 11 (C is 0), for the root
+  //Returns first number between 0 and 11 (C is 0), for the root (-1 if no idea)
   //Returns second number for chord type --> see list above
   public static int[] findChord(ShortMessage[] arr)
   {
