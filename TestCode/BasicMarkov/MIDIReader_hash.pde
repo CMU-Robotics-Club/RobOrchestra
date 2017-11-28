@@ -105,7 +105,14 @@ public class MIDIReader_hash{
   
           System.out.println();
        }
-    catch(Exception e){println("Suppressed an error"); exit();}
+    catch(InvalidMidiDataException e){
+      println("Bad file input");
+      exit();
+    }
+    catch(IOException e){
+      println("Bad file input");
+      exit();
+    }
   }
   
   private ArrayList<ShortMessage> removeStuff(ArrayList<ShortMessage> notesPlaying, ShortMessage sm){

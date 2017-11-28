@@ -23,15 +23,18 @@ void setup(){
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 2);
   
-  File myFile = new File(dataPath("auldlangsyne.mid"));
+  File myFile = new File(dataPath("CMajChordTest.mid"));
+  File chordFile = myFile;
+  chordFile = new File(dataPath("CMajChordTest.mid"));
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 1);
+  
+  MIDIReader reader = new MIDIReader(myFile, new int[]{0}, 5);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
   
-  hashreader = new MIDIReader_hash(myFile, new int[]{2}, precision);
+  hashreader = new MIDIReader_hash(chordFile, new int[]{0}, precision);
   
   Object[] timestamps = hashreader.mMap.keySet().toArray();
   Long[] times = new Long[timestamps.length];
@@ -55,8 +58,13 @@ void draw(){
   pitch = pitch%12 + 60;
   int len = mystate.lengths[mystate.lengths.length-1];
   Note note = new Note(channel, pitch, velocity);
-  
-  ShortMessage[] chordArray = hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).toArray(new ShortMessage[hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).size()]);
+  ShortMessage[] chordArray;
+  try{
+    chordArray = hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).toArray(new ShortMessage[hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).size()]);
+  }
+  catch(Exception e){
+    chordArray = new ShortMessage[0];
+  }
   PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands, ChordDetection.findChord(chordArray));
   t.start();
   
