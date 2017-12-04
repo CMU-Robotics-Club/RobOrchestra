@@ -23,18 +23,18 @@ void setup(){
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 2);
   
-  File myFile = new File(dataPath("CMajChordTest.mid"));
+  File myFile = new File(dataPath("schubert_ave_maria.mid"));
   File chordFile = myFile;
-  chordFile = new File(dataPath("CMajChordTest.mid"));
+  //chordFile = new File(dataPath("CMajChordTest.mid"));
   
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{0}, 5);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 1);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
   
-  hashreader = new MIDIReader_hash(chordFile, new int[]{0}, precision);
+  hashreader = new MIDIReader_hash(chordFile, new int[]{2}, precision);
   
   Object[] timestamps = hashreader.mMap.keySet().toArray();
   Long[] times = new Long[timestamps.length];
@@ -49,7 +49,7 @@ void setup(){
     tempstate = mc.getNext(tempstate);
   }
   percussionLen = tempstate.lengths[tempstate.lengths.length-1];
-  thread("playPercussion");
+  //thread("playPercussion");
 }
 
 void draw(){
@@ -115,6 +115,15 @@ void playPercussion(){
     }
   }
   
+}
+
+static void printArray(int[] A){
+  print("[");
+  for (int x = 0; x < A.length; x++){
+    print(A[x]);
+    if(x < A.length-1) print(", ");
+  }
+  print("]");
 }
 
 //processes delay in milliseconds

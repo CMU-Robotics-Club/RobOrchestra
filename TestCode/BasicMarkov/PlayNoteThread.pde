@@ -14,14 +14,6 @@ class PlayNoteThread extends Thread{
   }
   
   public void run(){
-    //Why do we do this? Was this hard-coding around broken Xylobot solenoids?
-    /*if(note.pitch == 61) {
-      note.pitch = 73;
-    }
-    else if(note.pitch == 75) {
-      note.pitch = 63;
-    }*/
-    
     
     myBus.sendNoteOn(note);
     scaleOn(chord);
@@ -34,6 +26,9 @@ class PlayNoteThread extends Thread{
   }
   
   private void scaleOn(int[] c){
+    
+    double r = Math.random();
+    if(r > 0.25) return;
     //Hopefully this works; mostly written with if statements and Wikipedia, and no idea what's supposed to happen, so...
     if(c[0]!=-1){
       //Tonic
@@ -67,6 +62,11 @@ class PlayNoteThread extends Thread{
         chordNotes.add(new Note(1, ((c[0]+11)%12)+60, 100));
       }
     }
+    
+    //Take chords down an octave
+    /*for(Note n: chordNotes){
+      n.pitch -= 12;
+    }*/
     
     //Play the chord
     for(int x = 0; x < chordNotes.size(); x++){

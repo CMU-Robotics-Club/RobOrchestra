@@ -24,13 +24,14 @@ Code for types of chords
 -1 - not sure what chord it is
 */
 public static class ChordDetection{
-  
   static int[] prevMajorMinorArr = new int[]{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
   
   //Returns first number between 0 and 11 (C is 0), for the root (-1 if no idea)
   //Returns second number for chord type --> see list above
   public static int[] findChord(ShortMessage[] arr){
     int[] out = findChordWrapped(arr);
+    printArray(out);
+    println();
     if(out[1] != -1){
       /*for(int x = 0; x < 12; x++){
         //prevMajorMinorArr[x] = out[1];
@@ -65,6 +66,8 @@ public static class ChordDetection{
       }
     }
     
+    printArray(chordTest);
+    
     //If no notes are detected
     if(chordTest[0] == -1) return new int[]{-1, -1};
     
@@ -80,14 +83,14 @@ public static class ChordDetection{
       if((chordTest[0] + 4) % 12 == chordTest[1]) return new int[]{chordTest[0], 1};
       else if((chordTest[0] + 3) % 12 == chordTest[1]) return new int[]{chordTest[0], 2};
       else if((chordTest[0] + 7) % 12 == chordTest[1]) return new int[]{chordTest[0], prevMajorMinorArr[chordTest[0]]};
-      else if((chordTest[0] + 10) % 12 == chordTest[1]) return new int[]{chordTest[0], 3};
+      //else if((chordTest[0] + 10) % 12 == chordTest[1]) return new int[]{chordTest[0], 3};
       else if((chordTest[0] + 11) % 12 == chordTest[1]) return new int[]{chordTest[0], 5};
       else if((chordTest[0] + 6) % 12 == chordTest[1]) return new int[]{chordTest[0], 4};
       
       else if((chordTest[1] + 4) % 12 == chordTest[0]) return new int[]{chordTest[1], 1};
       else if((chordTest[1] + 3) % 12 == chordTest[0]) return new int[]{chordTest[1], 2};
       else if((chordTest[1] + 7) % 12 == chordTest[0]) return new int[]{chordTest[1], prevMajorMinorArr[chordTest[1]]};
-      else if((chordTest[1] + 10) % 12 == chordTest[0]) return new int[]{chordTest[1], 3};
+      //else if((chordTest[1] + 10) % 12 == chordTest[0]) return new int[]{chordTest[1], 3};
       else if((chordTest[1] + 11) % 12 == chordTest[0]) return new int[]{chordTest[1], 5};
       else if((chordTest[1] + 6) % 12 == chordTest[0]) return new int[]{chordTest[1], 4};
     }
@@ -401,6 +404,7 @@ public static class ChordDetection{
       
     }
    
+    
     //println("COULDN'T CHORD");
     return new int[]{-1, -1};
   }
