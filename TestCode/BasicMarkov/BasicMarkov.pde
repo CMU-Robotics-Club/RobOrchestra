@@ -15,20 +15,22 @@ boolean percussionNoteOff = false;
 
 int percussionLen = 1000; //Overwritten in setup
 
+int chordVolume = 100;
+
 MIDIReader_hash hashreader;
 int precision = 20;
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 2);
+  compBus = new MidiBus(this, 0, 1);
   
-  File myFile = new File(dataPath("schubert_ave_maria.mid"));
+  File myFile = new File(dataPath("auldlangsyne.mid"));
   File chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 1);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 10);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
@@ -79,6 +81,9 @@ void playPercussion(){
   while(true){
     
     double randomCheck = Math.random();
+    
+    //TODO: Instead of a deterministic or random monkey banging on the keyboard as hard as possible...
+    //Try a gradual decrescendo, with a small chance of jumping back up to max volume each time? Sounds more like phrasing?
     
     if(randomCheck < 0.5) {
       myBus.sendNoteOn(snareNote);
