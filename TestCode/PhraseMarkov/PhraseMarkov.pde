@@ -21,8 +21,8 @@ ArrayList<ArrayList<Integer>> rhythm_array = new ArrayList<ArrayList<Integer>>()
 MidiBus output;
 String key = "D";
 int xylo_channel = 1;
-int noteLen = 333;    // Length of eighth note
-int num_phrases = 100;
+int noteLen = 200;    // Length of eighth note
+int num_phrases = 2;
 
 //Length of states
 int stateLength = 2;

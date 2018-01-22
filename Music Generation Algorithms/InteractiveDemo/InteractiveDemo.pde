@@ -215,7 +215,7 @@ void setup() {
   tempoKnob = cp5.addKnob("tempo")
     .setPosition(30 * scale, 188 * scale)
     .setRadius(30 * scale)
-    .setRange(60, 400)
+    .setRange(30, 220)
     .setValue(120)
     .setDragDirection(Knob.VERTICAL)
     .setCaptionLabel("BPM")
@@ -256,7 +256,7 @@ void draw() {
     noteSliders[i].setCaptionLabel(noteNames[(tonic + scaleOffsets[curScale][curSubScale][i]) % 12]);
   }
 
-  if(isPlaying && millis() > curTime + (60000 / tempo)) {
+  if(isPlaying && millis() > curTime + (60000 / (tempo * 2))) {
     playMelody();
     curTime = millis();
   }
