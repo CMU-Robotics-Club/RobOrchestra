@@ -215,7 +215,7 @@ void setup() {
   tempoKnob = cp5.addKnob("tempo")
     .setPosition(30 * scale, 188 * scale)
     .setRadius(30 * scale)
-    .setRange(60, 400)
+    .setRange(30, 220)
     .setValue(120)
     .setDragDirection(Knob.VERTICAL)
     .setCaptionLabel("BPM")
