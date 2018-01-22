@@ -31,7 +31,7 @@ class PlayNoteThread extends Thread{
     //if(r > 0.25) return;
     
     if(r > 0.2){
-      chordVolume *= 0.8;
+      chordVolume *= 0.9;
       if(chordVolume < 40) chordVolume = 40;
     }
     else{
@@ -44,10 +44,10 @@ class PlayNoteThread extends Thread{
       chordNotes.add(new Note(1, (c[0]%12)+60, chordVolume));
       
       //Third
-      if(c[1] == 2 || c[1] == 3 || c[1] == 4 || c[1] == 6 || c[1] == 7) {
+      if(c[1] == 2 ||c[1] == 4 || c[1] == 6 || c[1] == 7) {
         chordNotes.add(new Note(1, ((c[0]+3)%12)+60, chordVolume));
       }
-      if(c[1] == 1 || c[1] == 5) {
+      if(c[1] == 1 ||  c[1] == 3 || c[1] == 5) {
         chordNotes.add(new Note(1, ((c[0]+4)%12)+60, chordVolume));
       }
       

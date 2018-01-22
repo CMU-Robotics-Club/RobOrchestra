@@ -185,7 +185,7 @@ public static class ChordDetection{
       
       if((chordTest[2] + 4) % 12 == chordTest[1])
       {
-        if((chordTest[1] + 6) % 12 == chordTest[0]) return new int[]{chordTest[2], 3};
+        //if((chordTest[1] + 6) % 12 == chordTest[0]) return new int[]{chordTest[2], 3};
         if((chordTest[1] + 7) % 12 == chordTest[0]) return new int[]{chordTest[2], 5};
         if((chordTest[1] + 3) % 12 == chordTest[0]) return new int[]{chordTest[2], 1};
       }
