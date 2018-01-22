@@ -256,7 +256,7 @@ void draw() {
     noteSliders[i].setCaptionLabel(noteNames[(tonic + scaleOffsets[curScale][curSubScale][i]) % 12]);
   }
 
-  if(isPlaying && millis() > curTime + (60000 / tempo)) {
+  if(isPlaying && millis() > curTime + (60000 / (tempo * 2))) {
     playMelody();
     curTime = millis();
   }
