@@ -25,7 +25,7 @@ void setup(){
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 1);
   
-  File myFile = new File(dataPath("auldlangsyne.mid"));
+  File myFile = new File(dataPath("jingle_bells-2.mid"));
   File chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
