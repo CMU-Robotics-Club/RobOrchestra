@@ -17,23 +17,48 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 
 int played = 0;
 
+void handleNoteOn(byte channel, byte pitch, byte velocity){
+  //This function plays notes
+  if(velocity == 0) return;
+  
+  int noteIndex = pitch;
+
+  //Rescale notes
+  while(noteIndex < STARTNOTE){
+    noteIndex += 12;
+  }
+  while(noteIndex > ENDNOTE){
+    noteIndex -= 12;
+  }
+  
+  int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31};
+  int notePin = pinnumbers[noteIndex - STARTNOTE];//getNote(noteIndex); // map the note to the pin
+  playKey(notePin); // plays the key on the glockenspiel (xylobot)
+  Serial1.println(noteIndex);
+}
+
 void setup()
 {
   xylo_init();
   pinMode(LED, OUTPUT);
-  Serial3.begin(115200);
+  Serial1.begin(115200);
+  MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);          // Launch MIDI and listen to channel 1
+  MIDI.turnThruOn();
 }
 
 void loop()
 { 
-  if(MIDI.read()){
+  MIDI.read();
+
+  //Old code, can be deleted if I didn't break everything...
+  /*if(MIDI.read()){
       int noteIndex = MIDI.getData1();
       if(noteIndex >= STARTNOTE && noteIndex <= ENDNOTE){
         int notePin = getNote(noteIndex); // map the note to the pin
         playKey(notePin); // plays the key on the glockenspiel (xylobot)
       }  
-    }  
+    }  */
   //}
 }
 

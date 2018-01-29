@@ -14,6 +14,8 @@
 extern "C"{
 #endif
 
+    //Taken care of in the main file. Don't need this anymore.
+
     /* PLACE DEFINITIONS HERE */
     // Define notes to arduino pins here
     #define N_C 22
@@ -33,6 +35,7 @@ extern "C"{
     #define N_HIGH_D 30
     #define N_HIGH_D_S 39
     #define N_HIGH_E 31
+    //{22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31}
 
     // Define key index to notes here
     #define NOTE_C 60
