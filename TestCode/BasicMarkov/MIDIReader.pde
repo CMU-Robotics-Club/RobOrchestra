@@ -162,6 +162,13 @@ public class MIDIReader{
         lengthBuffer = cappedAdd(lengthBuffer, p.len, stateLength);
         delayBuffer = cappedAdd(delayBuffer, p.delay, stateLength);
         timeBuffer = cappedAdd(timeBuffer, p.startTime, stateLength);
+        
+        //Fudge to timeout long pauses and stop simultaneous notes
+        /*for(int x = 0; x < timeBuffer.length; x++){
+          //if(timeBuffer[x] < 10){timeBuffer[x] = 10;}
+          if(timeBuffer[x] > 1){timeBuffer[x] = 1;}
+        }*/
+        
         if(pitchBuffer.length == stateLength){
           State s = new State(pitchBuffer, lengthBuffer, delayBuffer, timeBuffer);
           if(prevState != null){
