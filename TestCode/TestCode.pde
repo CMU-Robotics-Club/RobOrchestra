@@ -35,7 +35,8 @@ void setup() {
 
 //loops
 void draw() {
-  for(int x = lo; x < hi; x++){
+  //for(int x = lo; x < hi; x++){
+  for(int x = 60; x < hi; x+=0){
     System.out.println("Testing note with MIDI value " + x);
     
     //creates a note object

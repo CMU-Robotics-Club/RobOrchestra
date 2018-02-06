@@ -15,10 +15,13 @@
 #define LED 13
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-int played = 0;
+//int played = 0; //Does nothing?
+int toPlay[] = {};
+int nToPlay = 0;
+int startTime = 0;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity){
-  //This function plays notes
+  //This function queues up notes to be played
   if(velocity == 0) return;
   
   int noteIndex = pitch;
@@ -30,18 +33,50 @@ void handleNoteOn(byte channel, byte pitch, byte velocity){
   while(noteIndex > ENDNOTE){
     noteIndex -= 12;
   }
-  
+
+  //Add noteIndex to toPlay (TODO: Make this less bad)
+  int temp[nToPlay+1];
+  for(int x = 0; x < nToPlay; x++){
+    temp[x] = toPlay[x];
+  }
+  temp[nToPlay] = noteIndex;
+  int toPlay[nToPlay+1];
+  for(int x = 0; x < nToPlay+1; x++){
+    toPlay[x] = temp[x];
+    
+  }
+  nToPlay++;
+  startTime += KEY_UP_TIME/5;
+}
+
+void playNotes(){
+  //To move to whatever plays the notes
   int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31};
-  int notePin = pinnumbers[noteIndex - STARTNOTE];//getNote(noteIndex); // map the note to the pin
-  playKey(notePin); // plays the key on the glockenspiel (xylobot)
-  Serial1.println(noteIndex);
+
+  if(nToPlay > 0){
+    Serial.println("a");
+  }
+  
+  for(int x = 0; x < nToPlay; x++){
+    int keyPin = pinnumbers[toPlay[x] - STARTNOTE];//getNote(noteIndex); // map the note to the pin
+    digitalWrite(keyPin, HIGH);
+    digitalWrite(LED, HIGH);
+  }
+  delay(KEY_UP_TIME);
+  for(int x = 0; x < nToPlay; x++){
+    int keyPin = pinnumbers[toPlay[x] - STARTNOTE];//getNote(noteIndex); // map the note to the pin
+    digitalWrite(keyPin, LOW);
+    digitalWrite(LED, LOW);
+  }
+  int toPlay[0] = {};
+  nToPlay = 0;
 }
 
 void setup()
 {
   xylo_init();
   pinMode(LED, OUTPUT);
-  Serial1.begin(115200);
+  Serial.begin(115200);
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);          // Launch MIDI and listen to channel 1
   MIDI.turnThruOn();
@@ -50,6 +85,12 @@ void setup()
 void loop()
 { 
   MIDI.read();
+
+  int curTime = millis();
+  if(curTime - startTime > 20*KEY_UP_TIME){
+    startTime = curTime;
+    playNotes();
+  }
 
   //Old code, can be deleted if I didn't break everything...
   /*if(MIDI.read()){
@@ -104,13 +145,14 @@ int getNote(int noteIndex){
   }
 }
 
-void playKey(int keyPin){
+//Replaced by playNotes above
+/*void playKey(int keyPin){
   digitalWrite(keyPin, HIGH);
   digitalWrite(LED, HIGH);
   delay(KEY_UP_TIME);
   digitalWrite(LED, LOW);
   digitalWrite(keyPin, LOW); 
-}
+}*/
 
 
 
