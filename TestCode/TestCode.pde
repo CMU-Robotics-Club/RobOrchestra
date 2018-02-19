@@ -36,7 +36,7 @@ void setup() {
 //loops
 void draw() {
   //for(int x = lo; x < hi; x++){
-  for(int x = 60; x < hi; x+=0){
+  for(int x = 60; x < hi; x++){
     delay(1000);
     System.out.println("Testing note with MIDI value " + x);
     
@@ -44,18 +44,7 @@ void draw() {
     Note mynote = new Note(channel, x, 100, noteLen);
     
     //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);//*/
-    
-    /*delay(1);
-    //Play another note
-    //creates a note object
-    Note mynote2 = new Note(channel, x+3, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote2);
-    
-    //time between each note//*/
-    //delay(1000);
+    myBus.sendNoteOn(mynote);
   }
 
 }

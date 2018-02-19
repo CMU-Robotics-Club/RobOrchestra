@@ -4,11 +4,10 @@
 #include <midi_Namespace.h>
 #include <midi_Settings.h>
 
-#include "def.h"
 #include "xylo.h"
 
-#define STARTNOTE 60 //60
-#define ENDNOTE 76 // 76
+#define STARTNOTE 60
+#define ENDNOTE 76 //1 above highest note (which is 75)
 #define KEY_UP_TIME 50
 
 
@@ -19,13 +18,13 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 unsigned long startTime = 0;
 
 
-int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31};
-bool toPlay[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31}; //Ports for C, C#, D, ..., high D, high E
+bool toPlay[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}; //Stores whether we want to play the solenoids next cycle; updates as we run
 int nPins = 17;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity){
   //This function queues up notes to be played
-  if(velocity == 0) return;
+  if(velocity == 0) return; //Ignore velocity 0
   
   int noteIndex = pitch;
 
@@ -38,20 +37,8 @@ void handleNoteOn(byte channel, byte pitch, byte velocity){
   }
 
   toPlay[noteIndex - 60] = true;
-/*
-  //Add noteIndex to toPlay (TODO: Make this less bad)
-  int temp[nToPlay+1];
-  for(int x = 0; x < nToPlay; x++){
-    temp[x] = toPlay[x];
-  }
-  temp[nToPlay] = noteIndex;
-  int tempp[nToPlay+1];
-  toPlay = tempp;
-  for(int x = 0; x < nToPlay+1; x++){
-    toPlay[x] = temp[x];
-    
-  }
-  nToPlay++;*/
+
+  //Add extra time delay any time we get new messages so chords don't get split
   startTime += 10;
   unsigned long curTime = millis();
   if(startTime > curTime){
@@ -60,11 +47,11 @@ void handleNoteOn(byte channel, byte pitch, byte velocity){
 }
 
 void playNotes(){
-  
+  //Plays any queued notes, then clears the queue
   for(int x = 0; x < nPins; x++){
     if(toPlay[x]){
       Serial.println("a");
-      int keyPin = pinnumbers[x];//getNote(noteIndex); // map the note to the pin
+      int keyPin = pinnumbers[x]; // map the note to the pin
       digitalWrite(keyPin, HIGH);
     }
   }
@@ -72,7 +59,7 @@ void playNotes(){
   delay(KEY_UP_TIME);
   for(int x = 0; x < nPins; x++){
     if(toPlay[x]){
-      int keyPin = pinnumbers[x];//getNote(noteIndex); // map the note to the pin
+      int keyPin = pinnumbers[x]; // map the note to the pin
       digitalWrite(keyPin, LOW);
     }
   }
@@ -99,7 +86,8 @@ void setup()
 }
 
 void loop()
-{ 
+{
+  //Check for and process new MIDI messages, then if it's time to play notes, play notes
   MIDI.read();
 
   unsigned long curTime = millis();
@@ -107,68 +95,7 @@ void loop()
     startTime = curTime;
     playNotes();
   }
-
-  //Old code, can be deleted if I didn't break everything...
-  /*if(MIDI.read()){
-      int noteIndex = MIDI.getData1();
-      if(noteIndex >= STARTNOTE && noteIndex <= ENDNOTE){
-        int notePin = getNote(noteIndex); // map the note to the pin
-        playKey(notePin); // plays the key on the glockenspiel (xylobot)
-      }  
-    }  */
-  //}
 }
-
-// maps the note index to the note pin
-int getNote(int noteIndex){
-  switch (noteIndex) {
-  case NOTE_C:
-    return N_C;
-  case NOTE_C_S:
-    return N_C_S;
-  case NOTE_D:
-    return N_D;
-  case NOTE_D_S:
-    return N_D_S;
-  case NOTE_E:
-    return N_E;
-  case NOTE_F:
-    return N_F;
-  case NOTE_F_S:
-    return N_F_S;
-  case NOTE_G:
-    return N_G;
-  case NOTE_G_S:
-    return N_G_S;
-  case NOTE_A:
-    return N_A;
-  case NOTE_A_S:
-    return N_A_S;
-  case NOTE_B:
-    return N_B;
-  case NOTE_HIGH_C:
-    return N_HIGH_C;
-  case NOTE_HIGH_C_S:
-    return N_HIGH_C_S;
-  case NOTE_HIGH_D:
-    return N_HIGH_D;
-  case NOTE_HIGH_D_S:
-    return N_HIGH_D_S;
-  case NOTE_HIGH_E:
-    return N_HIGH_E;
-  default: // should never drop to this case!
-    return 0;
-  }
-}
-
-//Replaced by playNotes above
-/*void playKey(int keyPin){
-  digitalWrite(keyPin, HIGH);
-  digitalWrite(LED, HIGH);
-  delay(KEY_UP_TIME);
-  digitalWrite(LED, LOW);
-  digitalWrite(keyPin, LOW); 
-}*/
 
 
 
