@@ -51,7 +51,7 @@ void setup(){
     tempstate = mc.getNext(tempstate);
   }
   percussionLen = tempstate.lengths[tempstate.lengths.length-1];
-  //thread("playPercussion");
+  thread("playPercussion");
 }
 
 void draw(){

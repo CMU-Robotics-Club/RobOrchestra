@@ -16,9 +16,12 @@
 MIDI_CREATE_DEFAULT_INSTANCE();
 
 //int played = 0; //Does nothing?
-int toPlay[] = {};
-int nToPlay = 0;
-int startTime = 0;
+unsigned long startTime = 0;
+
+
+int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31};
+bool toPlay[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+int nPins = 17;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity){
   //This function queues up notes to be played
@@ -34,42 +37,50 @@ void handleNoteOn(byte channel, byte pitch, byte velocity){
     noteIndex -= 12;
   }
 
+  toPlay[noteIndex - 60] = true;
+/*
   //Add noteIndex to toPlay (TODO: Make this less bad)
   int temp[nToPlay+1];
   for(int x = 0; x < nToPlay; x++){
     temp[x] = toPlay[x];
   }
   temp[nToPlay] = noteIndex;
-  int toPlay[nToPlay+1];
+  int tempp[nToPlay+1];
+  toPlay = tempp;
   for(int x = 0; x < nToPlay+1; x++){
     toPlay[x] = temp[x];
     
   }
-  nToPlay++;
-  startTime += KEY_UP_TIME/5;
+  nToPlay++;*/
+  startTime += 1;
+  unsigned long curTime = millis();
+  if(startTime > curTime){
+    startTime = curTime;
+  }
 }
 
 void playNotes(){
-  //To move to whatever plays the notes
-  int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31};
-
-  if(nToPlay > 0){
-    Serial.println("a");
-  }
   
-  for(int x = 0; x < nToPlay; x++){
-    int keyPin = pinnumbers[toPlay[x] - STARTNOTE];//getNote(noteIndex); // map the note to the pin
-    digitalWrite(keyPin, HIGH);
-    digitalWrite(LED, HIGH);
+  for(int x = 0; x < nPins; x++){
+    if(toPlay[x]){
+      Serial.println("a");
+      int keyPin = pinnumbers[x];//getNote(noteIndex); // map the note to the pin
+      digitalWrite(keyPin, HIGH);
+    }
   }
+  //digitalWrite(LED, HIGH);
   delay(KEY_UP_TIME);
-  for(int x = 0; x < nToPlay; x++){
-    int keyPin = pinnumbers[toPlay[x] - STARTNOTE];//getNote(noteIndex); // map the note to the pin
-    digitalWrite(keyPin, LOW);
-    digitalWrite(LED, LOW);
+  for(int x = 0; x < nPins; x++){
+    if(toPlay[x]){
+      int keyPin = pinnumbers[x];//getNote(noteIndex); // map the note to the pin
+      digitalWrite(keyPin, LOW);
+    }
   }
-  int toPlay[0] = {};
-  nToPlay = 0;
+
+  //Reset toPlay array to all false
+  for(int x = 0; x < nPins; x++){
+    toPlay[x] = false;
+  }
 }
 
 void setup()
@@ -77,6 +88,10 @@ void setup()
   xylo_init();
   pinMode(LED, OUTPUT);
   Serial.begin(115200);
+  for(int x = 0; x < nPins; x++){
+    pinMode(pinnumbers[x], OUTPUT);
+    digitalWrite(pinnumbers[x], LOW);
+  }
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);          // Launch MIDI and listen to channel 1
   MIDI.turnThruOn();
@@ -86,8 +101,8 @@ void loop()
 { 
   MIDI.read();
 
-  int curTime = millis();
-  if(curTime - startTime > 20*KEY_UP_TIME){
+  unsigned long curTime = millis();
+  if(curTime - startTime > KEY_UP_TIME){
     startTime = curTime;
     playNotes();
   }

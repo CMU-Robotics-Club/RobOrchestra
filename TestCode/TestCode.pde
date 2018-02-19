@@ -46,7 +46,7 @@ void draw() {
     myBus.sendNoteOn(mynote);
     
     //time between each note
-    delay(noteLen);
+    delay(1);
   }
 
 }
