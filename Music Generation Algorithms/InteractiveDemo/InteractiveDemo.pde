@@ -197,7 +197,7 @@ void setup() {
     .setPosition(30 * scale, 118 * scale)
     .setRadius(30 * scale)
     .setRange(60, 71)
-    .setValue(66)
+    .setValue(60)
     .setDragDirection(Knob.VERTICAL)
     .setCaptionLabel("Root")
     .setColorBackground(color(103, 0, 0))
