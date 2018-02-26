@@ -25,7 +25,7 @@ int noteLen = 200;    // Length of eighth note
 int num_phrases = 2;
 
 //Length of states
-int stateLength = 2;
+int stateLength = 1;
 
 State mystate;
 MarkovChain<State> mc;
@@ -161,6 +161,7 @@ ArrayList<Integer> xylo_phrases(int phrase_length) {
 }
 
 ArrayList<Integer> rhythm() {
+  //Generates 4 measures of rhythms, with quarter notes and half notes, ending on a whole note?
   ArrayList<Integer> rhythm_array = new ArrayList<Integer>();
   // ArrayList<Integer> temp_array = new ArrayList<Integer>();
   

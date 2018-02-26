@@ -7,7 +7,7 @@
 #include "xylo.h"
 
 #define STARTNOTE 60
-#define ENDNOTE 76 //1 above highest note (which is 75)
+#define ENDNOTE 76 //Equal to the highest note
 #define KEY_UP_TIME 50
 
 
@@ -17,13 +17,16 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 //int played = 0; //Does nothing?
 unsigned long startTime = 0;
 
+//Before rewiring:
+//Low C# was 13
 
-int pinnumbers[] = {22, 13, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31}; //Ports for C, C#, D, ..., high D, high E
+int pinnumbers[] = {22, 48, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 39, 31}; //Ports for C, C#, D, ..., high D, high E
 bool toPlay[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}; //Stores whether we want to play the solenoids next cycle; updates as we run
 int nPins = 17;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity){
   //This function queues up notes to be played
+  if(channel != 1) return; //Only play channel 1
   if(velocity == 0) return; //Ignore velocity 0
   
   int noteIndex = pitch;
@@ -47,6 +50,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity){
 }
 
 void playNotes(){
+  
   //Plays any queued notes, then clears the queue
   for(int x = 0; x < nPins; x++){
     if(toPlay[x]){

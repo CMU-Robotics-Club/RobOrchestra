@@ -5,12 +5,12 @@
 import themidibus.*; //Library documentation: http://www.smallbutdigital.com/themidibus.php
 
 MidiBus myBus; //Creates a MidiBus object
-int channel = 0; //channel xylobot is on
+int channel = 1; //channel xylobot is on
 int noteLen = 1000; //set note length in milliseconds
 
 //Bounds on range (MIDI values)
 int lo = 60; //middle C (C4)
-int hi = 76; //E5
+int hi = 77; //E5
 
 //Parameters
 int nreps = 1; //Number of times to repeat each note
@@ -36,8 +36,8 @@ void setup() {
 //loops
 void draw() {
   //for(int x = lo; x < hi; x++){
-  for(int x = 60; x < hi; x++){
-    delay(1000);
+  for(int x = 60; x < hi; x+=0){
+    delay(500);
     System.out.println("Testing note with MIDI value " + x);
     
     //creates a note object
@@ -45,6 +45,22 @@ void draw() {
     
     //sends note to Xylobot 
     myBus.sendNoteOn(mynote);
+    
+    delay(1);
+    
+    //creates a note object
+    mynote = new Note(channel, x+4, 100, noteLen);
+    
+    //sends note to Xylobot 
+    myBus.sendNoteOn(mynote);
+    
+    delay(1);
+    
+    //creates a note object
+    mynote = new Note(channel, x+7, 100, noteLen);
+    
+    //sends note to Xylobot 
+    myBus.sendNoteOn(mynote);//*/
   }
 
 }
