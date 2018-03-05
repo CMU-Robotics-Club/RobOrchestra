@@ -1,4 +1,4 @@
-int solenoidPin = 22; //change to output pin connected on the Arduino
+int solenoidPin = 50; //change to output pin connected on the Arduino
 
 
 void setup() {

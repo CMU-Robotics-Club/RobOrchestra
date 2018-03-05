@@ -20,7 +20,7 @@ unsigned long startTime = 0;
 //Before rewiring:
 //Low C# was 13
 
-int pinnumbers[] = {22, 50, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 51, 31}; //Ports for C, C#, D, ..., high D#, high E
+int pinnumbers[] = {22, 50, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 51, 31}; //Ports for C, C#, D, ..., high D, high E
 bool toPlay[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}; //Stores whether we want to play the solenoids next cycle; updates as we run
 int nPins = 17;
 

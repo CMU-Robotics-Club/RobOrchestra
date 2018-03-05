@@ -2,7 +2,7 @@ class PlayNoteThread extends Thread{
   Note note;
   int len;
   int[] chord;
-  boolean noteOff;
+  boolean noteOff = false;
   ArrayList<Note> chordNotes;
   
   public PlayNoteThread(Note n, int l, boolean b, int[] c){

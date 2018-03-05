@@ -25,6 +25,7 @@ int scale = 2;
 int snarePitchMIDI = 36;
 int tomPitchMIDI = 37;
 int channel = 0;
+int perc_channel = 1;
 int velocity = 120;
 
 String[] scaleNames = {"Diatonic", "Jazz", "Minor", "Pentatonic", "Other"};
@@ -273,12 +274,12 @@ void playMelody() {
   double tomThresh = Math.min(tom[beatIndex] + tomDensity, 1.0);
   
   if(snarePlay <= snareThresh) {
-    myBus.sendNoteOn(new Note(0, snarePitchMIDI, 100));  
+    myBus.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
   }
    
   delay(2);
   if(tomPlay <= tomThresh) {
-    myBus.sendNoteOn(new Note(0, tomPitchMIDI, 100));   
+    myBus.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
   }
     
   delay(2);
