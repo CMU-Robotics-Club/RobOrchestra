@@ -23,14 +23,14 @@ int precision = 20;
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 2);
+  compBus = new MidiBus(this, 0, 0);
   
   File myFile = new File(dataPath("twinkle_twinkle.mid"));
   File chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 10);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 20);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));

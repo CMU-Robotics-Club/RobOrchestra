@@ -8,7 +8,7 @@
 
 #define STARTNOTE 60
 #define ENDNOTE 76 //Equal to the highest note
-#define KEY_UP_TIME 50
+#define KEY_UP_TIME 40
 
 
 #define LED 13
@@ -21,6 +21,7 @@ unsigned long startTime = 0;
 //Low C# was 13
 
 int pinnumbers[] = {22, 50, 23, 38, 24, 25, 34, 26, 35, 27, 36, 28, 29, 37, 30, 51, 31}; //Ports for C, C#, D, ..., high D#, high E
+unsigned long pintimes[] = {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}; //Time since turned on
 bool toPlay[17] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}; //Stores whether we want to play the solenoids next cycle; updates as we run
 int nPins = 17;
 
@@ -39,14 +40,18 @@ void handleNoteOn(byte channel, byte pitch, byte velocity){
     noteIndex -= 12;
   }
 
-  toPlay[noteIndex - 60] = true;
+  toPlay[noteIndex - STARTNOTE] = true;
 
+  digitalWrite(pinnumbers[noteIndex-STARTNOTE], HIGH);
+  pintimes[noteIndex-STARTNOTE] = millis();
+/*
   //Add extra time delay any time we get new messages so chords don't get split
-  startTime += 10;
+  startTime += KEY_UP_TIME/5;
+  
   unsigned long curTime = millis();
   if(startTime > curTime){
     startTime = curTime;
-  }
+  }*/
 }
 
 void playNotes(){
@@ -94,11 +99,18 @@ void loop()
   //Check for and process new MIDI messages, then if it's time to play notes, play notes
   MIDI.read();
 
-  unsigned long curTime = millis();
+  for(int x = 0; x < nPins; x++){
+    if(millis() - pintimes[x] > KEY_UP_TIME){
+      int keyPin = pinnumbers[x]; // map the note to the pin
+      digitalWrite(keyPin, LOW);
+    }
+  }
+
+  /*unsigned long curTime = millis();
   if(curTime - startTime > KEY_UP_TIME){
     startTime = curTime;
     playNotes();
-  }
+  }*/
 }
 
 
