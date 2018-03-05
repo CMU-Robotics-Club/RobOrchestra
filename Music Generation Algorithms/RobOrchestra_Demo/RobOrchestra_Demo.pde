@@ -12,8 +12,8 @@ int tonicTotal = -1; //Music stops when we reach this number of tonic chord/quar
 
 //Chord attributes relocated to make them global
 int channel = 0; //set channel. 0 for speakers
-int pchannel1 = 0; //Percussion channel 1 (snare drum)
-int pchannel2 = 0; //Percussion channel 2 (bass drum)
+int pchannel1 = 1; //Percussion channel 1 (snare drum)
+int pchannel2 = 1; //Percussion channel 2 (bass drum)
 int velocity = 80; //chord volume
 int melVelocity = 120; //melody note volume
 int ticks = noteLen; //length in milliseconds

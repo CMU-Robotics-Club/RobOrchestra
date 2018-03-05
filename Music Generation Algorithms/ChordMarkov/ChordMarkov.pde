@@ -74,7 +74,7 @@ void draw(){
 }
 
 void playPercussion(){
-  int percChannel = 2;
+  int percChannel = 0;
   Note snareNote = new Note(percChannel, 36, 100);
   Note bassNote = new Note(percChannel, 35, 100);
   Note tomNote = new Note(percChannel, 37, 100);
@@ -87,35 +87,35 @@ void playPercussion(){
     
     if(randomCheck < 0.5) {
       myBus.sendNoteOn(snareNote);
-      myBus.sendNoteOn(bassNote);
-      myBus.sendNoteOn(tomNote);
+      //myBus.sendNoteOn(bassNote);
+      //myBus.sendNoteOn(tomNote);
       delay(int(percussionLen * 2 * 0.75));
       if(percussionNoteOff){
-        myBus.sendNoteOff(snareNote);
-        myBus.sendNoteOff(bassNote);
-        myBus.sendNoteOff(tomNote);
+        //myBus.sendNoteOff(snareNote);
+        //myBus.sendNoteOff(bassNote);
+        //myBus.sendNoteOff(tomNote);
       }
-      myBus.sendNoteOn(tomNote);
+      //myBus.sendNoteOn(tomNote);
       delay(int(percussionLen * 2 * 0.25));
       if(percussionNoteOff){
-        myBus.sendNoteOff(snareNote);
+        //myBus.sendNoteOff(snareNote);
       }
     }
     
     else {
       myBus.sendNoteOn(snareNote);
-      myBus.sendNoteOn(bassNote);
-      myBus.sendNoteOn(tomNote);
+      //myBus.sendNoteOn(bassNote);
+      //myBus.sendNoteOn(tomNote);
       delay(int(percussionLen));
       if(percussionNoteOff){
-        myBus.sendNoteOff(snareNote);
-        myBus.sendNoteOff(bassNote);
-        myBus.sendNoteOff(tomNote);
+        //myBus.sendNoteOff(snareNote);
+        //myBus.sendNoteOff(bassNote);
+        //myBus.sendNoteOff(tomNote);
       }
       myBus.sendNoteOn(tomNote);
-      delay(int(percussionLen));
+      //delay(int(percussionLen));
       if(percussionNoteOff){
-        myBus.sendNoteOff(snareNote);
+        //myBus.sendNoteOff(snareNote);
       }
     }
   }

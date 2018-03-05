@@ -4,8 +4,8 @@ import java.lang.Math; //To get random numbers
 MidiBus myBus;
 int channel = 0;
 int velocity = 120;
-int notelen = 1000;
-int pitch = 59;
+int notelen = 500;
+int pitch = 60;
 
 void setup(){
     myBus = new MidiBus(this, 0, 1);
@@ -16,7 +16,7 @@ void draw(){
    myBus.sendNoteOn(note);
    delay(notelen);
    myBus.sendNoteOff(note);
-   pitch = (pitch + 1)%12 + 60;
+   pitch = (pitch + 1);
 }
 
 //processes delay in milliseconds
