@@ -24,7 +24,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 void hitDrum() {
   if(which == 1){
     hit();
-    which = 1;
+    which = 2;
   } else{
     hit2();
     which = 1;
