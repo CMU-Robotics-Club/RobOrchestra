@@ -24,7 +24,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 void hitDrum() {
   if(which == 1){
     hit();
-    which = 1;
+    which = 0;
   } else{
     hit2();
     which = 1;
@@ -43,21 +43,23 @@ void setup()
 void loop()
 { 
   MIDI.read();
+  hitDrum();
+  delay(1000);
 }
 
 void hit() { 
-  servo_near.write(106);
+  servo_near.write(120);
   delay(100);
-  servo_near.write(90);
+  servo_near.write(95);
   delay(10);
 }
 
 
 void hit2() { 
   
-  servo_middle.write(106);  //143  160   green red black     //
+  servo_middle.write(95);  //143  160   green red black     //
   delay(100);
-  servo_middle.write(90);
+  servo_middle.write(120);
   delay(10);
 
 }
