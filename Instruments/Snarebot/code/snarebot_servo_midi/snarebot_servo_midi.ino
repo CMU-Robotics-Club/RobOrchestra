@@ -11,7 +11,6 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 Servo servo_near;
 Servo servo_middle;
 
-int which = 1;
 long stickdown = 50;
 long stickup = 40;
 long clock1 = -1;
