@@ -1,10 +1,15 @@
 import java.util.Random;
 
 public class Generate{
+  
+  private int[] STEPS = {0, 2, 4, 5, 7, 9, 11};
+  private Note TONIC;
+  
   public ArrayList<ArrayList<Note>> playList;
   
-  public Generate(){
+  public Generate(Note TONIC){
     playList = new ArrayList<ArrayList<Note>>();
+    this.TONIC = TONIC;
   }
   
   //Generate Chord Progression of length chords
@@ -54,10 +59,11 @@ public class Generate{
     ArrayList<Integer> chords = chordProgGen(length);
     int actualLength = chords.size();
     
+    Note prevNote = new Note(channel, 0, 0);
     for(int i = 0; i < actualLength; i++){
       //Some unmade get chord function
       ArrayList<Note> currChord = CHORDGETTER(chords.get(i));  //NEEDS TO BE IMPLEMENTED, I BELIEVE SOMEONE HAS ALREADY MADE THIS
-      currChord = RULEFILTER(currChord); //WILL BE IMPLEMENTED BY ME
+      currChord = RULEFILTER(currChord, "bassLine"); //WILL BE IMPLEMENTED BY ME
       bassLine.add(pickfromList(currChord));      
     }
     
@@ -71,6 +77,30 @@ public class Generate{
     int choose = rand.nextInt(length);
     return options.get(choose);
   }
+  
+  public ArrayList<Note> CHORDGETTER(Integer lol){
+    ArrayList<Note> arr = new ArrayList<Note>();
+    int base, third, fifth;
+    
+    base = STEPS[lol]; //root
+    third = STEPS[(lol+2)%7];
+    fifth = STEPS[(lol+2)%7];
+    
+    
+    arr.add(new Note(channel, TONIC.pitch()+base, 100));
+    arr.add(new Note(channel, TONIC.pitch()+third,100));
+    arr.add(new Note(channel, TONIC.pitch()+fifth,100));
+    arr.add(new Note(channel, TONIC.pitch()+base+12, 100));
+    
+    return arr;
+  }
    
+   
+  public ArrayList<Note> RULEFILTER(ArrayList<Note> choices, ArrayList<String> rules){
+    ArrayList<Note> arr = choices;
+    
+    
+    return arr;
+  }
   
 }
