@@ -12,7 +12,13 @@ Servo servo_near;
 Servo servo_middle;
 
 int which = 1;
+long stickdown = 50;
+long stickup = 40;
+long clock1 = -1;
+long clock2 = -1;
 
+//For testing only
+long lasttestmsg = 0;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
@@ -22,44 +28,60 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 }
 
 void hitDrum() {
-  if(which == 1){
+  if(millis() - clock1 >= stickdown + stickup && clock1 <= clock2){
     hit();
-    which = 0;
-  } else{
-    hit2();
-    which = 1;
   }
+  else if(millis() - clock2 >= stickdown + stickup){
+    hit2();
+  }
+  else{
+    //Neither stick is ready; ignore this message
+    //I'd like to throw an error or print something or do something otherwise weird; not sure if I can do that
+  }/**/
 }
 
 void setup()
 {
   servo_near.attach(5);
   servo_middle.attach(4);
+
+  //Initialize to up
+  servo_near.write(95);
+  servo_middle.write(120);
+
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOn();
+  clock1 = millis()-stickdown;
+  clock2 = millis()-stickdown;
+  lasttestmsg = millis();
 }
 
 void loop()
 { 
   MIDI.read();
-  hitDrum();
-  delay(1000);
-}
 
-void hit() { 
-  servo_near.write(120);
-  delay(100);
-  servo_near.write(95);
-  delay(10);
-}
-
-
-void hit2() { 
+  //Generate test messages every second
+  /*if(millis() - lasttestmsg > 80){
+    lasttestmsg = millis();
+    hitDrum();
+  }/**/
   
-  servo_near.write(95);
-  delay(100);
-  servo_near.write(120);
-  delay(10);
+  if(millis() - clock1 > stickdown){
+    servo_near.write(100);
+  }
+  if(millis() - clock2 > stickdown){
+    servo_middle.write(107); //Second servo's reversed, so 120 is up
+  }
+}
 
+void hit() {
+  clock1 = millis();
+  servo_near.write(120);
+}
+
+
+void hit2() {
+  clock2 = millis();
+  servo_middle.write(85);
 }
