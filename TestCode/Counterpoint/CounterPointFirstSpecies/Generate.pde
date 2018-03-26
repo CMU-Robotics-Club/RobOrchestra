@@ -1,4 +1,4 @@
-import java.util.Random;
+import java.util.*;
 
 public class Generate{
   
@@ -59,14 +59,13 @@ public class Generate{
     ArrayList<Integer> chords = chordProgGen(length);
     int actualLength = chords.size();
     
-    Note prevNote = new Note(channel, 0, 0);
+   // Note prevNote = new Note(channel, 0, 0);
     for(int i = 0; i < actualLength; i++){
       //Some unmade get chord function
-      ArrayList<Note> currChord = CHORDGETTER(chords.get(i));  //NEEDS TO BE IMPLEMENTED, I BELIEVE SOMEONE HAS ALREADY MADE THIS
-      currChord = RULEFILTER(currChord, "bassLine"); //WILL BE IMPLEMENTED BY ME
+      ArrayList<Note> currChord = CHORDGETTER(chords.get(i));
+      currChord = RULEFILTER(currChord, new ArrayList<String>(Arrays.asList("bassLine"))); //WILL BE IMPLEMENTED BY ME
       bassLine.add(pickfromList(currChord));      
     }
-    
     return bassLine;
   }
   
@@ -97,9 +96,16 @@ public class Generate{
    
    
   public ArrayList<Note> RULEFILTER(ArrayList<Note> choices, ArrayList<String> rules){
-    ArrayList<Note> arr = choices;
+    ArrayList<Note> arr = new ArrayList<>(choices);
     
-    
+    if(rules.contains("bassline")){
+      int bass_note = arr.get(0).pitch();
+      int n = arr.size();
+      for (int i = 0; i < n; i++){
+        if (arr.get(i).pitch() == bass_note+7) arr.remove(i);
+      }
+    }
+      
     return arr;
   }
   
