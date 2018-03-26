@@ -16,7 +16,7 @@ int which = 1;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  if (pitch == 36) {
+  if (pitch == 36 && velocity > 0) {
     hitDrum();
   }
 }
@@ -24,7 +24,11 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 void hitDrum() {
   if(which == 1){
     hit();
+<<<<<<< HEAD
     which = 0;
+=======
+    which = 2;
+>>>>>>> origin/master
   } else{
     hit2();
     which = 1;
@@ -57,9 +61,15 @@ void hit() {
 
 void hit2() { 
   
+<<<<<<< HEAD
   servo_middle.write(95);  //143  160   green red black     //
   delay(100);
   servo_middle.write(120);
+=======
+  servo_middle.write(90);  //143  160   green red black     //
+  delay(100);
+  servo_middle.write(106);
+>>>>>>> origin/master
   delay(10);
 
 }

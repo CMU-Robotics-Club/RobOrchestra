@@ -40,7 +40,7 @@ void draw() {
   //plays every chromatic note in the range
   for(int i = 0; i < 6; i++)
   {
-    for(int x = 46; x < 53; x += 2){
+    for(int x = lo; x < hi; x++){
       System.out.println("Testing note with MIDI value " + x);
       
       //creates a note object

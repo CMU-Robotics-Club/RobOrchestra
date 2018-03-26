@@ -20,6 +20,9 @@ int chordVolume = 100;
 MIDIReader_hash hashreader;
 int precision = 20;
 
+//Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
+int statelength = 19;
+
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
@@ -30,7 +33,7 @@ void setup(){
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, 20);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, statelength);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
