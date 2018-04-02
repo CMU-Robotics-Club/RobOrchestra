@@ -2,6 +2,7 @@ import java.util.*;
 
 public class Generate{
   
+  private float set_interval = 1000;
   private int[] STEPS = {0, 2, 4, 5, 7, 9, 11};
   private Note TONIC;
   
@@ -63,9 +64,19 @@ public class Generate{
     for(int i = 0; i < actualLength; i++){
       //Some unmade get chord function
       ArrayList<Note> currChord = CHORDGETTER(chords.get(i));
-      currChord = RULEFILTER(currChord, new ArrayList<String>(Arrays.asList("bassLine"))); //WILL BE IMPLEMENTED BY ME
-      bassLine.add(pickfromList(currChord));      
+      currChord = RULEFILTER(currChord, new ArrayList<String>()); //WILL BE IMPLEMENTED BY ME
+      
+      Note bassNote = pickfromList(currChord);     
+      while(bassNote.pitch() > bass_high){
+        bassNote.setPitch(bassNote.pitch() - 12);
+      }
+      while(bassNote.pitch() < bass_low){
+        bassNote.setPitch(bassNote.pitch() + 12);
+      }
+      
+      bassLine.add(bassNote);
     }
+    System.out.println(chords);
     return bassLine;
   }
   
@@ -81,9 +92,9 @@ public class Generate{
     ArrayList<Note> arr = new ArrayList<Note>();
     int base, third, fifth;
     
-    base = STEPS[lol]; //root
-    third = STEPS[(lol+2)%7];
-    fifth = STEPS[(lol+2)%7];
+    base = STEPS[(lol-1)%7]; //root
+    third = STEPS[(lol+1)%7];
+    fifth = STEPS[(lol+3)%7];
     
     
     arr.add(new Note(channel, TONIC.pitch()+base, 100));
@@ -96,17 +107,28 @@ public class Generate{
    
    
   public ArrayList<Note> RULEFILTER(ArrayList<Note> choices, ArrayList<String> rules){
-    ArrayList<Note> arr = new ArrayList<>(choices);
+    ArrayList<Note> arr = new ArrayList<Note>(choices);
     
-    if(rules.contains("bassline")){
-      int bass_note = arr.get(0).pitch();
-      int n = arr.size();
-      for (int i = 0; i < n; i++){
-        if (arr.get(i).pitch() == bass_note+7) arr.remove(i);
-      }
-    }
+    //if(rules.contains("bassline")){
+    //  int bass_note = arr.get(0).pitch();
+    //  int n = arr.size();
+    //  for (int i = 0; i < n; i++){
+    //    if (arr.get(i).pitch() == bass_note+7) arr.remove(i);
+    //  }
+    //}
       
     return arr;
   }
+  
+  public ArrayList<Voices> music_gen(int length){
+    ArrayList<Note> bass_line = bassLineGen(length);
+    
+    
+    
+    
+    
+    return new ArrayList<Voices>();
+  }
+  
   
 }

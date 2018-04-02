@@ -26,6 +26,9 @@ int output = 1;
 //Reference
 String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
+int bass_low = 36;
+int bass_high = 55;
+
 
 //for making output readable
 String midiToNote(int x){
@@ -39,9 +42,21 @@ void setup(){
   System.out.println("");
 
   myBus = new MidiBus(this, input, output);
-}
+} 
 
 
 void draw() {
+  Generate gen = new Generate(new Note(channel, 60, 100));
+  ArrayList<Note> bass_line = gen.bassLineGen(16);
+  for (Note x: bass_line){
+    System.out.println(x);
+    myBus.sendNoteOn(x);
+    delay(1000);
+  }
+    
+  
+  
+  
+  
   
 }
