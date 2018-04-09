@@ -54,9 +54,7 @@ void draw() {
     delay(1000);
   }
     
-  
-  
-  
-  
+  gen.score.writeMidiFile(dataPath("FirstSpecies.mid"));
+  gen.score.play();
   
 }

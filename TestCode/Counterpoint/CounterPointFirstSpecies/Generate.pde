@@ -1,16 +1,20 @@
 import java.util.*;
+import arb.soundcipher.*;
+//Need to have soundcipher library downloaded in Processing libraries
 
 public class Generate{
   
   private float set_interval = 1000;
   private int[] STEPS = {0, 2, 4, 5, 7, 9, 11};
   private Note TONIC;
+  public SCScore score;
   
   public ArrayList<ArrayList<Note>> playList;
   
   public Generate(Note TONIC){
     playList = new ArrayList<ArrayList<Note>>();
     this.TONIC = TONIC;
+    score = new SCScore();
   }
   
   //Generate Chord Progression of length chords
