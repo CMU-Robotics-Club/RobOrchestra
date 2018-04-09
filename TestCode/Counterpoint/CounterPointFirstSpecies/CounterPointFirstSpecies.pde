@@ -47,14 +47,16 @@ void setup(){
 
 void draw() {
   Generate gen = new Generate(new Note(channel, 60, 100));
-  ArrayList<Note> bass_line = gen.bassLineGen(16);
-  for (Note x: bass_line){
-    System.out.println(x);
-    myBus.sendNoteOn(x);
-    delay(1000);
-  }
+  //ArrayList<Note> bass_line = gen.bassLineGen(16);
+  //for (Note x: bass_line){
+  //  System.out.println(x);
+  //  myBus.sendNoteOn(x);
+  //  delay(1000);
+  //}
+    
+  gen.music_gen(16);  
     
   gen.score.writeMidiFile(dataPath("FirstSpecies.mid"));
-  gen.score.play();
+  gen.score.play(); 
   
 }

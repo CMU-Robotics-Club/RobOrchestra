@@ -109,28 +109,21 @@ public class Generate{
   }
    
    
-  public ArrayList<Note> RULEFILTER(ArrayList<Note> choices, ArrayList<String> rules){
-    ArrayList<Note> arr = new ArrayList<Note>(choices);
+  //public ArrayList<Note> RULEFILTER(ArrayList<Note> choices, ArrayList<String> rules){
+  //  ArrayList<Note> arr = new ArrayList<Note>(choices);
     
-    //if(rules.contains("bassline")){
-    //  int bass_note = arr.get(0).pitch();
-    //  int n = arr.size();
-    //  for (int i = 0; i < n; i++){
-    //    if (arr.get(i).pitch() == bass_note+7) arr.remove(i);
-    //  }
-    //}
       
-    return arr;
-  }
+  //  return arr;
+  //}
   
-  public ArrayList<Voices> music_gen(int length){
+  public void music_gen(int length){
     ArrayList<Note> bass_line = bassLineGen(length);
+    int timeCount = 0;
+    for (Note i: bass_line){
+      score.addNote(timeCount*2.0, i.pitch(), i.velocity(), 2.0);
+      timeCount++;
+    }
     
-    
-    
-    
-    
-    return new ArrayList<Voices>();
   }
   
   
