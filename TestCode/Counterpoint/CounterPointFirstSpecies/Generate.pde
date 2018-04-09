@@ -79,7 +79,6 @@ public class Generate{
       
       bassLine.add(bassNote);
     }
-    System.out.println(chords);
     return bassLine;
   }
   
@@ -118,11 +117,11 @@ public class Generate{
   
   public void music_gen(int length){
     ArrayList<Note> bass_line = bassLineGen(length);
-    int timeCount = 0;
-    for (Note i: bass_line){
-      score.addNote(timeCount*2.0, i.pitch(), i.velocity(), 2.0);
-      timeCount++;
+    for (int i = 0; i < bass_line.size(); i++){
+      score.addNote(1*i, bass_line.get(i).pitch(), bass_line.get(i).velocity(), 1);
     }
+    
+    
     
   }
   

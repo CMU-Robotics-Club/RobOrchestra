@@ -55,8 +55,9 @@ void draw() {
   //}
     
   gen.music_gen(16);  
-    
-  gen.score.writeMidiFile(dataPath("FirstSpecies.mid"));
+   
   gen.score.play(); 
+  
+  delay(18000);
   
 }
