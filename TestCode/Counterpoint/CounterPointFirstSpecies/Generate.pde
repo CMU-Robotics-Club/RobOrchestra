@@ -8,6 +8,7 @@ public class Generate{
   private int[] STEPS = {0, 2, 4, 5, 7, 9, 11};
   private Note TONIC;
   public SCScore score;
+  public ArrayList<Integer> chords; 
   
   public ArrayList<ArrayList<Note>> playList;
   
@@ -61,13 +62,13 @@ public class Generate{
   //Generate Bass Line of length notes
   public ArrayList<Note> bassLineGen(int length){
     ArrayList<Note> bassLine = new ArrayList<Note>();
-    ArrayList<Integer> chords = chordProgGen(length);
-    int actualLength = chords.size();
+    ArrayList<Integer> Chords = chordProgGen(length);
+    int actualLength = Chords.size();
     
    // Note prevNote = new Note(channel, 0, 0);
     for(int i = 0; i < actualLength; i++){
       //Some unmade get chord function
-      ArrayList<Note> currChord = CHORDGETTER(chords.get(i));
+      ArrayList<Note> currChord = CHORDGETTER(Chords.get(i));
             
       Note bassNote = pickfromList(currChord);     
       while(bassNote.pitch() > bass_high){
@@ -79,6 +80,7 @@ public class Generate{
       
       bassLine.add(bassNote);
     }
+    chords = Chords;
     return bassLine;
   }
   
@@ -118,9 +120,17 @@ public class Generate{
   public void music_gen(int length){
     ArrayList<Note> bass_line = bassLineGen(length);
     for (int i = 0; i < bass_line.size(); i++){
-      score.addNote(1*i, bass_line.get(i).pitch(), bass_line.get(i).velocity(), 1);
+      score.addNote(i, bass_line.get(i).pitch(), bass_line.get(i).velocity(), 1);
     }
     
+    int prevNote = -1;
+    int prevChord = -1;
+    int prevInterval = -1;
+    
+    for (int i = 0; i < bass_line.size(); i++){
+      ArrayList<Note> currChord = CHORDGETTER(chords.get(i));
+      score.addNote(i, pickfromList(currChord).pitch() + 12, 100, 1);
+    }
     
     
   }

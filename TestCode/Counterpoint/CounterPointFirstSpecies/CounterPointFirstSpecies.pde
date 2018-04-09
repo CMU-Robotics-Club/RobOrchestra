@@ -42,22 +42,14 @@ void setup(){
   System.out.println("");
 
   myBus = new MidiBus(this, input, output);
+  
+  Generate gen = new Generate(new Note(channel, 60, 100));
+  gen.music_gen(16);  
+   
+  gen.score.play(); 
 } 
 
 
 void draw() {
-  Generate gen = new Generate(new Note(channel, 60, 100));
-  //ArrayList<Note> bass_line = gen.bassLineGen(16);
-  //for (Note x: bass_line){
-  //  System.out.println(x);
-  //  myBus.sendNoteOn(x);
-  //  delay(1000);
-  //}
-    
-  gen.music_gen(16);  
-   
-  gen.score.play(); 
-  
-  delay(18000);
-  
+
 }
