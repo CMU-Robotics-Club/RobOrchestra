@@ -64,8 +64,7 @@ public class Generate{
     for(int i = 0; i < actualLength; i++){
       //Some unmade get chord function
       ArrayList<Note> currChord = CHORDGETTER(chords.get(i));
-      currChord = RULEFILTER(currChord, new ArrayList<String>()); //WILL BE IMPLEMENTED BY ME
-      
+            
       Note bassNote = pickfromList(currChord);     
       while(bassNote.pitch() > bass_high){
         bassNote.setPitch(bassNote.pitch() - 12);
