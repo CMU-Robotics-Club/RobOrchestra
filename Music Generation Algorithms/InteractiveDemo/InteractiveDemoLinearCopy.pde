@@ -4,6 +4,8 @@ import themidibus.*;
 ControlP5 cp5;
 MidiBus myBus;
 
+Button melodyLabel;
+Button harmonyLabel;
 Button onOff1;
 Button onOff2;
 Button scaleCycle;
@@ -135,6 +137,26 @@ void setup() {
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
   
   resetArrays();
+  
+  melodyLabel = cp5.addButton("melodyLabel")
+    .setPosition(0 * scale, 5 * scale)
+    .setSize(50 * scale, 30 * scale)
+    .setCaptionLabel("Melody")
+    .setColorBackground(color(255, 255, 255))
+    .setColorForeground(color(255, 255, 255))
+    .setColorActive(color(255, 255, 225))
+    .setColorLabel(color(0, 0, 0)); 
+  ;
+  
+  harmonyLabel = cp5.addButton("harmonyLabel")
+    .setPosition(48 * scale, 5 * scale)
+    .setSize(50 * scale, 30 * scale)
+    .setCaptionLabel("Harmony")
+    .setColorBackground(color(255, 255, 255))
+    .setColorForeground(color(255, 255, 255))
+    .setColorActive(color(255, 255, 225))
+    .setColorLabel(color(0, 0, 0));    
+  ;
   
   onOff1 = cp5.addButton("togglePlay1")
     .setPosition(10 * scale, 30 * scale)
