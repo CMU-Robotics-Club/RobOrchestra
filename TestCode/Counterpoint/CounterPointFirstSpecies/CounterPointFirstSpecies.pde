@@ -21,7 +21,7 @@ int hi = 76; //E5
 
 //Parameters for directing stream of MIDI data
 int input = 0;
-int output = 1;
+int output = 4;
 
 //Reference
 String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
@@ -32,7 +32,7 @@ int bass_high = 55;
 
 //for making output readable
 String midiToNote(int x){
-   return notes[x%12] + " " + (x/12-1); 
+   return notes[x%12] + " " + (x); 
 }
 
 CounterPointFirstSpecies mySong;
@@ -41,15 +41,21 @@ void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, input, output);
+  myBus = new MidiBus(this, input, 3);
   
-  Generate gen = new Generate(new Note(channel, 60, 100));
-  gen.music_gen(16);  
-   
-  gen.score.play(); 
+ 
 } 
 
 
 void draw() {
-
+  
+   Generate gen = new Generate(new Note(channel, 60, 100));
+   gen.music_gen(16);  
+  
+  gen.score.setMidiDeviceOutput(output);
+  gen.score.play(); 
+  
+  while(gen.score.playing){
+    delay(500);
+  }
 }
