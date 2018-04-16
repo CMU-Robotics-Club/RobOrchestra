@@ -6,7 +6,7 @@
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-Servo servo1;
+Servo strummer;
 int strum_delay = 50;
 int sol_delay = 50;
 int which = 0; //Next direction to sweep the arm
@@ -139,7 +139,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 
 void setup()
 {
-  servo1.attach(53);
+  strummer.attach(53);
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOn();
