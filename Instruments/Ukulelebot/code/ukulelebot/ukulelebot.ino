@@ -6,27 +6,27 @@
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-Servo strummer;
+Servo servo1;
 int strum_delay = 50;
 int sol_delay = 50;
 int which = 0; //Next direction to sweep the arm
 
-int SOL_1 = 1;
-int SOL_2 = 2;
-int SOL_3 = 3;
-int SOL_4 = 4;
-int SOL_5 = 5;
-int SOL_6 = 6;
-int SOL_7 = 7;
-int SOL_8 = 8;
-int SOL_9 = 9;
-int SOL_10 = 10;
-int SOL_11 = 11;
-int SOL_12 = 12;
-int SOL_13 = 13;
-int SOL_14 = 22;
-int SOL_15 = 23;
-int SOL_16 = 24;
+int SOL_1 = 22;
+int SOL_2 = 23;
+int SOL_3 = 24;
+int SOL_4 = 25;
+int SOL_5 = 26;
+int SOL_6 = 27;
+int SOL_7 = 28;
+int SOL_8 = 29;
+int SOL_9 = 30;
+int SOL_10 = 31;
+int SOL_11 = 32;
+int SOL_12 = 33;
+int SOL_13 = 34;
+int SOL_14 = 35;
+int SOL_15 = 36;
+int SOL_16 = 37;
 
  int C[4] = {SOL_15,0,0,0};
  int D[4] = {SOL_2, SOL_6,SOL_10, 0};
@@ -139,6 +139,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 
 void setup()
 {
+  servo1.attach(53);
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOn();
