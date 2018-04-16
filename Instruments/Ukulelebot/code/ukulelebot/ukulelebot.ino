@@ -6,6 +6,8 @@
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 
+#THIS IS THE WORKING ONE
+
 Servo strummer;
 int strum_delay = 50;
 int sol_delay = 50;
