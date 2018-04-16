@@ -32,45 +32,65 @@ int solenoidarray[] = {SOL_1, SOL_2, SOL_3, SOL_4, SOL_5, SOL_6, SOL_7, SOL_8, S
 int nsolenoids = 16;
 
 const int chordlen = 4;
-const int numchords = 7;
+const int numchords = 12;
 
 int C[chordlen] = {SOL_15,0,0,0};
+int Cs[chordlen] = {SOL_1, SOL_5, SOL_9, SOL_16};
 int D[chordlen] = {SOL_2, SOL_6,SOL_10, 0};
+int Ds[chordlen] = {SOL_7, SOL_11, SOL_13, 0};
 int E[chordlen] = {SOL_4, SOL_8,SOL_12,SOL_14};
 int F[chordlen] = {SOL_4, SOL_8,SOL_12,SOL_14};
+int Fs[chordlen] = {SOL_3, SOL_5, SOL_10, SOL_13};
 int G[chordlen] = {SOL_6, SOL_11, SOL_14, 0};
+int Gs[chordlen] = {SOL_1, SOL_7, SOL_12, SOL_15}; //First string needs fifth fret
 int A[chordlen] = {SOL_2, SOL_5, 0, 0};
+int As[chordlen] = {SOL_3, SOL_6, SOL_9, SOL_13};
 int B[chordlen] = {SOL_4, SOL_7,SOL_10,SOL_14};
 
 
-int Cm[chordlen] = {SOL_7,SOL_11,SOL_15};
-int Dm[chordlen] = {SOL_2, SOL_6, SOL_9 };
-int Em[chordlen] = {SOL_8,SOL_11,SOL_14 };
-int Fm[chordlen] = {SOL_1, SOL_9,SOL_15};
-int Gm[chordlen] = {SOL_6,SOL_11,SOL_13 };
+int Cm[chordlen] = {SOL_7,SOL_11,SOL_15, 0};
+int Csm[chordlen] = {SOL_1, SOL_5, 0, SOL_16};
+int Dm[chordlen] = {SOL_2, SOL_6, SOL_9, 0};
+int Dsm[chordlen] = {SOL_3, SOL_7, SOL_10, SOL_13};
+int Em[chordlen] = {SOL_8,SOL_11,SOL_14, 0};
+int Fm[chordlen] = {SOL_1, SOL_9,SOL_15, 0};
+int Fsm[chordlen] = {SOL_2, SOL_5, SOL_10, SOL_16};
+int Gm[chordlen] = {SOL_6,SOL_11,SOL_13, 0};
+int Gsm[chordlen] = {SOL_1, SOL_7, SOL_12, SOL_14};
 int Am[chordlen] = {SOL_2,0,0,0};
+int Asm[chordlen] = {SOL_3, SOL_5, SOL_9, SOL_13};
 int Bm[chordlen] = {SOL_4, SOL_6,SOL_10,SOL_14};
 
 int C7[chordlen] = {SOL_13,0,0,0};
+int Cs7[chordlen] = {SOL_1, SOL_5, SOL_9, SOL_14};
 int D7[chordlen] = {SOL_2,SOL_10,0,0};
+int Ds7[chordlen] = {SOL_3, SOL_7, SOL_11, SOL_16};
 int E7[chordlen] = {SOL_10,SOL_14,0,0 };
 int F7[chordlen] = {SOL_2,SOL_7,SOL_9,0};
+int Fs7[chordlen] = {SOL_3, SOL_8, SOL_10, SOL_16};
 int G7[chordlen] = {SOL_6,SOL_9,SOL_14,0};
+int Gs7[chordlen] = {SOL_1, SOL_7, SOL_10, SOL_15};
 int CHORD_A7[chordlen] = {SOL_5,0,0,0}; //Because apparently A7 was taken already
+int As7[chordlen] = {SOL_1, SOL_6, SOL_9, SOL_13};
 int B7[chordlen] = {SOL_2,SOL_7,SOL_10,SOL_14};
 
 
-int *major[numchords] = {C,D,E,F,G,A,B};
-int *minor[numchords] = {Cm,Dm,Em,Fm,Gm,Am,Bm};
-int *other[numchords] = {C7,D7,E7,F7,CHORD_A7,B7};
+int *major[numchords] = {C,Cs,D,Ds,E,F,Fs,G,Gs,A,As,B};
+int *minor[numchords] = {Cm,Csm,Dm,Dsm,Em,Fm,Fsm,Gm,Gsm,Am,Asm,Bm};
+int *other[numchords] = {C7,Cs7,D7,Ds7,E7,F7,Fs7,G7,Gs7,CHORD_A7,As7,B7};
 
 /*  note number */
 int C_midi = 60;
+int Cs_midi = 61;
 int D_midi = 62;
+int Ds_midi = 63;
 int E_midi = 64;
 int F_midi = 65;
+int Fs_midi = 66;
 int G_midi = 67;
-int A_midi = 79;
+int Gs_midi = 68;
+int A_midi = 69;
+int As_midi = 70;
 int B_midi = 71; 
 
 void play(int note[]){
@@ -103,9 +123,10 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
   pitch = pitch % 12 + 60;
   
   if(channel == 3) {
-    int Note; 
-    
-    if(pitch == C_midi){
+    int Note = pitch % 12;
+
+    //Added all the chords; don't need this anymore
+    /*if(pitch == C_midi){
         Note = 0;
     } else if(pitch == D_midi){
       Note = 1;
@@ -119,7 +140,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
         Note = 5;
     } else if(pitch == B_midi){
         Note = 6;
-    }
+    }*/
 
     int chord[4] = {0,0,0,0};
     
