@@ -8,7 +8,7 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 
 Servo strummer;
 int strum_delay = 50;
-int sol_delay = 50;
+int sol_delay = 500;
 int which = 0; //Next direction to sweep the arm
 
 int SOL_1 = 22;
@@ -28,49 +28,54 @@ int SOL_14 = 35;
 int SOL_15 = 36;
 int SOL_16 = 37;
 
- int C[4] = {SOL_15,0,0,0};
- int D[4] = {SOL_2, SOL_6,SOL_10, 0};
- int E[4] = {SOL_4, SOL_8,SOL_12,SOL_14};
- int F[4] = {SOL_4, SOL_8,SOL_12,SOL_14};
- int G[4] = {SOL_6, SOL_11, SOL_14, 0};
- int A[4] = {SOL_2, SOL_5, 0, 0};
- int B[4] = {SOL_4, SOL_7,SOL_10,SOL_14};
+int solenoidarray[] = {SOL_1, SOL_2, SOL_3, SOL_4, SOL_5, SOL_6, SOL_7, SOL_8, SOL_9, SOL_10, SOL_11, SOL_12, SOL_13, SOL_14, SOL_15, SOL_16};
+int nsolenoids = 16;
+
+const int chordlen = 4;
+const int numchords = 7;
+
+int C[chordlen] = {SOL_15,0,0,0};
+int D[chordlen] = {SOL_2, SOL_6,SOL_10, 0};
+int E[chordlen] = {SOL_4, SOL_8,SOL_12,SOL_14};
+int F[chordlen] = {SOL_4, SOL_8,SOL_12,SOL_14};
+int G[chordlen] = {SOL_6, SOL_11, SOL_14, 0};
+int A[chordlen] = {SOL_2, SOL_5, 0, 0};
+int B[chordlen] = {SOL_4, SOL_7,SOL_10,SOL_14};
 
 
- int Cm[4] = {SOL_7,SOL_11,SOL_15};
- int Dm[4] = {SOL_2, SOL_6, SOL_9 };
- int Em[4] = {SOL_8,SOL_11,SOL_14 };
- int Fm[4] = {SOL_1, SOL_9,SOL_15};
- int Gm[4] = {SOL_6,SOL_11,SOL_13 };
- int Am[4] = {SOL_2,0,0,0};
- int Bm[4] = {SOL_4, SOL_6,SOL_10,SOL_14};
+int Cm[chordlen] = {SOL_7,SOL_11,SOL_15};
+int Dm[chordlen] = {SOL_2, SOL_6, SOL_9 };
+int Em[chordlen] = {SOL_8,SOL_11,SOL_14 };
+int Fm[chordlen] = {SOL_1, SOL_9,SOL_15};
+int Gm[chordlen] = {SOL_6,SOL_11,SOL_13 };
+int Am[chordlen] = {SOL_2,0,0,0};
+int Bm[chordlen] = {SOL_4, SOL_6,SOL_10,SOL_14};
 
- int C7[4] = {SOL_13,0,0,0}; //Should this be SOL_13 (which is also just 13)??
- int D7[4] = {SOL_2,SOL_10,0,0};
- int E7[4] = {SOL_10,SOL_14,0,0 };
- int F7[4] = {SOL_2,SOL_7,SOL_9,0};
- int G7[4] = {SOL_6,SOL_9,SOL_14,0};
- int CHORD_A7[4] = {SOL_5,0,0,0}; //Why is this not just called A7??
- int B7[4] = {SOL_2,SOL_7,SOL_10,SOL_14};
+int C7[chordlen] = {SOL_13,0,0,0};
+int D7[chordlen] = {SOL_2,SOL_10,0,0};
+int E7[chordlen] = {SOL_10,SOL_14,0,0 };
+int F7[chordlen] = {SOL_2,SOL_7,SOL_9,0};
+int G7[chordlen] = {SOL_6,SOL_9,SOL_14,0};
+int CHORD_A7[chordlen] = {SOL_5,0,0,0}; //Because apparently A7 was taken already
+int B7[chordlen] = {SOL_2,SOL_7,SOL_10,SOL_14};
 
 
- int *major[7] = {C,D,E,F,G,A,B};
- int *minor[7] = {Cm,Dm,Em,Fm,Gm,Am,Bm};
- int *other[7] = {C7,D7,E7,F7,CHORD_A7,B7};
+int *major[numchords] = {C,D,E,F,G,A,B};
+int *minor[numchords] = {Cm,Dm,Em,Fm,Gm,Am,Bm};
+int *other[numchords] = {C7,D7,E7,F7,CHORD_A7,B7};
 
 /*  note number */
-  int C_midi = 60;
-  int D_midi = 62;
-  int E_midi = 64;
-  int F_midi = 65;
-  int G_midi = 67;
-  int A_midi = 79;
-  int B_midi = 71; 
+int C_midi = 60;
+int D_midi = 62;
+int E_midi = 64;
+int F_midi = 65;
+int G_midi = 67;
+int A_midi = 79;
+int B_midi = 71; 
 
 void play(int note[]){
-  int len = sizeof(note);
   
-  for(int i=0;i<len;i++){
+  for(int i=0;i<chordlen;i++){
     digitalWrite(note[i],HIGH);
   }
   
@@ -86,7 +91,7 @@ void play(int note[]){
   
   
   
-  for(int i=0;i<len;i++){
+  for(int i=0;i<chordlen;i++){
     digitalWrite(note[i],LOW);
   }
 }
@@ -103,7 +108,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
     if(pitch == C_midi){
         Note = 0;
     } else if(pitch == D_midi){
-      Note = 1; //Why double-equals??
+      Note = 1;
     } else if(pitch == E_midi){
         Note = 2;
     } else if(pitch == F_midi){
@@ -140,6 +145,10 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 void setup()
 {
   strummer.attach(53);
+  for(int x = 0; x < nsolenoids; x++){
+    pinMode(solenoidarray[x], OUTPUT);
+    digitalWrite(solenoidarray[x], LOW);
+  }
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOn();
@@ -147,7 +156,9 @@ void setup()
 
 void loop()
 { 
-  MIDI.read();
+  //MIDI.read();
+  play(D);
+  delay(1000);
 }
 
 
