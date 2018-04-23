@@ -18,6 +18,9 @@ public class Generate{
     score = new SCScore();
   }
   
+  
+ 
+  
   //Generate Chord Progression of length chords
   public ArrayList<Integer> chordProgGen(int length){
     ArrayList<Integer> chords = new ArrayList<Integer>();
@@ -59,8 +62,13 @@ public class Generate{
   }
   
   
+  
+  
+  
+  
   //Generate Bass Line of length notes
   public ArrayList<Note> bassLineGen(int length){
+    Random rand = new Random();
     ArrayList<Note> bassLine = new ArrayList<Note>();
     ArrayList<Integer> Chords = chordProgGen(length);
     int actualLength = Chords.size();
@@ -80,11 +88,19 @@ public class Generate{
       
       bassLine.add(bassNote);
     }
+    
+    bassLine.set(bassLine.size()-2, new Note(channel, TONIC.pitch()-1+3*(rand.nextInt(2)), 100));
+    
     chords = Chords;
     bassLine.set(bassLine.size()-1, TONIC); 
     bassLine.set(0, TONIC);
     return bassLine;
   }
+  
+  
+  
+  
+  
   
   //Pick Note from list of valid Notes
   public Note pickfromList(ArrayList<Note> options){
@@ -119,33 +135,42 @@ public class Generate{
   //  return arr;
   //}
   
+  
+  
+  
+  
+  
+  
+  
+  
   public void music_gen(int length){
+    Random rand = new Random();
     ArrayList<Note> bass_line = bassLineGen(length);
     for (int i = 0; i < bass_line.size(); i++){
-      score.addNote(i, bass_line.get(i).pitch(), bass_line.get(i).velocity(), 1);
+      score.addNote(TIME*i, bass_line.get(i).pitch(), bass_line.get(i).velocity(), TIME);
     }
     
     int prevNote = -1;
     int prevChord = -1;
     int prevInterval = -1;
     
-    for (int i = 0; i < bass_line.size(); i++){
+    for (int i = 0; i < bass_line.size()-2; i++){
       ArrayList<Note> currChord = CHORDGETTER(chords.get(i));
       if (prevInterval == 8 || prevInterval == 5){
         currChord = removeByNote(currChord, bass_line.get(i));
-        currChord = removeByNote(currChord, new Note(channel, bass_line.get(i).pitch() + 7, 100, 1));
-        currChord = removeByNote(currChord, new Note(channel, bass_line.get(i).pitch() + 6, 100, 1));
+        currChord = removeByNote(currChord, new Note(channel, bass_line.get(i).pitch() + 7, 100));
+        currChord = removeByNote(currChord, new Note(channel, bass_line.get(i).pitch() + 6, 100));
       }
       
       
       for (int j = prevNote - 12; j < prevNote + 12; j++) {
-        if (Math.abs(j - prevNote) > 5) currChord = removeByNote(currChord, new Note(channel, j, 100, 1));
+        if (Math.abs(j - prevNote) > 5) currChord = removeByNote(currChord, new Note(channel, j, 100));
       }
       
       
       int newPitch = pickfromList(currChord).pitch() + 12;
       Note NoteToAdd = new Note(channel, newPitch, 100, 1);
-      score.addNote(i, NoteToAdd.pitch(), 100, 1);
+      score.addNote(TIME*i, NoteToAdd.pitch(), 100, TIME);
       
       int dif = (NoteToAdd.pitch() - bass_line.get(i).pitch())%12;
       if (dif == 7 || dif == 6){
@@ -166,8 +191,19 @@ public class Generate{
       
     }
     
+    int secondLastPitch = TONIC.pitch() + 11;
+    if (bass_line.get(bass_line.size()-2).pitch()%12 == 11) secondLastPitch = TONIC.pitch() + 14;
+    
+    score.addNote(TIME*(bass_line.size()-2.0), secondLastPitch, 100, TIME); 
+    
+    score.addNote(TIME*(bass_line.size()-1.0), TONIC.pitch() + 12, 100, TIME);
+    
     
   }
+  
+  
+  
+  
   
   public ArrayList<Note> removeByNote(ArrayList<Note> arr, Note toBeRemoved){
     int n = arr.size();

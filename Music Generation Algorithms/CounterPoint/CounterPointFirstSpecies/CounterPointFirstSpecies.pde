@@ -21,7 +21,7 @@ int hi = 76; //E5
 
 //Parameters for directing stream of MIDI data
 int input = 0;
-int output = 4;
+int output = 2;
 
 //Reference
 String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
@@ -29,6 +29,7 @@ String[] notes = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B
 int bass_low = 36;
 int bass_high = 55;
 
+float TIME = 1;
 
 //for making output readable
 String midiToNote(int x){
@@ -43,7 +44,6 @@ void setup(){
 
   myBus = new MidiBus(this, input, 3);
   
- 
 } 
 
 
@@ -56,6 +56,6 @@ void draw() {
   gen.score.play(); 
   
   while(gen.score.playing){
-    delay(500);
+    delay(4000);
   }
 }
