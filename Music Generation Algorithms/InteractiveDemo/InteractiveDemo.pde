@@ -4,7 +4,10 @@ import themidibus.*;
 ControlP5 cp5;
 MidiBus myBus;
 
-Button onOff;
+Button melodyLabel;
+Button harmonyLabel;
+Button onOff1;
+Button onOff2;
 Button scaleCycle;
 Button subScaleCycle;
 
@@ -26,7 +29,7 @@ int snarePitchMIDI = 36;
 int tomPitchMIDI = 37;
 int channel = 0;
 int perc_channel = 1;
-int velocity = 120;
+int velocity = 120; 
 
 String[] scaleNames = {"Diatonic", "Jazz", "Minor", "Pentatonic", "Other"};
 String[][] subScaleNames = {
@@ -70,7 +73,7 @@ int[][][] scaleOffsets = {
 };
 
 float[][][] scaleWeights = {
-  {{1.00, 0.50, 1.00, 0.25, 1.00, 0.50, 0.75},
+  {{1.00, 0.50, 1.00, 0.25, 1.00, 0.70, 0.40},
    {1.00, 0.50, 1.00, 0.25, 1.00, 0.50, 0.75},
    {1.00, 0.50, 1.00, 0.25, 1.00, 0.50, 0.75},
    {1.00, 0.50, 1.00, 0.25, 1.00, 0.50, 0.75},
@@ -104,12 +107,14 @@ float[][][] scaleWeights = {
 int curScale = 0;
 int curSubScale = 0;
 
-boolean isPlaying = true;
+boolean isPlaying1 = true;
+boolean isPlaying2 = false;
 
 int beatIndex = 0;
 int tonic = 0;
 int tempo = 0;
-
+int prev_tone_index_1 = 1;
+int prev_tone_index_2 = 1;
 String[] noteNames = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 float[] notes = {};
 float[] probs = {};
@@ -133,22 +138,49 @@ void setup() {
   
   resetArrays();
   
-  onOff = cp5.addButton("togglePlay")
-    .setPosition(30 * scale, 30 * scale)
+  melodyLabel = cp5.addButton("melodyLabel")
+    .setPosition(0 * scale, 5 * scale)
+    .setSize(50 * scale, 30 * scale)
+    .setCaptionLabel("Melody")
+    .setColorBackground(color(255, 255, 255))
+    .setColorForeground(color(255, 255, 255))
+    .setColorActive(color(255, 255, 225))
+    .setColorLabel(color(0, 0, 0)); 
+  ;
+  
+  harmonyLabel = cp5.addButton("harmonyLabel")
+    .setPosition(48 * scale, 5 * scale)
+    .setSize(50 * scale, 30 * scale)
+    .setCaptionLabel("Harmony")
+    .setColorBackground(color(255, 255, 255))
+    .setColorForeground(color(255, 255, 255))
+    .setColorActive(color(255, 255, 225))
+    .setColorLabel(color(0, 0, 0));    
+  ;
+  
+  onOff1 = cp5.addButton("togglePlay1")
+    .setPosition(10 * scale, 30 * scale)
     .setSize(35 * scale, 73 * scale)
     .setFont(new ControlFont(createFont("Power.ttf", 15 * scale, true), 15 * scale))
     .setCaptionLabel("\u23FB")
   ;
   
+  onOff2 = cp5.addButton("togglePlay2")
+    .setPosition(55 * scale, 30 * scale)
+    .setSize(35 * scale, 73 * scale)
+    .setFont(new ControlFont(createFont("Power.ttf", 15 * scale, true), 15 * scale))
+    .setCaptionLabel("\u23FB")
+  ;  
+  
   scaleCycle = cp5.addButton("changeScale")
-    .setPosition(70 * scale, 30 * scale)
+    .setPosition(100 * scale, 30 * scale)
     .setSize(70 * scale, 34 * scale)
     .setColorBackground(color(24, 100, 204))
     .setColorForeground(color(24, 100, 204))
     .setColorActive(color(49, 144, 225))
   ;
   subScaleCycle = cp5.addButton("changeSubScale")
-    .setPosition(70 * scale, 69 * scale)
+    .setPosition(100 * scale, 69 * scale)
     .setSize(70 * scale, 34 * scale)
     .setColorBackground(color(9, 35, 70))
     .setColorForeground(color(9, 35, 70))
@@ -156,7 +188,7 @@ void setup() {
   ;
   
   xyloSlider = cp5.addSlider("xyloDensity")
-    .setPosition(155 * scale, 30 * scale)
+    .setPosition(175 * scale, 30 * scale)
     .setSize(195 * scale, 21 * scale)
     .setRange(0.0, 1.0)
     .setValue(0.55)
@@ -169,7 +201,7 @@ void setup() {
   xyloSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10 * scale);
   
   snareSlider = cp5.addSlider("snareDensity")
-    .setPosition(155 * scale, 56 * scale)
+    .setPosition(175 * scale, 56 * scale)
     .setSize(195 * scale, 21 * scale)
     .setRange(0.0, 1.0)
     .setValue(0.70)
@@ -182,7 +214,7 @@ void setup() {
   snareSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10 * scale);
   
   tomSlider = cp5.addSlider("tomDensity")
-    .setPosition(155 * scale, 82 * scale)
+    .setPosition(175 * scale, 82 * scale)
     .setSize(195 * scale, 21 * scale)
     .setRange(0.0, 1.0)
     .setValue(0.45)
@@ -195,7 +227,7 @@ void setup() {
   tomSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10 * scale);
   
   tonicKnob = cp5.addKnob("tonic")
-    .setPosition(30 * scale, 118 * scale)
+    .setPosition(20 * scale, 118 * scale)
     .setRadius(30 * scale)
     .setRange(60, 71)
     .setValue(60)
@@ -214,7 +246,7 @@ void setup() {
   rootNote.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 
   tempoKnob = cp5.addKnob("tempo")
-    .setPosition(30 * scale, 188 * scale)
+    .setPosition(20 * scale, 188 * scale)
     .setRadius(30 * scale)
     .setRange(30, 220)
     .setValue(120)
@@ -232,7 +264,8 @@ void setup() {
   tempoBPM.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 }
 
-int curTime = 0;
+int curTime1 = 0;
+int curTime2 = 0;
 void draw() {
   float sum = 0.0;
   for (int i = 0; i < notes.length; i++)
@@ -242,10 +275,15 @@ void draw() {
       
   background(255, 255, 255);
   
-  onOff.setColorBackground(isPlaying ? color(204, 0, 43) : color(240, 240, 240));
-  onOff.setColorForeground(isPlaying ? color(204, 0, 43) : color(240, 240, 240));
-  onOff.setColorActive(isPlaying ? color(235, 0, 43) : color(230, 230, 230));
-  onOff.setColorLabel(isPlaying ? color(255, 255, 255) : color(204, 0, 43));
+  onOff1.setColorBackground(isPlaying1 ? color(204, 0, 43) : color(240, 240, 240));
+  onOff1.setColorForeground(isPlaying1 ? color(204, 0, 43) : color(240, 240, 240));
+  onOff1.setColorActive(isPlaying1 ? color(235, 0, 43) : color(230, 230, 230));
+  onOff1.setColorLabel(isPlaying1 ? color(255, 255, 255) : color(204, 0, 43));
+  
+  onOff2.setColorBackground(isPlaying2 ? color(204, 0, 43) : color(240, 240, 240));
+  onOff2.setColorForeground(isPlaying2 ? color(204, 0, 43) : color(240, 240, 240));
+  onOff2.setColorActive(isPlaying2 ? color(235, 0, 43) : color(230, 230, 230));
+  onOff2.setColorLabel(isPlaying2 ? color(255, 255, 255) : color(204, 0, 43));  
   
   scaleCycle.setCaptionLabel(scaleNames[curScale]);
   subScaleCycle.setCaptionLabel(subScaleNames[curScale][curSubScale]);
@@ -257,13 +295,19 @@ void draw() {
     noteSliders[i].setCaptionLabel(noteNames[(tonic + scaleOffsets[curScale][curSubScale][i]) % 12]);
   }
 
-  if(isPlaying && millis() > curTime + (60000 / (tempo * 2))) {
-    playMelody();
-    curTime = millis();
+  if(isPlaying1 && millis() > curTime1 + (60000 / (tempo * 2))) {
+    prev_tone_index_1 = playMelody(prev_tone_index_1, false);
+    if(isPlaying2) playMelody(prev_tone_index_1, true); //plays harmony
+    curTime1 = millis();
   }
+  
+  if(!isPlaying1 && isPlaying2 && millis() > curTime2 + (60000 / (tempo * 2))) {
+    prev_tone_index_2 = playMelody(prev_tone_index_2, false); 
+    curTime2 = millis();
+  }  
 }
 
-void playMelody() {
+int playMelody(int prev_tone_index, boolean isHarmony) {
   double r = Math.random();
   double xyloPlay = Math.random();
   double snarePlay = Math.random();
@@ -272,6 +316,9 @@ void playMelody() {
   double xyloThresh = Math.min(xylo[beatIndex] + xyloDensity, 1.0);
   double snareThresh = Math.min(snare[beatIndex] + snareDensity, 1.0);
   double tomThresh = Math.min(tom[beatIndex] + tomDensity, 1.0);
+  
+  int toneToPlay = 0;
+  int toneIndex = 0;
   
   if(snarePlay <= snareThresh) {
     myBus.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
@@ -284,20 +331,39 @@ void playMelody() {
     
   delay(2);
   if(xyloPlay <= xyloThresh) {
-    for(int i = 0; i < scaleOffsets[curScale][curSubScale].length; i++) {
-      r -= probs[i];
-      if(r < 0) {
-        int toneToPlay = tonic + scaleOffsets[curScale][curSubScale][i];
-        myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));  
-        break;
+    
+    if(isHarmony){
+      toneIndex = (prev_tone_index+2) % scaleOffsets[curScale][curSubScale].length;    
+    }
+    else if(r < .50){
+      for(int i = 0; i < scaleOffsets[curScale][curSubScale].length; i++) {
+        r -= probs[i];
+        if(r < 0) {
+          toneIndex = i; 
+          break;      
+        }
       }
+    }
+    else if(r < .80){
+      toneIndex = (prev_tone_index+1) % scaleOffsets[curScale][curSubScale].length; 
+    }    
+    else{
+      toneIndex = (prev_tone_index-1+scaleOffsets[curScale][curSubScale].length) % scaleOffsets[curScale][curSubScale].length; 
+    }
+    print(toneIndex);
+    toneToPlay = tonic + scaleOffsets[curScale][curSubScale][toneIndex];
+    myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
     }      
-  }
   beatIndex = (beatIndex + 1) % measureLength;
+  return toneIndex;
 }
 
-void togglePlay() {
-  isPlaying = !isPlaying;
+void togglePlay1() {
+  isPlaying1 = !isPlaying1;
+}
+
+void togglePlay2(){
+  isPlaying2 = !isPlaying2;
 }
 
 void resetArrays() {
