@@ -34,12 +34,12 @@ int nsolenoids = 16;
 const int chordlen = 4;
 const int numchords = 12;
 
-int C[chordlen] = {SOL_15,0,0,0};
+int C[chordlen] = {SOL_9,0,0,0}; //SOL_15, 0, 0, 0
 int Cs[chordlen] = {SOL_1, SOL_5, SOL_9, SOL_16};
 int D[chordlen] = {SOL_2, SOL_6,SOL_10, 0};
 int Ds[chordlen] = {SOL_7, SOL_11, SOL_13, 0};
 int E[chordlen] = {SOL_4, SOL_8,SOL_12,SOL_14};
-int F[chordlen] = {SOL_4, SOL_8,SOL_12,SOL_14};
+int F[chordlen] = {SOL_2, SOL_9, 0, 0};
 int Fs[chordlen] = {SOL_3, SOL_5, SOL_10, SOL_13};
 int G[chordlen] = {SOL_6, SOL_11, SOL_14, 0};
 int Gs[chordlen] = {SOL_1, SOL_7, SOL_12, SOL_15}; //First string needs fifth fret
@@ -178,7 +178,7 @@ void setup()
 void loop()
 { 
   //MIDI.read();
-  play(D);
+  play(C);
   delay(1000);
 }
 
