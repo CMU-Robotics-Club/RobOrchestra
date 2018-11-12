@@ -1,13 +1,3 @@
-/**
- * HSVColorTracking
- * Greg Borenstein
- * https://github.com/atduskgreg/opencv-processing-book/blob/master/code/hsv_color_tracking/HSVColorTracking/HSVColorTracking.pde
- *
- * Modified by Jordi Tost @jorditost (color selection)
- *
- * University of Applied Sciences Potsdam, 2014
- */
- 
 import gab.opencv.*;
 import processing.video.*;
 import java.awt.Rectangle;
@@ -20,10 +10,22 @@ ArrayList<Contour> contours;
 // <1> Set the range of Hue values for our filter
 int rangeLow = 20;
 int rangeHigh = 35;
-int preMidX = 0;
-int preMidY = 0;
-Point_Vector prePointVector = new Point_Vector(0,0,0,0);
 
+int[] p1 = {0, 0};
+int[] p2 = {0, 0};
+int time1 = 0;
+int time2 = 0;
+
+int index = 0;
+
+void velocity() {
+  //System.out.println(p2[0] + " " +  p3[0] + " " + p2[1] + " " + p3[1]);
+  int[] v1 = {p1[0] - p2[0], p1[1] - p2[1]};
+  double v1Length = Math.sqrt(Math.pow(v1[0], 2) + Math.pow(v1[1], 2));
+  int time = time1 - time2;
+  double velocity = v1Length/time;
+  System.out.println(velocity);
+}
 
 void setup() {
   video = new Capture(this, 640, 480);
@@ -63,11 +65,6 @@ void draw() {
   // <6> Get the processed image for reference.
   colorFilteredImage = opencv.getSnapshot();
   
-  ///////////////////////////////////////////
-  // We could process our image here!
-  // See ImageFiltering.pde
-  ///////////////////////////////////////////
-  
   // <7> Find contours in our range image.
   //     Passing 'true' sorts them by descending area.
   contours = opencv.findContours(true, true);
@@ -89,29 +86,19 @@ void draw() {
     noFill(); 
     strokeWeight(2); 
     stroke(255, 0, 0);
-    //the x and y values are coordinates of the top left corner
-    //we need the midpoint in order to track the location/speed of the pingpong ball
     rect(r.x, r.y, r.width, r.height);
-    //calculates current midpoints
-    int midX=r.x+r.width/2;
-    int midY=r.y+r.height/2;
-    //calculates magnitude of past point vector
-    //calculates new point vector based on current and past midpoints
-    Point_Vector pointVector=new Point_Vector(preMidX,preMidY,midX,midY);
-    preMidX=midX;
-    preMidY=midY;
-    System.out.println("pointVector: ("+pointVector.get_vector_x()+", "+pointVector.get_vector_y()+")");
     
-    
-    // <12> Draw a dot in the middle of the bounding box, on the object.
-    noStroke(); 
-    fill(255, 0, 0);
-    ellipse(r.x + r.width/2, r.y + r.height/2, 30, 30);
+    p2[0] = p1[0];
+    p2[1] = p1[1];
+    time2 = time1;
+    p1[0] = r.x + r.width/2;
+    p1[1] = r.y + r.height/2;
+    time1 = millis();
   }
+  velocity();
 }
 
 void mousePressed() {
-  
   color c = get(mouseX, mouseY);
   println("r: " + red(c) + " g: " + green(c) + " b: " + blue(c));
    
