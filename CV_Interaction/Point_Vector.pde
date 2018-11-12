@@ -1,4 +1,11 @@
 public class Point_Vector{
+  
+//have the location of where the ball is and then which direction it's going
+//make a vector based on previous vectors
+//get the most current point vector
+//investigate what the CV interaction is outputting
+
+
 
   private int loc_x;
   private int loc_y;

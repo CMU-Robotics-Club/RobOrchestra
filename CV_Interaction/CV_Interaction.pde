@@ -20,6 +20,9 @@ ArrayList<Contour> contours;
 // <1> Set the range of Hue values for our filter
 int rangeLow = 20;
 int rangeHigh = 35;
+int preMidX = 0;
+int preMidY = 0;
+
 
 void setup() {
   video = new Capture(this, 640, 480);
@@ -85,7 +88,17 @@ void draw() {
     noFill(); 
     strokeWeight(2); 
     stroke(255, 0, 0);
+    //the x and y values are coordinates of the top left corner
+    //we need the midpoint in order to track the location/speed of the pingpong ball
     rect(r.x, r.y, r.width, r.height);
+    int midX=r.x+r.width/2;
+    int midY=r.y+r.height/2;
+    //System.out.println("midpoint: ("+midX+", "+midY+")");
+    Point_Vector pointVector=new Point_Vector(preMidX,preMidY,midX,midY);
+    preMidX=midX;
+    preMidY=midY;
+    System.out.println("pointVector: ("+pointVector.get_vector_x()+", "+pointVector.get_vector_y()+")");
+    
     
     // <12> Draw a dot in the middle of the bounding box, on the object.
     noStroke(); 
