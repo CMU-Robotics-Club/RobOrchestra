@@ -29,6 +29,11 @@ public class Point_Vector{
     return vec_y;
   }
   
+  //Returns magnitude
+  public double get_magnitude(){
+    return Math.pow(((Math.pow(vec_x,2))+(Math.pow(vec_y,2))),0.5);
+  }
+  
   public int get_x(){
     return loc_x;
   }

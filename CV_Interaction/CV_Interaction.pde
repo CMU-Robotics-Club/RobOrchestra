@@ -22,6 +22,7 @@ int rangeLow = 20;
 int rangeHigh = 35;
 int preMidX = 0;
 int preMidY = 0;
+Point_Vector prePointVector = new Point_Vector(0,0,0,0);
 
 
 void setup() {
@@ -91,9 +92,11 @@ void draw() {
     //the x and y values are coordinates of the top left corner
     //we need the midpoint in order to track the location/speed of the pingpong ball
     rect(r.x, r.y, r.width, r.height);
+    //calculates current midpoints
     int midX=r.x+r.width/2;
     int midY=r.y+r.height/2;
-    //System.out.println("midpoint: ("+midX+", "+midY+")");
+    //calculates magnitude of past point vector
+    //calculates new point vector based on current and past midpoints
     Point_Vector pointVector=new Point_Vector(preMidX,preMidY,midX,midY);
     preMidX=midX;
     preMidY=midY;
