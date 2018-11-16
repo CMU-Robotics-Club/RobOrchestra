@@ -15,16 +15,20 @@ int[] p1 = {0, 0};
 int[] p2 = {0, 0};
 int time1 = 0;
 int time2 = 0;
+double prevV = 0;
+double currV = 0;
+int beat_count = 0;
+int beat_buffer = 0;
 
 int index = 0;
 
-void velocity() {
+double velocity() {
   //System.out.println(p2[0] + " " +  p3[0] + " " + p2[1] + " " + p3[1]);
   int[] v1 = {p1[0] - p2[0], p1[1] - p2[1]};
   double v1Length = Math.sqrt(Math.pow(v1[0], 2) + Math.pow(v1[1], 2));
   int time = time1 - time2;
   double velocity = v1Length/time;
-  System.out.println(velocity);
+  return velocity;
 }
 
 void setup() {
@@ -95,7 +99,14 @@ void draw() {
     p1[1] = r.y + r.height/2;
     time1 = millis();
   }
-  velocity();
+  prevV = currV;
+  currV = velocity();
+  if (prevV > currV*2.5 && millis() > beat_buffer + 1000){
+    System.out.println("BEAT");
+    System.out.println(beat_count);
+    beat_count++;
+    beat_buffer = millis();
+  }
 }
 
 void mousePressed() {
