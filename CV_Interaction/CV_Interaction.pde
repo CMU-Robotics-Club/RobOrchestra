@@ -19,6 +19,9 @@ double prevV = 0;
 double currV = 0;
 int beat_count = 0;
 int beat_buffer = 0;
+double last_beat = 0;
+double curr_beat = 0;
+double tempo = 0;
 
 int index = 0;
 
@@ -33,12 +36,17 @@ double velocity() {
 
 void setup() {
   video = new Capture(this, 640, 480);
-  video.start();
   
   opencv = new OpenCV(this, video.width, video.height);
+  //double fps = video.get(opencv.CV_CAP_PROP_FPS);
+
+
+  video.start();
+
   contours = new ArrayList<Contour>();
   
   size(1280, 480, P2D);
+
 }
 
 void draw() {
@@ -46,6 +54,7 @@ void draw() {
   // Read last captured frame
   if (video.available()) {
     video.read();
+   
   }
 
   // <2> Load the new frame of our movie in to OpenCV
@@ -101,9 +110,11 @@ void draw() {
   }
   prevV = currV;
   currV = velocity();
-  if (prevV > currV*2.5 && millis() > beat_buffer + 1000){
-    System.out.println("BEAT");
-    System.out.println(beat_count);
+  if (prevV > currV*2 && millis() > beat_buffer + 750){
+    last_beat = curr_beat;
+    curr_beat = millis();
+    tempo = 60000/((curr_beat - last_beat));
+    System.out.println(tempo);
     beat_count++;
     beat_buffer = millis();
   }
