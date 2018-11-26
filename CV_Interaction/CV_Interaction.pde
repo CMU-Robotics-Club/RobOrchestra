@@ -35,11 +35,9 @@ double velocity() {
 }
 
 void setup() {
-  video = new Capture(this, 640, 480);
+  video = new Capture(this, 640, 480, 30);
   
   opencv = new OpenCV(this, video.width, video.height);
-  //double fps = video.get(opencv.CV_CAP_PROP_FPS);
-
 
   video.start();
 
@@ -59,6 +57,7 @@ void draw() {
 
   // <2> Load the new frame of our movie in to OpenCV
   opencv.loadImage(video);
+  opencv.blur(300);
   
   // Tell OpenCV to use color information
   opencv.useColor();
