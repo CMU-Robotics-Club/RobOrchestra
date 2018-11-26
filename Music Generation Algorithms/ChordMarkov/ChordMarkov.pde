@@ -26,7 +26,7 @@ int statelength = 19;
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 0);
+  compBus = new MidiBus(this, 0, 2);
   
   File myFile = new File(dataPath("twinkle_twinkle.mid"));
   File chordFile = myFile;
