@@ -114,6 +114,7 @@ void draw() {
     curr_beat = millis();
     tempo = 60000/((curr_beat - last_beat));
     System.out.println(tempo);
+    //could we maybe make a way to average the tempo so it's a little more stable?
     beat_count++;
     beat_buffer = millis();
   }
