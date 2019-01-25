@@ -180,17 +180,15 @@ void loop()
 { 
   strummer.write(30);
   delay(1000);
-  digitalWrite(36, HIGH);
-  digitalWrite(34, HIGH);
-  digitalWrite(33, HIGH);
-  digitalWrite(32, HIGH);
-  delay(3000);
+  for(int x = 0; x < nsolenoids; x++){
+    digitalWrite(solenoidarray[x], HIGH);
+  }
+  delay(10000);
   strummer.write(60);
   delay(1000);
-  digitalWrite(36, LOW);
-  digitalWrite(34, LOW);
-  digitalWrite(33, LOW);
-  digitalWrite(32, LOW);
+for(int x = 0; x < nsolenoids; x++){
+    digitalWrite(solenoidarray[x], LOW);
+  }
   delay(2000);
   return;
   //MIDI.read();
