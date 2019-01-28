@@ -14,7 +14,7 @@ The robots, all powered by Arduinos with MIDI shields, operate via a distributed
 
 ### Robots.
 
-The orchestra is currently comprised of BassBot, tomBot SnareBot and xyloBot. Currently in progress are ukuleleBot and xyloBot's larger cousin, glockenspielBot
+The orchestra is currently comprised of tomBot SnareBot and xyloBot. Currently in progress are ukuleleBot, RoboOboe, and RoboHarmonica.
 
 
 ##### The Arduino directory was moved to instruments/archives
