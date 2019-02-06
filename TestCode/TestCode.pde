@@ -46,7 +46,7 @@ void draw() {
     //sends note to Xylobot 
     myBus.sendNoteOn(mynote);
     
-    delay(1);
+    /*delay(1);
     
     //creates a note object
     mynote = new Note(channel, x+4, 100, noteLen);

@@ -23,7 +23,7 @@ Textlabel tempoBPM;
 
 Slider[] noteSliders = {};
 
-int scale = 5;
+int scale = 2;
 
 int snarePitchMIDI = 36;
 int tomPitchMIDI = 37;
@@ -131,7 +131,7 @@ float[] snare = {0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0, 0.5, -1.0, 0.0, -1.
 void setup() {
   surface.setSize(380 * scale, 278 * scale);
   cp5 = new ControlP5(this);
-  myBus = new MidiBus(this, 0, 3);
+  myBus = new MidiBus(this, 0, 1);
   MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
