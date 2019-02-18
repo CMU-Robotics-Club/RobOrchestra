@@ -7,6 +7,7 @@
 MIDI_CREATE_DEFAULT_INSTANCE();
 
 Servo strummer;
+Servo chordPusher;
 int strum_delay = 50;
 int sol_delay = 500;
 int which = 0; //Next direction to sweep the arm
@@ -165,11 +166,14 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 
 void setup()
 {
-  strummer.attach(53);
+  strummer.attach(52);
+  chordPusher.attach(53);
   for(int x = 0; x < nsolenoids; x++){
     pinMode(solenoidarray[x], OUTPUT);
     digitalWrite(solenoidarray[x], LOW);
   }
+
+  
   MIDI.setHandleNoteOn(handleNoteOn);
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOn();
@@ -178,8 +182,20 @@ void setup()
 void loop()
 { 
   //MIDI.read();
-  play(C);
+  //digitalWrite(32, HIGH);
+  //digitalWrite(33, HIGH);
+  //digitalWrite(31, HIGH);
+  for(int x = 0; x < nsolenoids; x++){
+    digitalWrite(solenoidarray[x], HIGH);
+  }
   delay(1000);
+  chordPusher.write(100);
+  delay(3000);
+  for(int x = 0; x < nsolenoids; x++){
+    digitalWrite(solenoidarray[x], LOW);
+  }
+  chordPusher.write(0);
+  delay(2000);
 }
 
 
