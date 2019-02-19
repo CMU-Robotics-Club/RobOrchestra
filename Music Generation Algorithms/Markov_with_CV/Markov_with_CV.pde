@@ -5,7 +5,7 @@ import java.awt.Rectangle;
 
 MarkovChain<State> mc;
 State mystate;
-CV conductor = new CV();
+//CV conductor = new CV();
 static Capture video;
 static OpenCV opencv;
 
@@ -70,20 +70,20 @@ void setup(){
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 2);
   
-  //File myFile = new File(dataPath("twinkle_twinkle.mid"));
-  File myFile = new File(dataPath("Despacito5.mid"));
+  File myFile = new File(dataPath("twinkle_twinkle.mid"));
+  //File myFile = new File(dataPath("Despacito5.mid"));
   
   File chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
   
-  MIDIReader reader = new MIDIReader(myFile, new int[]{4}, statelength);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, statelength);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
   
-  hashreader = new MIDIReader_hash(chordFile, new int[]{4}, precision);
+  hashreader = new MIDIReader_hash(chordFile, new int[]{1}, precision);
   
   Object[] timestamps = hashreader.mMap.keySet().toArray();
   Long[] times = new Long[timestamps.length];
@@ -111,10 +111,11 @@ void draw(){
 
   // <2> Load the new frame of our movie in to OpenCV
   opencv.loadImage(video);
-  opencv.blur(300);
+  //opencv.blur(300);
   
   // Tell OpenCV to use color information
   opencv.useColor();
+  //opencv.blur(10);
   src = opencv.getSnapshot();
   
   // <3> Tell OpenCV to work in HSV color space.
@@ -129,6 +130,7 @@ void draw(){
   opencv.inRange(rangeLow, rangeHigh);
   
   // <6> Get the processed image for reference.
+  opencv.blur(30);
   colorFilteredImage = opencv.getSnapshot();
   
   // <7> Find contours in our range image.
@@ -161,15 +163,17 @@ void draw(){
     p1[1] = r.y + r.height/2;
     time1 = millis();
   }
-  if (currV > .20){
+  if (currV > 0.5/*.20*/){
     play_trigger = true;
   }
   prevV = currV;
   currV = velocity();
-  if (play_trigger && (prevV > currV*2 && millis() > beat_buffer + 750)){
+  if (play_trigger && (prevV > currV*2 && millis() > beat_buffer + 250)){
     last_beat = curr_beat;
     curr_beat = millis();
-    tempo = 60000/((curr_beat - last_beat));
+    System.out.println(curr_beat - last_beat);
+    double alpha = 0.8;
+    tempo = alpha*60000/((curr_beat - last_beat)) + (1-alpha)*tempo;
     System.out.println(tempo);
     //could we maybe make a way to average the tempo so it's a little more stable?
     beat_count++;
