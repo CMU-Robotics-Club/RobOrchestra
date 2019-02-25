@@ -115,6 +115,7 @@ void draw(){
   
   // Tell OpenCV to use color information
   opencv.useColor();
+  opencv.blur(50);
   //opencv.blur(10);
   src = opencv.getSnapshot();
   
@@ -130,12 +131,12 @@ void draw(){
   opencv.inRange(rangeLow, rangeHigh);
   
   // <6> Get the processed image for reference.
-  opencv.blur(30);
+  
   colorFilteredImage = opencv.getSnapshot();
   
   // <7> Find contours in our range image.
   //     Passing 'true' sorts them by descending area.
-  contours = opencv.findContours(true, true);
+  contours = opencv.findContours(false, true);
   
   // <8> Display background images
   image(src, 0, 0);
@@ -276,8 +277,8 @@ void mousePressed() {
   int hue = int(map(hue(c), 0, 255, 0, 180));
   println("hue to detect: " + hue);
   
-  rangeLow = hue - 5;
-  rangeHigh = hue + 5;
+  rangeLow = hue - 3;
+  rangeHigh = hue + 1;
 }
 
 double velocity() {
