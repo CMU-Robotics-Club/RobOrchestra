@@ -81,7 +81,7 @@ void setup(){
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
-  println(mc.objects.size());
+  //println(mc.objects.size());
   
   hashreader = new MIDIReader_hash(chordFile, new int[]{1}, precision);
   
@@ -136,7 +136,7 @@ void draw(){
   
   // <7> Find contours in our range image.
   //     Passing 'true' sorts them by descending area.
-  contours = opencv.findContours(false, true);
+  contours = opencv.findContours(true, true);
   
   // <8> Display background images
   image(src, 0, 0);
@@ -164,16 +164,20 @@ void draw(){
     p1[1] = r.y + r.height/2;
     time1 = millis();
   }
-  if (currV > 0.5/*.20*/){
+  //println(currV);
+  //  println();
+  //if (currV > 0.5/*.20*/){
+  if (currV > 1/*.20*/ && !play_trigger && millis() > beat_buffer + 300){
+    println(currV);
     play_trigger = true;
   }
   prevV = currV;
   currV = velocity();
-  if (play_trigger && (prevV > currV*2 && millis() > beat_buffer + 250)){
+  if (play_trigger /*&& (prevV > currV*2 && millis() > beat_buffer + 250)*/){
     last_beat = curr_beat;
     curr_beat = millis();
     System.out.println(curr_beat - last_beat);
-    double alpha = 0.8;
+    double alpha = 0.5;
     tempo = alpha*60000/((curr_beat - last_beat)) + (1-alpha)*tempo;
     System.out.println(tempo);
     //could we maybe make a way to average the tempo so it's a little more stable?
@@ -277,8 +281,8 @@ void mousePressed() {
   int hue = int(map(hue(c), 0, 255, 0, 180));
   println("hue to detect: " + hue);
   
-  rangeLow = hue - 3;
-  rangeHigh = hue + 1;
+  rangeLow = hue - 4;
+  rangeHigh = hue + 4;
 }
 
 double velocity() {
