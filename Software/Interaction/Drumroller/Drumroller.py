@@ -5,7 +5,7 @@ def getFrame():
     ok, frame = cap.read()
     
     if not ok:
-        print('Wrror: Cannot read webcam!')
+        print('Error: Cannot read webcam!')
         sys.exit()
     
     frame = cv2.flip(frame, 1)
