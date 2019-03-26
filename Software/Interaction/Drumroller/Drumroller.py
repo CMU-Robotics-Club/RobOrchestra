@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import mido
 
 def getFrame():
     ok, frame = cap.read()
@@ -11,7 +12,7 @@ def getFrame():
     frame = cv2.flip(frame, 1)
     return frame
 
-def initializeTracker():
+def initializeTracker(frame):
     # tracker = cv2.TrackerBoosting_create()
     # tracker = cv2.TrackerMIL_create()
     # tracker = cv2.TrackerKCF_create()
@@ -37,9 +38,12 @@ def track(tracker, frame):
     
 
 def main():
-    tracker = initializeTracker()
+    frame = getFrame()
+    tracker = initializeTracker(frame)
+    msg = mido.Message('note_on', note=60)
 
     while(True):
+        print("msg note", msg.note)
         frame = getFrame()
         track(tracker, frame)
         cv2.imshow('frame', frame)
