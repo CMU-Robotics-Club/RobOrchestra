@@ -29,7 +29,7 @@ int snarePitchMIDI = 36;
 int tomPitchMIDI = 37;
 int channel = 0;
 int perc_channel = 1;
-int velocity = 120; 
+int velocity = 100; 
 
 String[] scaleNames = {"Diatonic", "Jazz", "Minor", "Pentatonic", "Other"};
 String[][] subScaleNames = {
