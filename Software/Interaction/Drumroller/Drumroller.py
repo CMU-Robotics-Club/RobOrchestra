@@ -34,21 +34,32 @@ def track(tracker, frame):
     ok, bbox = tracker.update(frame)    
     p1 = (int(bbox[0]), int(bbox[1]))
     p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
+    #print(p1, p2)
     cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
+    return p1
     
 
 def main():
     frame = getFrame()
     tracker = initializeTracker(frame)
     msg = mido.Message('note_on', note=60)
+    n = 0
+    
 
     while(True):
-        print("msg note", msg.note)
+        print(n)
+        #print("msg note", msg.note)
         frame = getFrame()
-        track(tracker, frame)
+        position = track(tracker, frame)
+        #setting initial position for top and bottom 
+        #position trackers
+        if n = 0:
+            topPosition = position
+            bottomPosition = position
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        n += 1
 
     cap.release()
     cv2.destroyAllWindows()
