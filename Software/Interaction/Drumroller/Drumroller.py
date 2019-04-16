@@ -34,28 +34,41 @@ def track(tracker, frame):
     ok, bbox = tracker.update(frame)    
     p1 = (int(bbox[0]), int(bbox[1]))
     p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-    #print(p1, p2)
     cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
-    return p1
+    return p1[1]
     
 
 def main():
     frame = getFrame()
     tracker = initializeTracker(frame)
-    msg = mido.Message('note_on', note=60)
+    #mido seems to need a port name in order to send messages,
+    #so we put mio here but we're not sure about it
+    port = mido.open_output('mio')
+    msg = mido.Message('note_on', note=36)
+    #keep track of the last position and last direction you had
+    #if your last direction was up and your current direction is
+    #down, then you've made a beat
     n = 0
+    prevDir = "up"
+    prevPosition = 0
+    curDir = "up"
     
-
     while(True):
-        print(n)
-        #print("msg note", msg.note)
         frame = getFrame()
-        position = track(tracker, frame)
-        #setting initial position for top and bottom 
-        #position trackers
-        if n = 0:
-            topPosition = position
-            bottomPosition = position
+        curPosition = track(tracker, frame)
+        #print(curPosition)
+    
+        if n != 0:
+            if curPosition - prevPosition > 15:
+                curDir = "down"
+            elif curPosition - prevPosition < -15:
+                curDir = "up"
+            if prevDir == "up" and curDir == "down":
+                print("drum_beat")
+                port.send(msg)
+        prevPosition = curPosition
+        prevDir = curDir
+            
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
