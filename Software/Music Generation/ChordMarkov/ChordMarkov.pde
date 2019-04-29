@@ -8,7 +8,7 @@ MidiBus compBus; //Creates a MidiBus object
 int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 
-double legato = 0.9;
+double legato = 0.5;
 double lenmult = 1; //Note length multiplier (to speed up/slow down output)
 boolean sendNoteOffCommands = false;
 boolean percussionNoteOff = false;
@@ -21,29 +21,29 @@ MIDIReader_hash hashreader;
 int precision = 20;
 
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
-int statelength = 1;
+int statelength = 50;
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 2);
   
-  File myFile = new File(dataPath("twinkle_twinkle.mid"));
-  //File myFile = new File(dataPath("Despacito5.mid"));
+  //File myFile = new File(dataPath("twinkle_twinkle.mid"));
+  File myFile = new File(dataPath("Despacito5.mid"));
   
   File chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
   
-  //MIDIReader reader = new MIDIReader(myFile, new int[]{4}, statelength);
-  MIDIReader reader = new MIDIReader(myFile, new int[]{1}, statelength);
+  MIDIReader reader = new MIDIReader(myFile, new int[]{4}, statelength);
+  //MIDIReader reader = new MIDIReader(myFile, new int[]{1}, statelength);
   mc = new MarkovChain(reader.states, reader.transitions);
   
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
 
-  hashreader = new MIDIReader_hash(chordFile, new int[]{1}, precision);
-  //hashreader = new MIDIReader_hash(chordFile, new int[]{4}, precision);
+  //hashreader = new MIDIReader_hash(chordFile, new int[]{1}, precision);
+  hashreader = new MIDIReader_hash(chordFile, new int[]{4}, precision);
   
   Object[] timestamps = hashreader.mMap.keySet().toArray();
   Long[] times = new Long[timestamps.length];

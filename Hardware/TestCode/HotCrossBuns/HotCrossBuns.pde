@@ -33,37 +33,43 @@ void setup() {
 
 }
 
+void playNote(int x, int noteLen){
+  System.out.println("Playing note with MIDI value " + x);
+    
+  //creates a note object
+  Note mynote = new Note(channel, x, 100, noteLen);
+  
+  //sends note to Xylobot 
+  myBus.sendNoteOn(mynote);
+  double legato = 0.95;
+  delay((int)(legato*noteLen));
+  myBus.sendNoteOff(mynote);
+  delay((int)((1-legato)*noteLen));
+}
+
 //loops
 void draw() {
-  //for(int x = lo; x < hi; x++){
-  for(int x = lo; x <= hi; x++){
-    System.out.println("Testing note with MIDI value " + x);
-    
-    //creates a note object
-    Note mynote = new Note(channel, x, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);
-    double legato = 0.5;
-    delay((int)(legato*noteLen));
-    myBus.sendNoteOff(mynote);
-    delay((int)((1-legato)*noteLen));
-    
-    /*delay(1);
-    
-    //creates a note object
-    mynote = new Note(channel, x+4, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);
-    
-    delay(1);
-    
-    //creates a note object
-    mynote = new Note(channel, x+7, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);//*/
-  }
-
+  playNote(71, 1000);
+  playNote(69, 1000);
+  playNote(67, 2000);
+  
+  playNote(71, 1000);
+  playNote(69, 1000);
+  playNote(67, 2000);
+  
+  playNote(67, 500);
+  playNote(67, 500);
+  playNote(67, 500);
+  playNote(67, 500);
+  
+  playNote(69, 500);
+  playNote(69, 500);
+  playNote(69, 500);
+  playNote(69, 500);
+  
+  playNote(71, 1000);
+  playNote(69, 1000);
+  playNote(67, 2000);
+  
+  delay(4000);
 }
