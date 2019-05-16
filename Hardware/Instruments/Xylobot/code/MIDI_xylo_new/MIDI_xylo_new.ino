@@ -20,7 +20,7 @@ int nPins = 17;
 
 void handleNoteOn(byte channel, byte pitch, byte velocity){
   //This function queues up notes to be unplayed
-  if(channel != 1) return; //Only play channel 1
+  //if(channel != 1) return; //Only play channel 1
   if(velocity == 0) return; //Ignore velocity 0
   
   int noteIndex = pitch;
