@@ -44,7 +44,7 @@ void setup()
 {
   Serial.begin(115200);
   Serial.print("Starting...\n");
-
+  output = createWriter("positions.txt");
   pixy.init();
 }
 
@@ -89,14 +89,21 @@ void loop()
        prevx = x;
        prevy = y;
        prevTime = newTime;
-       Serial.print(xnum);
-       Serial.print(", ");
-       Serial.print(ynum);
-       Serial.print(", ");
-       Serial.print(dx, 6);
-       Serial.print(", ");
-       Serial.print(dy, 6);
-       Serial.println("");
+       output.println(xnum + ", " + ynum + ", " + dx + ", " + dy);
+//       Serial.print(xnum);
+//       Serial.print(", ");
+//       Serial.print(ynum);
+//       Serial.print(", ");
+//       Serial.print(dx, 6);
+//       Serial.print(", ");
+//       Serial.print(dy, 6);
+//       Serial.println("");
+    }
+    void keyPressed() 
+    {
+    	output.flush();
+	output.close();
+	exit();
     }
   }
 }
