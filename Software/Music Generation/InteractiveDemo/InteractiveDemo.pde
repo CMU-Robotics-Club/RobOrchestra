@@ -2,7 +2,7 @@ import controlP5.*;
 import themidibus.*;
 
 ControlP5 cp5;
-MidiBus myBus;
+MidiBus myBus, compBus;
 
 Button melodyLabel;
 Button harmonyLabel;
@@ -27,8 +27,8 @@ int scale = 2;
 
 int snarePitchMIDI = 36;
 int tomPitchMIDI = 37;
-int channel = 0;
-int perc_channel = 1;
+int channel = 0; //xylobot is channel1, which is 0 in hex
+int perc_channel = 9;
 int velocity = 120; 
 
 String[] scaleNames = {"Diatonic", "Jazz", "Minor", "Pentatonic", "Other"};
@@ -131,7 +131,8 @@ float[] snare = {0.5, -1.0, 0.0, -1.0, 1.0, -1.0, 0.0, -1.0, 0.5, -1.0, 0.0, -1.
 void setup() {
   surface.setSize(380 * scale, 278 * scale);
   cp5 = new ControlP5(this);
-  myBus = new MidiBus(this, 0, 1);
+  compBus = new MidiBus(this, 0, 1);
+  myBus = new MidiBus(this, 0, 3);
   MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
@@ -350,9 +351,10 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
     else{
       toneIndex = (prev_tone_index-1+scaleOffsets[curScale][curSubScale].length) % scaleOffsets[curScale][curSubScale].length; 
     }
-    print(toneIndex);
+    print(toneIndex+1);
     toneToPlay = tonic + scaleOffsets[curScale][curSubScale][toneIndex];
-    myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
+    myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));
+    //compBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity)); //use this to play from the computer
     }      
   beatIndex = (beatIndex + 1) % measureLength;
   return toneIndex;
