@@ -67,8 +67,6 @@ void loop()
   // If there are detect blocks, print them!
   if (pixy.ccc.numBlocks)
   {
-    for (i = 0; i < pixy.ccc.numBlocks; i++)
-    {
        int x = pixy.ccc.blocks[0].m_x;
        int y = pixy.ccc.blocks[0].m_y;
        int newTime = millis();
@@ -99,7 +97,7 @@ void loop()
        Serial.print(", ");
        Serial.print(newTime, 6);
        Serial.println("");
-    }
+    
 //    void keyPressed() 
 //    {
 //    	output.flush();
