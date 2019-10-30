@@ -1,3 +1,6 @@
+#include <Wire.h>
+#include <SPI.h>
+#include "outputVector.h"
 #include <PIDLoop.h>
 #include <Pixy2.h>
 #include <Pixy2CCC.h>
@@ -31,30 +34,25 @@
 
 // This is the main Pixy object
 
-typedef struct vec vector;
-struct vec {
-  int x,y;
-  float dx,dy;
-};
-
 
 Pixy2 pixy;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.print("Starting...\n");
 //  output = createWriter("positions.txt");
   pixy.init();
 }
 
-vector a = {0,0,0.0,0.0};
+vect a = {0,0,0.0,0.0};
 int prevx = 0;
 int prevy = 0;
 int prevTime = 0;
 
-vector* getVector() {
-  vector *output = &a;
+String toBePrinted; 
+vect* getvect() {
+  vect *output = &a;
   return output;
 }
 
@@ -77,9 +75,9 @@ void loop()
        float dx = ((float)x - (float)prevx)/((float)(newTime - prevTime));
        float dy = ((float)y - (float)prevy)/((float)(newTime - prevTime));
        a = {x, y, dx, dy};
-       vector *curLocPoint = &a; 
+       vect *curLocPoint = &a;
 
-       
+
        char xnum[MAX];
        char ynum[MAX];
        itoa(curLocPoint->x, xnum, 10);
@@ -87,7 +85,18 @@ void loop()
        prevx = x;
        prevy = y;
        prevTime = newTime;
-       Serial.print(xnum);
+       toBePrinted = String("");
+       toBePrinted += xnum;
+       toBePrinted += ", ";
+       toBePrinted += ynum;
+       toBePrinted += ", ";
+       toBePrinted += dx;
+       toBePrinted += ", ";
+       toBePrinted += dy;
+       toBePrinted += ", ";
+       toBePrinted += newTime;
+       Serial.println(toBePrinted);
+       /*Serial.print(xnum);
        Serial.print(", ");
        Serial.print(ynum);
        Serial.print(", ");
@@ -96,9 +105,9 @@ void loop()
        Serial.print(dy, 6);
        Serial.print(", ");
        Serial.print(newTime, 6);
-       Serial.println("");
-    
-//    void keyPressed() 
+       Serial.println("");*/
+
+//    void keyPressed()
 //    {
 //    	output.flush();
 //	output.close();

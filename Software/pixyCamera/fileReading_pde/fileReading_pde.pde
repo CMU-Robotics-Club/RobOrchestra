@@ -2,7 +2,8 @@ import processing.serial.*;
 import java.util.*;
 Serial mySerial;
 PrintWriter output;
-
+int lf = 10;    // Linefeed in ASCII
+boolean shouldRead;
 int getDevNumb(String[] devs) {
    for (int i = 0; i < devs.length; i++) {
      if (devs[i].equals("/dev/cu.usbmodem14111"))
@@ -11,41 +12,22 @@ int getDevNumb(String[] devs) {
    return -1;
 }
 
-
-boolean validInput(String s)
-{
-  System.out.println(s);
-  String[] res = s.split(",");
-  int count = 0;
-  for(String curr : res)
-  {
-    System.out.println("a" + curr + "a");
-    try
-    {
-      double d = Double.parseDouble(curr);
-    }
-    catch(NumberFormatException e)
-    {
-      //System.out.println(curr);
-      return false;
-    }
-  } 
-  return true;
-}
-
 void setup() {
+   shouldRead = false;
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[dev_numb], 115200 );
+   mySerial = new Serial( this, devs[0], 9600 );
    output = createWriter( "position.txt" );
 }
 void draw() {
     if (mySerial.available() > 0 ) {
-         String value = mySerial.readString();
-         if ( value != null && validInput(value)) {
+         String value = mySerial.readStringUntil(lf);
+         if (shouldRead == true && value != null) {
               output.println( value );
          }
+         if(value != null && value.startsWith("error:"))
+              shouldRead = true;
     }
 }
 

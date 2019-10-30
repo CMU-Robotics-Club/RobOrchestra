@@ -4,7 +4,7 @@
 %at this point, insert the code to initialize the variable you will be
 %storing the words in
 %then
-fid = fopen('./pixyCamera/fileReading_pde/position.txt','rt');
+fid = fopen('messingAroundWithoutCommas.txt','rt');
 A = [];
 xArr = [];
 tArr = [];
@@ -20,13 +20,10 @@ while true
         if(c{i} == "")
             continue;
         end
-        c{i} = str2double(c{i})
-        if(isnan(c{i}))
-            continue;
-        end
+        c{i} = str2double(c{i});
     end 
     A = [A; c];
-    x = c{2};
+    x = c{1};
     
     %x = power(c{1}, 2) + power(c{2}, 2);
     t = c{5};
