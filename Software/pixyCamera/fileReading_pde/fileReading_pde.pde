@@ -1,5 +1,7 @@
 import processing.serial.*;
 import java.util.*;
+import java.text.SimpleDateFormat;  
+
 Serial mySerial;
 PrintWriter output;
 int lf = 10;    // Linefeed in ASCII
@@ -13,12 +15,20 @@ int getDevNumb(String[] devs) {
 }
 
 void setup() {
+   SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");  
+   Date date = new Date();  
+   String datevar = formatter.format(date);
+   String filename = "position"+datevar+".txt";
+   filename = filename.replace('/', '_');
+   filename = filename.replace(' ', '_');
+   filename = filename.replace(':', '_');
+   filename = "positionData/" + filename;
    shouldRead = false;
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[0], 9600 );
-   output = createWriter( "position.txt" );
+   mySerial = new Serial( this, devs[7], 9600 );
+   output = createWriter( filename );
 }
 void draw() {
     if (mySerial.available() > 0 ) {
