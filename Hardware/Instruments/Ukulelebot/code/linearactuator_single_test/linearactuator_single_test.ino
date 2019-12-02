@@ -1,8 +1,8 @@
-#define AIN1 2
+#define AIN1 30 //D2
 
-#define AIN2 4
+#define AIN2 32//D4
 
-#define PWMA 5
+#define PWMA 5 // 
 
 
 const int feedback = A0; //potentiometer from actuator
