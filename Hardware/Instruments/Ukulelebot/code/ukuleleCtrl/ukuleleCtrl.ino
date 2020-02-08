@@ -36,8 +36,33 @@ enum str {
   G, C, E, A
 };
 
+int noteToString(int note) {
+  int bases[4] = {67, 60, 64, 69};
+  smallest = null;
+  for (int i = 0; i < bases.size(); i++) {
+    diff = note - bases[i];
+    if (smallest == null || (diff < smallest && diff >= 0)) {
+      smallest = bases[i];
+    }
+  }
+  
+  if (smallest == 67) {
+    return G;
+  }
+  else if (smallest == 60) {
+    return C;
+  }
+  else if (smallest == 64) {
+    return E;
+  }
+  else if (smallest == 69) {
+    return A;
+  }
+}
 
-int noteToPos(int note, str s) {
+int noteToPos(int note) {
+  s = noteToString(note);
+  
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
   }
@@ -175,4 +200,3 @@ void brake()
   digitalWrite(AIN2, HIGH);
   analogWrite(PWMA, 0);
 }
-
