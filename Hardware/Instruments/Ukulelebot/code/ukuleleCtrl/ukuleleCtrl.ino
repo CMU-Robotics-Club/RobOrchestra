@@ -37,11 +37,12 @@ enum str {
 };
 
 int noteToString(int note) {
-  int bases[4] = {67, 60, 64, 69};
-  smallest = null;
-  for (int i = 0; i < bases.size(); i++) {
-    diff = note - bases[i];
-    if (smallest == null || (diff < smallest && diff >= 0)) {
+  int strings = 4;
+  int bases[strings] = {67, 60, 64, 69};
+  int smallest;
+  for (int i = 0; i < strings; i++) {
+    int diff = note - bases[i];
+    if (diff < smallest && diff >= 0) {
       smallest = bases[i];
     }
   }
@@ -61,7 +62,7 @@ int noteToString(int note) {
 }
 
 int noteToPos(int note) {
-  s = noteToString(note);
+  str s = noteToString(note);
   
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
@@ -79,6 +80,7 @@ int noteToPos(int note) {
 }
 
 int moveToPos(int note, str s, int lowest) {
+  int pos;
   switch(s){
     case G:
       pos = analogRead(gPot); //pot for G string
@@ -93,16 +95,16 @@ int moveToPos(int note, str s, int lowest) {
       pos = analogRead(aPot); //pot for A string
       break;
   }
-  target = (note - lowest) * 1024 / 12;
+  int target = (note - lowest) * 1024 / 12;
   while (abs(pos - target) > 10) {
     if (pos > target) {
-      rev(50); //50 is arbitrary speed
+      rev(50, s); //50 is arbitrary speed
     }
     else {
-      fwd(50);
+      fwd(50, s);
     }
   }
-  brake();
+  brake(s);
   return 0;
 }
 
@@ -169,11 +171,12 @@ void rev(int speed, str s)
   analogWrite(PWMA, speed);
 }
 
-void brake()
+void brake(str s)
 { 
   int AIN1 = 0;
   int AIN2 = 0;
   int PWMA = 0;
+  
     switch(s){
     case G:
       AIN1 = gMotIn;
