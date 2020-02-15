@@ -47,16 +47,16 @@ int noteToString(int note) {
     }
   }
   
-  if (smallest == 67) {
+  if (smallest == bases[0]) {
     return G;
   }
-  else if (smallest == 60) {
+  else if (smallest == bases[1]) {
     return C;
   }
-  else if (smallest == 64) {
+  else if (smallest == bases[2]) {
     return E;
   }
-  else if (smallest == 69) {
+  else if (smallest == bases[3]) {
     return A;
   }
 }
