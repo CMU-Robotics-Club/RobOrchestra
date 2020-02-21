@@ -5,8 +5,7 @@ Welcome to RobOrchestra! RobOrchestra is an ongoing project in the Carnegie Mell
 
 Check out this demo video: https://drive.google.com/open?id=1UAF38HtQlL7tU6Xmdl4eHLXhHpyFQM5X
 
-#### Team Meetings: Mondays, 4:30-6pm for Hardware and Wednesdays, 4:30-6:30pm for Software, both in RoboClub. Contact Sam at sir@andrew.cmu.edu for more information
-
+#### Team Meetings: Saturdays, 5-6pm for Hardware and Thursdays, 6:30-7:30pm for Software, both in RoboClub. Contact Sam (RobOrchestra Leader) at sir@andrew.cmu.edu for more information, or Manasi Joglekar (RobOrchestra Software Lead) at mjogleka@andrew.cmu.edu, or Sharon Liu (RobOrchestra Harware Lead) at sharonli@andrew.cmu.edu.
 #### Check out our Wiki for meeting agendas and tutorials
 
 ### How it works.
