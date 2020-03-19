@@ -51,6 +51,7 @@ public class ChordState extends Object implements Comparable<ChordState>{
     }
     if(i == roots.length && j != s.roots.length) return -1;
     if(j == s.roots.length && i != roots.length) return 1;
+    i = 0; j = 0;
     while(i < types.length && j < s.types.length){
       if(types[i] != s.types[j]) return types[i]-s.types[j];
       i++;
@@ -60,7 +61,7 @@ public class ChordState extends Object implements Comparable<ChordState>{
     if(j == s.types.length && i != roots.length) return 1;
     i = 0; j = 0;
     while(i < lengths.length && j < s.lengths.length){
-      if(lengths[i] != s.lengths[j]) return lengths[i]-s.lengths[j];
+      if(abs(lengths[i] - s.lengths[j])>1) return lengths[i]-s.lengths[j]; //Roundoff tolerance
       i++;
       j++;
     }
@@ -69,7 +70,7 @@ public class ChordState extends Object implements Comparable<ChordState>{
     //println("Comparing delays");
     i = 0; j = 0;
     while(i < delays.length && j < s.delays.length){
-      if(delays[i] != s.delays[j]) return delays[i]-s.delays[j];
+      if(abs(delays[i] - s.delays[j])>1) return delays[i]-s.delays[j]; //Roundoff tolerance
       i++;
       j++;
     }
@@ -116,7 +117,7 @@ public class ChordState extends Object implements Comparable<ChordState>{
       s += starttimes[x];
       if(x < starttimes.length-1)s += ", ";
     }
-    s += "]}";
+    s += "]}\n";
     return s;
   }
   

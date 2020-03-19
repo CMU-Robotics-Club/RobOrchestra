@@ -8,8 +8,8 @@ MidiBus compBus; //Creates a MidiBus object
 int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 
-double legato = 0.5;
-double lenmult = 1; //Note length multiplier (to speed up/slow down output)
+double legato = 0.9;
+double lenmult = 0.2; //Note length multiplier (to speed up/slow down output)
 boolean sendNoteOffCommands = false;
 boolean percussionNoteOff = false;
 
@@ -32,7 +32,7 @@ void setup(){
   myBus = new MidiBus(this, 0, 2); //Melody
   compBus = new MidiBus(this, 0, 1); //Harmony
   
-  File myFile = new File(dataPath("MuseScore Midi/I'm Yours.mid")); //INPUT
+  File myFile = new File(dataPath("MuseScore Midi/Demons-Imagine_Dragons.mid")); //INPUT
   //File myFile = new File(dataPath("Despacito5.mid"));
   
   File chordFile = myFile;
@@ -42,10 +42,14 @@ void setup(){
   //MIDIReader reader = new MIDIReader(myFile, new int[]{0}, statelength);
   ChordReader reader = new ChordReader(myFile, new int[]{1}, statelength); //The "1" is an INPUT (melody reader track(s) )
   mc = new MarkovChain(reader.states, reader.transitions);
+  println(reader.states);
 
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
-  println(mc.objects);
   println(mc.objects.size());
+  for(int i = 0; i < mc.objects.size(); i++){
+    println(i);
+    printArray(mc.probs[i]);
+  }
 
   //TODO: Currently dead code, consider resurrecting
   //Get percussion beat length by iterating the Markov chain a lot to get a common length value
