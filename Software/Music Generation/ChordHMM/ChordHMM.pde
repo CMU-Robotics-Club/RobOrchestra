@@ -29,7 +29,7 @@ public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#",
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 1); //Melody
+  myBus = new MidiBus(this, 0, 2); //Melody
   compBus = new MidiBus(this, 0, 1); //Harmony
   
   File myFile = new File(dataPath("MuseScore Midi/I'm Yours.mid")); //INPUT
@@ -44,6 +44,7 @@ void setup(){
   mc = new MarkovChain(reader.states, reader.transitions);
 
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
+  println(mc.objects);
   println(mc.objects.size());
 
   //TODO: Currently dead code, consider resurrecting

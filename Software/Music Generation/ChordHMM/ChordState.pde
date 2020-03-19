@@ -91,7 +91,7 @@ public class ChordState extends Object implements Comparable<ChordState>{
   }
   
   public String toString(){
-    String s = "Roots: [";
+    String s = "{Roots: [";
     for(int x = 0; x < roots.length; x++){
       s += roots[x];
       if(x < roots.length-1)s += ", ";
@@ -116,7 +116,7 @@ public class ChordState extends Object implements Comparable<ChordState>{
       s += starttimes[x];
       if(x < starttimes.length-1)s += ", ";
     }
-    s += "]";
+    s += "]}";
     return s;
   }
   

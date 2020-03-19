@@ -61,7 +61,7 @@ public class ChordReader{
       for(int x: toRead){
           Track track = tracks[x];
           PartialChord prevChord = new PartialChord();
-          long timeThresh = 1000; //These are in ticks?
+          long timeThresh = 100; //These are in ticks?
           long prevTimestamp = 0;
           long currentStartTime = 0;
           
@@ -83,8 +83,11 @@ public class ChordReader{
                 
                   if (sm.getCommand() == NOTE_ON) {
                       if ((timestamp - prevTimestamp) > timeThresh){
+                        println(timestamp - prevTimestamp);
                         updateChords(prevChord, timestamp, stateLength); //Stop previous chord
                         currentStartTime = timestamp; //Next chord starts now (but we'll figure out what it is after we update all the note changes)
+                        int[] temp = ChordDetection.findChord(makeArray(notesPlaying)); //TODO: Look up syntax
+                        prevChord = new PartialChord(temp[0], temp[1], currentStartTime);
                       }
                       if(sm.getData2() > 0){         
                         notesPlaying.add(sm);
@@ -93,18 +96,17 @@ public class ChordReader{
                         //It's a note off
                         notesPlaying = removeStuff(notesPlaying, sm);
                       }
-                      int[] temp = ChordDetection.findChord(makeArray(notesPlaying)); //TODO: Look up syntax
-                      prevChord = new PartialChord(temp[0], temp[1], currentStartTime);
                   }
                   else if(sm.getCommand() == NOTE_OFF){
                     //It's a note off
                     if ((timestamp - prevTimestamp) > timeThresh){
+                      println(timestamp - prevTimestamp);
                       updateChords(prevChord, timestamp, stateLength); //Stop previous chord
                       currentStartTime = timestamp; //Next chord starts now (but we'll figure out what it is after we update all the note changes)
+                      int[] temp = ChordDetection.findChord(makeArray(notesPlaying)); //TODO: Look up syntax
+                      prevChord = new PartialChord(temp[0], temp[1], currentStartTime);
                     }
                     notesPlaying = removeStuff(notesPlaying, sm);
-                    int[] temp = ChordDetection.findChord(makeArray(notesPlaying)); //TODO: Look up syntax
-                    prevChord = new PartialChord(temp[0], temp[1], currentStartTime);
                   }
               }
               else {
@@ -213,7 +215,7 @@ public class ChordReader{
     if(p.delay >= 0 && p.len >= 0){ //Throw out silly stuff, such as the dummy prevchord we use for initialization
       //Note is done; put it in buffers, and possibly state/transition arrays
       rootBuffer = cappedAdd(rootBuffer, p.root, stateLength);
-      typeBuffer = cappedAdd(typeBuffer, p.root, stateLength);
+      typeBuffer = cappedAdd(typeBuffer, p.type, stateLength);
       lengthBuffer = cappedAdd(lengthBuffer, p.len, stateLength);
       delayBuffer = cappedAdd(delayBuffer, p.delay, stateLength);
       timeBuffer = cappedAdd(timeBuffer, p.startTime, stateLength);
