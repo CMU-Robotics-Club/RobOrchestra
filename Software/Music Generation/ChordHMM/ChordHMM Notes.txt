@@ -1,0 +1,15 @@
+Chord Markov Notes:
+- MIDIReader does what I expect (puts out a list of notes and transitions)
+	- starttimes is used to sync with the chords
+- MIDIReader_hash DOESN'T make a list of notes and transitions
+	- Instead, it spits out a giant hashmap of desired precision, telling which chords happen when, which we can then cross-reference with starttimes
+
+- So, to build a reader for chords, we actually need a combination of both
+	- MIDIReader is the framework we want
+	- MIDIReader_hash has the code for dealing with chords
+
+
+
+Also, I found a (small) bug in ChordMarkov (and anything else using MIDIReader). When stateLength is longer than the number of notes in the piece, I don't keep reloading and retrying initialNotes.
+
+I don't know that we care to fix this retroactively, but I think I can fix this in chordHMM fairly easily.
