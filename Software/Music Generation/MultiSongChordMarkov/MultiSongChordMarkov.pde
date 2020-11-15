@@ -18,7 +18,7 @@ int percussionLen = 1000; //Overwritten in setup
 
 int chordVolume = 100;
 
-MIDIReader_hash hashreader;
+MIDIReader_hash[] hashreader;
 int precision = 20;
 
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
@@ -51,23 +51,24 @@ void setup(){
   println(mc[1].objects);
 
   //TODO: Add chords back in
-  /*hashreader = new MIDIReader_hash(chordFile, new int[]{1}, precision); //The "1" is an INPUT (harmony reader track(s) )
-  //hashreader = new MIDIReader_hash(chordFile, new int[]{4}, precision);
-  
-  Object[] timestamps = hashreader.mMap.keySet().toArray();
-  Long[] times = new Long[timestamps.length];
+  hashreader = new MIDIReader_hash[] {new MIDIReader_hash(myFile[0], new int[]{0}, precision), new MIDIReader_hash(myFile[1], new int[]{0}, precision)}; //The "1" is an INPUT (melody reader track(s) )
+
+  Object[][] timestamps = {hashreader[0].mMap.keySet().toArray(), hashreader[1].mMap.keySet().toArray()};
+  Long[][] times = new Long[timestamps.length][2];
   for(int x = 0; x < timestamps.length; x++){
-    times[x] = (Long)timestamps[x];
+    times[x] = new Long[] {(Long)timestamps[x][0], (Long)timestamps[x][1]};
   }
-  Arrays.sort(times);
+  //Do we need this?? If so, things get ugly
+  //Arrays.sort(times);
+  
   
   //Get percussion beat length by iterating the Markov chain a lot to get a common length value
-  State tempstate = mc.objects.get((int)(Math.random()*mc.objects.size()));
+  /*State tempstate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   for(int x = 0; x < 100; x++){
     tempstate = mc.getNext(tempstate);
   }
   percussionLen = tempstate.lengths[tempstate.lengths.length-1];
-  //thread("playPercussion");*/
+  //thread("playPercussion");/**/
 }
 
 void draw(){
@@ -99,13 +100,13 @@ void draw(){
   Note note = new Note(channel, pitch, velocity);
   ShortMessage[] chordArray;
   try{
-    chordArray = hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).toArray(new ShortMessage[hashreader.mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).size()]);
+    chordArray = hashreader[songIndex].mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).toArray(new ShortMessage[hashreader[songIndex].mMap.get((mystate.starttimes[mystate.starttimes.length - 1])/precision*precision).size()]);
   }
   catch(Exception e){
+    println(e);
+    print("bad chord");
     chordArray = new ShortMessage[0];
   }
-  //Does this work? TODO: Fix either way...
-  chordArray = new ShortMessage[0];
   
   PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands, ChordDetection.findChord(chordArray));
   t.start();
