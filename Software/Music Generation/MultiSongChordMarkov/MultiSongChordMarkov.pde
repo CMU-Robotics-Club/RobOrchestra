@@ -2,6 +2,8 @@ import themidibus.*; //Import midi library
 
 MarkovChain<State>[] mc;
 State mystate;
+int numFiles; //INPUT
+
 int songIndex;
 
 MidiBus myBus; //Creates a MidiBus object
@@ -24,31 +26,50 @@ int precision = 20;
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
 int statelength = 1; //INPUT
 
+int coolDown = 0;
+
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
   compBus = new MidiBus(this, 0, 2);
   
+  
   //File[] myFile = {new File(dataPath("twinkle_twinkle.mid")), new File(dataPath("Despacito5.mid"))}; //INPUT
-  File[] myFile = {new File(dataPath("Don't Stop Believing Melody.mid")), new File(dataPath("With Or Without You Melody (verse).mid"))}; //INPUT
-
+  File[] myFile = {new File(dataPath("Don't Stop Believing Melody.mid")),
+                   new File(dataPath("With Or Without You Melody (verse).mid")),
+                   new File(dataPath("Hey Soul Sister Verse.mid")),
+                   new File(dataPath("When I Come Around.mid")),
+                   new File(dataPath("Wagon Wheel.mid"))};
+                   
+  numFiles = myFile.length;
+  println(numFiles);
+  
   //File myFile = new File(dataPath("Despacito5.mid"));
   
   File[] chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
   
+  mc = new MarkovChain[numFiles];
   
   //MIDIReader reader = new MIDIReader(myFile, new int[]{4}, statelength);
-  MIDIReader[] reader = {new MIDIReader(myFile[0], new int[]{0}, statelength), new MIDIReader(myFile[1], new int[]{0}, statelength)}; //The "1" is an INPUT (melody reader track(s) )
-  
-  mc = new MarkovChain[]{new MarkovChain(reader[0].states, reader[0].transitions), new MarkovChain(reader[1].states, reader[1].transitions)};
+  MIDIReader[] reader = new MIDIReader[numFiles]; //The "1" is an INPUT (melody reader track(s) )
+  for(int i = 0; i < numFiles; i++) {
+    System.out.println(i);
+    println(myFile[0]);
+    reader[i] = new MIDIReader(myFile[i], new int[]{0}, statelength);
+    println(myFile[0]);
+    println(reader[i].transitions);
+    mc[i] = new MarkovChain<State>(reader[i].states, reader[i].transitions);
+  }
+  //mc = new MarkovChain[]{new MarkovChain(reader[0].states, reader[0].transitions), new MarkovChain(reader[1].states, reader[1].transitions)};
   
   songIndex = 1;
   mystate = mc[songIndex].objects.get((int)(Math.random()*mc[songIndex].objects.size()));
   
   //println(mc.objects.size());
-  println(mc[0].objects);
-  println(mc[1].objects);
+  for(int i = 0; i < numFiles; i++) {
+    println(mc[i].objects);
+  }
 
   //TODO: Add chords back in
   hashreader = new MIDIReader_hash[] {new MIDIReader_hash(myFile[0], new int[]{0}, precision), new MIDIReader_hash(myFile[1], new int[]{0}, precision)}; //The "1" is an INPUT (melody reader track(s) )
@@ -72,22 +93,26 @@ void setup(){
 }
 
 void draw(){
+  println(numFiles);
   double r = Math.random();
-  double switchprob = 0.1;
-  if(r < switchprob){
-    songIndex = 1-songIndex; //Switch songs (or try to, at least)
+  double switchprob = 1;
+  println(songIndex);
+  if(r < switchprob){//&& coolDown > 10){
+    songIndex = (songIndex + 1) % numFiles; //Switch songs (or try to, at least)
     println("Trying to switch songs");
   }
   
   try{
     mystate = mc[songIndex].getNext(mystate);
     if(r < switchprob){
-      print("Successfully switched songs");
+      println("Successfully switched songs");
+      println("new song: " + songIndex);
+      coolDown = 0;
     }
   }
   catch(Exception e){
     //Switched songs into a non-existent state, unswitch songs and keep going
-    songIndex = 1-songIndex; //Switch it back
+    songIndex = (songIndex - 1 + numFiles) % numFiles; //Switch it back
     mystate = mc[songIndex].getNext(mystate);
     println(e);
     println("Failed to switch songs");
@@ -112,6 +137,8 @@ void draw(){
   t.start();
   
   delay((int)(lenmult*mystate.delays[mystate.delays.length-1]));
+  
+  coolDown++;
 }
 
 void playPercussion(){
