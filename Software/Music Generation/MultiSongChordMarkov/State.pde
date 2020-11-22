@@ -7,6 +7,8 @@ public class State extends Object implements Comparable<State>{
   //NOTE: We deep-copy all arrays in the constructor to avoid weird stuff happening
   //(This is probably not the standard way to deal with that, but whatever.)
   
+  //TODO: I think chords are broken now (we don't compare starttimes in compareTo)
+  
   
   //NOTE: Overwrote this to always make length==delay
   public State(){

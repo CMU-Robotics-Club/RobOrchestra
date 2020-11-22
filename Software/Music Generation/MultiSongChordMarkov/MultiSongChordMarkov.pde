@@ -35,11 +35,11 @@ void setup(){
   
   
   //File[] myFile = {new File(dataPath("twinkle_twinkle.mid")), new File(dataPath("Despacito5.mid"))}; //INPUT
-  File[] myFile = {new File(dataPath("Don't Stop Believing Melody.mid")),
-                   new File(dataPath("With Or Without You Melody (verse).mid")),
+  File[] myFile = {/*new File(dataPath("Don't Stop Believing Melody.mid")),
+                   new File(dataPath("With Or Without You Melody (verse).mid")),*/
                    new File(dataPath("Hey Soul Sister Verse.mid")),
                    new File(dataPath("When I Come Around.mid")),
-                   new File(dataPath("Wagon Wheel.mid"))};
+                   new File(dataPath("Wagon Wheel.mid"))/**/};
                    
   numFiles = myFile.length;
   println(numFiles);
@@ -55,15 +55,17 @@ void setup(){
   MIDIReader[] reader = new MIDIReader[numFiles]; //The "1" is an INPUT (melody reader track(s) )
   for(int i = 0; i < numFiles; i++) {
     System.out.println(i);
-    println(myFile[0]);
     reader[i] = new MIDIReader(myFile[i], new int[]{0}, statelength);
-    println(myFile[0]);
-    println(reader[i].transitions);
     mc[i] = new MarkovChain<State>(reader[i].states, reader[i].transitions);
   }
   //mc = new MarkovChain[]{new MarkovChain(reader[0].states, reader[0].transitions), new MarkovChain(reader[1].states, reader[1].transitions)};
   
-  songIndex = 1;
+  println(reader[1].states);
+      println();
+    println();
+  println(reader[2].states);
+  
+  songIndex = 0;
   mystate = mc[songIndex].objects.get((int)(Math.random()*mc[songIndex].objects.size()));
   
   //println(mc.objects.size());
@@ -72,7 +74,10 @@ void setup(){
   }
 
   //TODO: Add chords back in
-  hashreader = new MIDIReader_hash[] {new MIDIReader_hash(myFile[0], new int[]{0}, precision), new MIDIReader_hash(myFile[1], new int[]{0}, precision)}; //The "1" is an INPUT (melody reader track(s) )
+  hashreader = new MIDIReader_hash[numFiles];
+  for(int i = 0; i < numFiles; i++){
+      hashreader[i] = new MIDIReader_hash(myFile[i], new int[]{0}, precision); //The "1" is an INPUT (melody reader track(s) )
+  }
 
   Object[][] timestamps = {hashreader[0].mMap.keySet().toArray(), hashreader[1].mMap.keySet().toArray()};
   Long[][] times = new Long[timestamps.length][2];
@@ -93,18 +98,16 @@ void setup(){
 }
 
 void draw(){
-  println(numFiles);
   double r = Math.random();
   double switchprob = 1;
-  println(songIndex);
-  if(r < switchprob){//&& coolDown > 10){
+  if(r < switchprob && coolDown > 10){
     songIndex = (songIndex + 1) % numFiles; //Switch songs (or try to, at least)
     println("Trying to switch songs");
   }
   
   try{
     mystate = mc[songIndex].getNext(mystate);
-    if(r < switchprob){
+    if(r < switchprob  && coolDown > 10){
       println("Successfully switched songs");
       println("new song: " + songIndex);
       coolDown = 0;
