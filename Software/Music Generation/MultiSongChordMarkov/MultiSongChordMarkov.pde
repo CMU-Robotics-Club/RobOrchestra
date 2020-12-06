@@ -35,8 +35,8 @@ void setup(){
   
   
   //File[] myFile = {new File(dataPath("twinkle_twinkle.mid")), new File(dataPath("Despacito5.mid"))}; //INPUT
-  File[] myFile = {/*new File(dataPath("Don't Stop Believing Melody.mid")),
-                   new File(dataPath("With Or Without You Melody (verse).mid")),*/
+  File[] myFile = {/*new File(dataPath("With Or Without You Melody (verse).mid")),
+                   new File(dataPath("Don't Stop Believing Melody.mid")),*/
                    new File(dataPath("Hey Soul Sister Verse.mid")),
                    new File(dataPath("When I Come Around.mid")),
                    new File(dataPath("Wagon Wheel.mid"))/**/};
