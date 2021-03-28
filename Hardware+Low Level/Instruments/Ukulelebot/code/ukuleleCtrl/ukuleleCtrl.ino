@@ -36,6 +36,44 @@ enum str {
   G, C, E, A
 };
 
+int PWM[]= {gPWM, cPWM, aPWMC, ePWM};
+
+const int feedbackB = A0; //potentiometer from actuator A0
+const int feedbackA = A1; //potentiometer from actuator A1
+const int feedbackC = A3;
+const int feedbackD = A2;
+const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
+
+void setup()
+{
+  pinMode(feedback[1], INPUT);//feedback from actuator
+  pinMode(PWM[1], OUTPUT);
+  pinMode(IN1[1], OUTPUT);
+  pinMode(IN2[1], OUTPUT);
+
+  pinMode(feedback[0], INPUT);//feedback from actuator
+  pinMode(PWM[0], OUTPUT);
+  pinMode(IN1[0], OUTPUT);
+  pinMode(IN2[0], OUTPUT);
+
+   pinMode(feedback[2], INPUT);//feedback from actuator
+  pinMode(PWM[2], OUTPUT);
+  pinMode(IN1[2], OUTPUT);
+  pinMode(IN2[2], OUTPUT);
+
+  pinMode(feedback[3], INPUT);//feedback from actuator
+  pinMode(PWM[3], OUTPUT);
+  pinMode(IN1[3], OUTPUT);
+  pinMode(IN2[3], OUTPUT);
+
+  Serial.begin(9600);
+
+}
+void loop(){
+    int note= 67;  //test note
+    noteToPos(note);
+}
+
 int noteToString(int note) {
   int strings = 4;
   int bases[strings] = {67, 60, 64, 69};
@@ -46,7 +84,7 @@ int noteToString(int note) {
       smallest = bases[i];
     }
   }
-  
+
   if (smallest == bases[0]) {
     return G;
   }
@@ -63,7 +101,7 @@ int noteToString(int note) {
 
 int noteToPos(int note) {
   str s = noteToString(note);
-  
+
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
   }
@@ -127,12 +165,12 @@ void fwd(int speed, str s)
     case E:
       AIN1 = eMotIn;
       AIN2 = eMotOut;
-      PWMA = ePWMA;   
+      PWMA = ePWMA;
       break;
     case A:
       AIN1 = aMotIn;
       AIN2 = aMotOut;
-      PWMA = aPWMA;  
+      PWMA = aPWMA;
       break;
   }
   digitalWrite(AIN1, HIGH);
@@ -140,7 +178,7 @@ void fwd(int speed, str s)
   analogWrite(PWMA, speed);
 }
 void rev(int speed, str s)
-{ 
+{
   int AIN1 = 0;
   int AIN2 = 0;
   int PWMA = 0;
@@ -172,11 +210,11 @@ void rev(int speed, str s)
 }
 
 void brake(str s)
-{ 
+{
   int AIN1 = 0;
   int AIN2 = 0;
   int PWMA = 0;
-  
+
     switch(s){
     case G:
       AIN1 = gMotIn;
