@@ -72,7 +72,7 @@ void setup()
 
 }
 void loop(){
-    int note= 67;  //test note
+    int note= 65;  //test note
     noteToPos(note);
 //broken    fwd(50, C);
 //broken    fwd(50, G);
@@ -105,7 +105,7 @@ str noteToString(int note) {
 
 int noteToPos(int note) {
   str s = noteToString(note);
-  Serial.println(s);
+  //Serial.println(s);
   
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
@@ -139,19 +139,41 @@ int moveToPos(int note, str s, int lowest) {
       break;
   }
   int target = (note - lowest) * 1024 / 12;
-  while (abs(pos - target) > 10) {
+  Serial.println("pos, target: ");
+  Serial.println(pos);
+  Serial.println(target);
+  while (abs(pos - target) > 50) {
     if (pos > target) {
-      rev(50, s); //50 is arbitrary speed
+      rev(1, s); //50 is arbitrary speed
     }
     else {
-      fwd(50, s);
+      fwd(1, s);
+    }
+
+    Serial.println("pos, target: ");
+    Serial.println(pos);
+    Serial.println(target);
+    
+    switch(s){
+      case G:
+        pos = analogRead(gPot); //pot for G string
+        break;
+      case C:
+        pos = analogRead(cPot); //pot for C string
+        break;
+      case E:
+        pos = analogRead(ePot); //pot for E string
+        break;
+      case A:
+        pos = analogRead(aPot); //pot for A string
+        break;
     }
   }
   brake(s);
   return 0;
 }
 
-void fwd(int speed, str s)
+void fwd(int speedS, str s)
 {
   int AIN1 = 0;
   int AIN2 = 0;
@@ -180,9 +202,9 @@ void fwd(int speed, str s)
   }
   digitalWrite(AIN1, HIGH);
   digitalWrite(AIN2, LOW);
-  analogWrite(PWMA, speed);
+  analogWrite(PWMA, speedS);
 }
-void rev(int speed, str s)
+void rev(int speedS, str s)
 { 
   int AIN1 = 0;
   int AIN2 = 0;
@@ -211,7 +233,7 @@ void rev(int speed, str s)
   }
   digitalWrite(AIN1, LOW);
   digitalWrite(AIN2, HIGH);
-  analogWrite(PWMA, speed);
+  analogWrite(PWMA, speedS);
 }
 
 void brake(str s)
