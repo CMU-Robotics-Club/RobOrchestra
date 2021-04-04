@@ -31,12 +31,54 @@ const int cPWMA = 4; //PWMA for C string
 const int ePWMA = 5; //PWMA for E string
 const int aPWMA = 3; //PWMA for A string
 
+const int IN1[] = {gMotIn, cMotIn, eMotIn, aMotIn};
+const int IN2[] = {gMotOut, cMotOut, eMotOut, aMotOut};
 
 enum str {
   G, C, E, A
 };
 
-int noteToString(int note) {
+int PWM[]= {gPWMA, cPWMA, aPWMA, ePWMA};
+
+const int feedbackB = A0; //potentiometer from actuator A0
+const int feedbackA = A1; //potentiometer from actuator A1
+const int feedbackC = A3;
+const int feedbackD = A2;
+const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
+
+void setup()
+{
+  pinMode(feedback[1], INPUT);//feedback from actuator
+  pinMode(PWM[1], OUTPUT);
+  pinMode(IN1[1], OUTPUT);
+  pinMode(IN2[1], OUTPUT);
+
+  pinMode(feedback[0], INPUT);//feedback from actuator
+  pinMode(PWM[0], OUTPUT);
+  pinMode(IN1[0], OUTPUT);
+  pinMode(IN2[0], OUTPUT);
+
+   pinMode(feedback[2], INPUT);//feedback from actuator
+  pinMode(PWM[2], OUTPUT);
+  pinMode(IN1[2], OUTPUT);
+  pinMode(IN2[2], OUTPUT);
+
+  pinMode(feedback[3], INPUT);//feedback from actuator
+  pinMode(PWM[3], OUTPUT);
+  pinMode(IN1[3], OUTPUT);
+  pinMode(IN2[3], OUTPUT);
+
+  Serial.begin(9600);
+
+}
+void loop(){
+    int note= 67;  //test note
+    noteToPos(note);
+//broken    fwd(50, C);
+//broken    fwd(50, G);
+}
+
+str noteToString(int note) {
   int strings = 4;
   int bases[strings] = {67, 60, 64, 69};
   int smallest;
@@ -63,6 +105,7 @@ int noteToString(int note) {
 
 int noteToPos(int note) {
   str s = noteToString(note);
+  Serial.println(s);
   
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
