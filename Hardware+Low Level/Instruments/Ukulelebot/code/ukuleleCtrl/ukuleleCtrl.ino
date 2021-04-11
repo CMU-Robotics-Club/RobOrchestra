@@ -46,6 +46,7 @@ const int feedbackC = A3;
 const int feedbackD = A2;
 const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
 
+int i = 0;
 void setup()
 {
   pinMode(feedback[1], INPUT);//feedback from actuator
@@ -72,8 +73,23 @@ void setup()
 
 }
 void loop(){
-    int note= 65;  //test note
-    noteToPos(note);
+    i++;
+    int note= 69;  //test note
+
+//    int[] notes = {69, 76, 72, 70, 75, 77}
+    int notes[] = {69, 70, 71, 72, 73, 74, 75, 76, 77};
+    noteToPos(A, notes[i/700 % 9]);
+
+//    if (i / 700 % 2 == 0) {
+//      Serial.println(69);
+//      noteToPos(A, note);
+//    } else {
+//      Serial.println(76);
+//      noteToPos(A, 76);
+//    }
+//    noteToPos(68);
+//    noteToPos(62);
+//    noteToPos(65);
 //broken    fwd(50, C);
 //broken    fwd(50, G);
 }
@@ -103,8 +119,9 @@ str noteToString(int note) {
   }
 }
 
-int noteToPos(int note) {
-  str s = noteToString(note);
+int noteToPos(str curr, int note) {
+  str s = curr;
+//  noteToString(note);
   //Serial.println(s);
   
   if (s == G && note >= 67 && note <= 79){
@@ -138,16 +155,18 @@ int moveToPos(int note, str s, int lowest) {
       pos = analogRead(aPot); //pot for A string
       break;
   }
-  int target = (note - lowest) * 1024 / 12;
-  Serial.println("pos, target: ");
-  Serial.println(pos);
-  Serial.println(target);
-  while (abs(pos - target) > 50) {
+  int target = (note - lowest) * 700 / 12;
+//  Serial.println("pos, target: ");
+//  Serial.print(pos);
+//  Serial.println(target);
+  int actSpeed = 255;
+
+  if (abs(pos - target) > 20) {
     if (pos > target) {
-      rev(1, s); //50 is arbitrary speed
+      rev(actSpeed, s); //50 is arbitrary speed
     }
     else {
-      fwd(1, s);
+      fwd(actSpeed, s);
     }
 
     Serial.println("pos, target: ");
@@ -168,8 +187,11 @@ int moveToPos(int note, str s, int lowest) {
         pos = analogRead(aPot); //pot for A string
         break;
     }
+  } else {
+    brake(s);
+    
   }
-  brake(s);
+//  brake(s);
   return 0;
 }
 
