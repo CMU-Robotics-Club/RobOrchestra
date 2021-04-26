@@ -10,7 +10,7 @@
 
 
 //WIRING CONSTANTS
-const int gPot = A3; //pot for G string
+const int gPot = A5; //pot for G string
 const int cPot = A0; //pot for C string
 const int ePot = A1; //pot for E string
 const int aPot = A2; //pot for A string
@@ -49,22 +49,22 @@ const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
 int i = 0;
 void setup()
 {
-  pinMode(feedback[1], INPUT);//feedback from actuator
+  pinMode(gPot, INPUT);//feedback from actuator
   pinMode(PWM[1], OUTPUT);
   pinMode(IN1[1], OUTPUT);
   pinMode(IN2[1], OUTPUT);
 
-  pinMode(feedback[0], INPUT);//feedback from actuator
+  pinMode(cPot, INPUT);//feedback from actuator
   pinMode(PWM[0], OUTPUT);
   pinMode(IN1[0], OUTPUT);
   pinMode(IN2[0], OUTPUT);
 
-   pinMode(feedback[2], INPUT);//feedback from actuator
+  pinMode(ePot, INPUT);//feedback from actuator
   pinMode(PWM[2], OUTPUT);
   pinMode(IN1[2], OUTPUT);
   pinMode(IN2[2], OUTPUT);
 
-  pinMode(feedback[3], INPUT);//feedback from actuator
+  pinMode(aPot, INPUT);//feedback from actuator
   pinMode(PWM[3], OUTPUT);
   pinMode(IN1[3], OUTPUT);
   pinMode(IN2[3], OUTPUT);
@@ -72,57 +72,57 @@ void setup()
   Serial.begin(9600);
 
 }
+
+//int lenIntList(int someList[]) {
+//  int res =  sizeof(someList) / sizeof(int);
+//  Serial.println(res);
+//  return res;
+//}
+
+
+int notesA[] = {69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81};
+int notesG[] = {67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79};
+int notesC[] = {60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72};
+int notesE[] = {64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76};
+    
 void loop(){
     i++;
-    int note= 69;  //test note
 
-//    int[] notes = {69, 76, 72, 70, 75, 77}
-    int notes[] = {69, 70, 71, 72, 73, 74, 75, 76, 77};
-    noteToPos(A, notes[i/700 % 9]);
+    rev(50, G);
+//    rev(50, );
+//    noteToPos(A, notesA[i/200 % 13]);
+//    noteToPos(G, notesG[i/200 % 13]);
+//    noteToPos(C, notesC[i/200 % 13]);
+//    noteToPos(E, notesE[i/200 % 13]);
+}
 
-//    if (i / 700 % 2 == 0) {
-//      Serial.println(69);
-//      noteToPos(A, note);
-//    } else {
-//      Serial.println(76);
-//      noteToPos(A, 76);
+//str noteToString(int note) {
+//  int strings = 4;
+//  int bases[strings] = {67, 60, 64, 69};
+//  int smallest;
+//  for (int i = 0; i < strings; i++) {
+//    int diff = note - bases[i];
+//    if (diff < smallest && diff >= 0) {
+//      smallest = bases[i];
 //    }
-//    noteToPos(68);
-//    noteToPos(62);
-//    noteToPos(65);
-//broken    fwd(50, C);
-//broken    fwd(50, G);
-}
-
-str noteToString(int note) {
-  int strings = 4;
-  int bases[strings] = {67, 60, 64, 69};
-  int smallest;
-  for (int i = 0; i < strings; i++) {
-    int diff = note - bases[i];
-    if (diff < smallest && diff >= 0) {
-      smallest = bases[i];
-    }
-  }
-  
-  if (smallest == bases[0]) {
-    return G;
-  }
-  else if (smallest == bases[1]) {
-    return C;
-  }
-  else if (smallest == bases[2]) {
-    return E;
-  }
-  else if (smallest == bases[3]) {
-    return A;
-  }
-}
+//  }
+//  
+//  if (smallest == bases[0]) {
+//    return G;
+//  }
+//  else if (smallest == bases[1]) {
+//    return C;
+//  }
+//  else if (smallest == bases[2]) {
+//    return E;
+//  }
+//  else if (smallest == bases[3]) {
+//    return A;
+//  }
+//}
 
 int noteToPos(str curr, int note) {
   str s = curr;
-//  noteToString(note);
-  //Serial.println(s);
   
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
@@ -144,6 +144,7 @@ int moveToPos(int note, str s, int lowest) {
   switch(s){
     case G:
       pos = analogRead(gPot); //pot for G string
+      Serial.println(pos);
       break;
     case C:
       pos = analogRead(cPot); //pot for C string
@@ -155,10 +156,8 @@ int moveToPos(int note, str s, int lowest) {
       pos = analogRead(aPot); //pot for A string
       break;
   }
-  int target = (note - lowest) * 700 / 12;
-//  Serial.println("pos, target: ");
-//  Serial.print(pos);
-//  Serial.println(target);
+  int target = (note - lowest) * 650 / 12 + 50;
+  Serial.println(target);
   int actSpeed = 255;
 
   if (abs(pos - target) > 20) {
@@ -168,11 +167,6 @@ int moveToPos(int note, str s, int lowest) {
     else {
       fwd(actSpeed, s);
     }
-
-    Serial.println("pos, target: ");
-    Serial.println(pos);
-    Serial.println(target);
-    
     switch(s){
       case G:
         pos = analogRead(gPot); //pot for G string
@@ -256,6 +250,7 @@ void rev(int speedS, str s)
   digitalWrite(AIN1, LOW);
   digitalWrite(AIN2, HIGH);
   analogWrite(PWMA, speedS);
+  Serial.println("end");
 }
 
 void brake(str s)
