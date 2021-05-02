@@ -47,6 +47,7 @@ const int feedbackD = A2;
 const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
 
 int i = 0;
+int counter = 0;
 void setup()
 {
   pinMode(gPot, INPUT);//feedback from actuator
@@ -71,6 +72,8 @@ void setup()
 
   Serial.begin(9600);
 
+  calibrate();
+
 }
 
 //int lenIntList(int someList[]) {
@@ -84,16 +87,31 @@ int notesA[] = {69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81};
 int notesG[] = {67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79};
 int notesC[] = {60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72};
 int notesE[] = {64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76};
-    
-void loop(){
-    i++;
+int notesLen[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+int minVal[] = {0, 0, 0, 0};
+int maxVal[] = {1024, 1024, 1024, 1024};
+int threshRange[] = {1024, 1024, 1024, 1024};
 
-    rev(50, G);
-//    rev(50, );
-//    noteToPos(A, notesA[i/200 % 13]);
-//    noteToPos(G, notesG[i/200 % 13]);
-//    noteToPos(C, notesC[i/200 % 13]);
-//    noteToPos(E, notesE[i/200 % 13]);
+void loop(){
+    if(counter == 10){
+      counter = 0;
+      i = (i+1) % 26;
+//      Serial.print("G: ");
+//      Serial.println(analogRead(gPot));
+//      Serial.print("E: ");
+//      Serial.println(analogRead(ePot));
+//      Serial.print("A: ");
+//      Serial.println(analogRead(aPot));
+//      Serial.print("C: ");
+//      Serial.println(analogRead(cPot));
+//      Serial.println();
+    }
+    else counter++;
+    
+    noteToPos(A, notesA[notesLen[i]]);
+    noteToPos(G, notesG[notesLen[i]]);
+    noteToPos(C, notesC[notesLen[i]]);
+    noteToPos(E, notesE[notesLen[i]]);
 }
 
 //str noteToString(int note) {
@@ -141,24 +159,27 @@ int noteToPos(str curr, int note) {
 
 int moveToPos(int note, str s, int lowest) {
   int pos;
+  int target;
   switch(s){
     case G:
       pos = analogRead(gPot); //pot for G string
-      Serial.println(pos);
+      target = (note - lowest) * threshRange[0] / 12 + minVal[0];
       break;
     case C:
       pos = analogRead(cPot); //pot for C string
+      target = (note - lowest) * threshRange[1] / 12 + minVal[1];
       break;
     case E:
       pos = analogRead(ePot); //pot for E string
+      target = (note - lowest) * threshRange[2] / 12 + minVal[2];
       break;
     case A:
       pos = analogRead(aPot); //pot for A string
+      target = (note - lowest) * threshRange[3] / 12 + minVal[3];
       break;
   }
-  int target = (note - lowest) * 650 / 12 + 50;
-  Serial.println(target);
   int actSpeed = 255;
+  Serial.println(target);
 
   if (abs(pos - target) > 20) {
     if (pos > target) {
@@ -185,8 +206,88 @@ int moveToPos(int note, str s, int lowest) {
     brake(s);
     
   }
-//  brake(s);
   return 0;
+}
+
+void calibrate () {
+  const int delayTime = 1000;
+  
+  rev(255, G);
+  delay(delayTime);
+  minVal[0] = analogRead(gPot);
+  fwd(255, G);
+  delay(delayTime);
+  maxVal[0] = analogRead(gPot);
+  brake(G);
+
+  rev(255, C);
+  delay(delayTime);
+  minVal[1] = analogRead(cPot);
+  fwd(255, C);
+  delay(delayTime);
+  maxVal[1] = analogRead(cPot);
+  brake(C);
+
+  rev(255, E);
+  delay(delayTime);
+  minVal[2] = analogRead(ePot);
+  fwd(255, E);
+  delay(delayTime);
+  maxVal[2] = analogRead(ePot);
+  brake(E);
+
+  rev(255, A);
+  delay(delayTime);
+  minVal[3] = analogRead(aPot);
+  fwd(255, A);
+  delay(delayTime);
+  maxVal[3] = analogRead(aPot);
+  brake(A);
+
+  for (int i = 0; i < 4; i++) {
+    threshRange[i] = maxVal[i] - minVal[i];
+    Serial.println(threshRange[i]);
+  }
+  Serial.println("Calibration done!");
+}
+
+void calibrateTog () {
+  const int delayTime = 2000;
+  
+//  rev(255, G);
+//  rev(255, A);
+  rev(255, C);
+//  rev(255, E);
+
+  delay(delayTime);
+
+  minVal[0] = analogRead(gPot);
+  minVal[1] = analogRead(cPot);
+  minVal[2] = analogRead(ePot);
+  minVal[3] = analogRead(aPot);
+
+//  fwd(255, G);
+//  fwd(255, A);
+  fwd(255, C);
+//  fwd(255, E);
+
+  delay(delayTime);
+
+  maxVal[0] = analogRead(gPot);
+  maxVal[1] = analogRead(cPot);
+  maxVal[2] = analogRead(ePot);
+  maxVal[3] = analogRead(aPot);
+
+  brake(G);
+  brake(C);
+  brake(E);
+  brake(A);
+
+  for (int i = 0; i < 4; i++) {
+    threshRange[i] = maxVal[i] - minVal[i];
+    Serial.println(threshRange[i]);
+  }
+  Serial.println("Calibration done!");
 }
 
 void fwd(int speedS, str s)
@@ -250,7 +351,6 @@ void rev(int speedS, str s)
   digitalWrite(AIN1, LOW);
   digitalWrite(AIN2, HIGH);
   analogWrite(PWMA, speedS);
-  Serial.println("end");
 }
 
 void brake(str s)
