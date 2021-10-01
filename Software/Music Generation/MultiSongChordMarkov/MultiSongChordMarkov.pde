@@ -35,8 +35,8 @@ void setup(){
   
   
   //File[] myFile = {new File(dataPath("twinkle_twinkle.mid")), new File(dataPath("Despacito5.mid"))}; //INPUT
-  File[] myFile = {/*new File(dataPath("With Or Without You Melody (verse).mid")),
-                   new File(dataPath("Don't Stop Believing Melody.mid")),*/
+  File[] myFile = {new File(dataPath("With Or Without You Melody (verse).mid")),
+                   new File(dataPath("Don't Stop Believing Melody.mid")),
                    new File(dataPath("Hey Soul Sister Verse.mid")),
                    new File(dataPath("When I Come Around.mid")),
                    new File(dataPath("Wagon Wheel.mid"))/**/};
@@ -58,12 +58,6 @@ void setup(){
     reader[i] = new MIDIReader(myFile[i], new int[]{0}, statelength);
     mc[i] = new MarkovChain<State>(reader[i].states, reader[i].transitions);
   }
-  //mc = new MarkovChain[]{new MarkovChain(reader[0].states, reader[0].transitions), new MarkovChain(reader[1].states, reader[1].transitions)};
-  
-  println(reader[1].states);
-      println();
-    println();
-  println(reader[2].states);
   
   songIndex = 0;
   mystate = mc[songIndex].objects.get((int)(Math.random()*mc[songIndex].objects.size()));
