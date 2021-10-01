@@ -1,11 +1,11 @@
-#define AIN1 30 //D2
+#define AIN1 38 //D2
 
-#define AIN2 32//D4
+#define AIN2 40//D4
 
-#define PWMA 5 // 
+#define PWMA 3 // 
 
 
-const int feedback = A0; //potentiometer from actuator
+const int feedback = A1; //potentiometer from actuator
 int position_LA = 0; //potentiometer from actuator
 int prev;
 
@@ -26,7 +26,7 @@ void loop()
 {
 
 prev = position_LA;
-position_LA = analogRead(A0);  // read the input on analog pin 0:
+position_LA = analogRead(A3);  // read the input on analog pin 0:
 Serial.println(position_LA);
 
 

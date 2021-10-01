@@ -10,59 +10,137 @@
 
 
 //WIRING CONSTANTS
-const int gPot = 0; //pot for G string
-const int cPot = 0; //pot for C string
-const int aPot = 0; //pot for A string
-const int ePot = 0; //pot for E string
+const int gPot = A5; //pot for G string
+const int cPot = A0; //pot for C string
+const int ePot = A1; //pot for E string
+const int aPot = A2; //pot for A string
 
 
-const int gMotIn = 0; //mot for G string
-const int cMotIn = 0; //mot for C string
-const int aMotIn = 0; //mot for A string
-const int eMotIn = 0; //mot for E string
+const int gMotIn = 42; //mot for G string
+const int cMotIn = 34; //mot for C string
+const int eMotIn = 30; //mot for E string
+const int aMotIn = 38; //mot for A string
 
-const int gMotOut = 0; //mot for G string
-const int cMotOut = 0; //mot for C string
-const int aMotOut = 0; //mot for A string
-const int eMotOut = 0; //mot for E string
+const int gMotOut = 44; //mot for G string
+const int cMotOut = 36; //mot for C string
+const int eMotOut = 32; //mot for E string
+const int aMotOut = 40; //mot for A string
 
-const int gPWMA = 0; //PWMA for G string
-const int cPWMA = 0; //PWMA for C string
-const int aPWMA = 0; //PWMA for A string
-const int ePWMA = 0; //PWMA for E string
+const int gPWMA = 2; //PWMA for G string
+const int cPWMA = 4; //PWMA for C string
+const int ePWMA = 5; //PWMA for E string
+const int aPWMA = 3; //PWMA for A string
 
+const int IN1[] = {gMotIn, cMotIn, eMotIn, aMotIn};
+const int IN2[] = {gMotOut, cMotOut, eMotOut, aMotOut};
 
 enum str {
   G, C, E, A
 };
 
-int noteToString(int note) {
-  int strings = 4;
-  int bases[strings] = {67, 60, 64, 69};
-  int smallest;
-  for (int i = 0; i < strings; i++) {
-    int diff = note - bases[i];
-    if (diff < smallest && diff >= 0) {
-      smallest = bases[i];
-    }
-  }
-  
-  if (smallest == bases[0]) {
-    return G;
-  }
-  else if (smallest == bases[1]) {
-    return C;
-  }
-  else if (smallest == bases[2]) {
-    return E;
-  }
-  else if (smallest == bases[3]) {
-    return A;
-  }
+int PWM[]= {gPWMA, cPWMA, aPWMA, ePWMA};
+
+const int feedbackB = A0; //potentiometer from actuator A0
+const int feedbackA = A1; //potentiometer from actuator A1
+const int feedbackC = A3;
+const int feedbackD = A2;
+const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
+
+int i = 0;
+int counter = 0;
+void setup()
+{
+  pinMode(gPot, INPUT);//feedback from actuator
+  pinMode(PWM[1], OUTPUT);
+  pinMode(IN1[1], OUTPUT);
+  pinMode(IN2[1], OUTPUT);
+
+  pinMode(cPot, INPUT);//feedback from actuator
+  pinMode(PWM[0], OUTPUT);
+  pinMode(IN1[0], OUTPUT);
+  pinMode(IN2[0], OUTPUT);
+
+  pinMode(ePot, INPUT);//feedback from actuator
+  pinMode(PWM[2], OUTPUT);
+  pinMode(IN1[2], OUTPUT);
+  pinMode(IN2[2], OUTPUT);
+
+  pinMode(aPot, INPUT);//feedback from actuator
+  pinMode(PWM[3], OUTPUT);
+  pinMode(IN1[3], OUTPUT);
+  pinMode(IN2[3], OUTPUT);
+
+  Serial.begin(9600);
+
+  calibrate();
+
 }
 
-int noteToPos(int note) {
-  str s = noteToString(note);
+//int lenIntList(int someList[]) {
+//  int res =  sizeof(someList) / sizeof(int);
+//  Serial.println(res);
+//  return res;
+//}
+
+
+int notesA[] = {69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81};
+int notesG[] = {67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79};
+int notesC[] = {60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72};
+int notesE[] = {64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76};
+int notesLen[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+int minVal[] = {0, 0, 0, 0};
+int maxVal[] = {1024, 1024, 1024, 1024};
+int threshRange[] = {1024, 1024, 1024, 1024};
+
+void loop(){
+    if(counter == 10){
+      counter = 0;
+      i = (i+1) % 26;
+//      Serial.print("G: ");
+//      Serial.println(analogRead(gPot));
+//      Serial.print("E: ");
+//      Serial.println(analogRead(ePot));
+//      Serial.print("A: ");
+//      Serial.println(analogRead(aPot));
+//      Serial.print("C: ");
+//      Serial.println(analogRead(cPot));
+//      Serial.println();
+    }
+    else counter++;
+    
+    noteToPos(A, notesA[notesLen[i]]);
+    noteToPos(G, notesG[notesLen[i]]);
+    noteToPos(C, notesC[notesLen[i]]);
+    noteToPos(E, notesE[notesLen[i]]);
+}
+
+//str noteToString(int note) {
+//  int strings = 4;
+//  int bases[strings] = {67, 60, 64, 69};
+//  int smallest;
+//  for (int i = 0; i < strings; i++) {
+//    int diff = note - bases[i];
+//    if (diff < smallest && diff >= 0) {
+//      smallest = bases[i];
+//    }
+//  }
+//  
+//  if (smallest == bases[0]) {
+//    return G;
+//  }
+//  else if (smallest == bases[1]) {
+//    return C;
+//  }
+//  else if (smallest == bases[2]) {
+//    return E;
+//  }
+//  else if (smallest == bases[3]) {
+//    return A;
+//  }
+//}
+
+int noteToPos(str curr, int note) {
+  str s = curr;
   
   if (s == G && note >= 67 && note <= 79){
     return moveToPos(note, s, 67);
@@ -81,34 +159,138 @@ int noteToPos(int note) {
 
 int moveToPos(int note, str s, int lowest) {
   int pos;
+  int target;
   switch(s){
     case G:
       pos = analogRead(gPot); //pot for G string
+      target = (note - lowest) * threshRange[0] / 12 + minVal[0];
       break;
     case C:
       pos = analogRead(cPot); //pot for C string
+      target = (note - lowest) * threshRange[1] / 12 + minVal[1];
       break;
     case E:
       pos = analogRead(ePot); //pot for E string
+      target = (note - lowest) * threshRange[2] / 12 + minVal[2];
       break;
     case A:
       pos = analogRead(aPot); //pot for A string
+      target = (note - lowest) * threshRange[3] / 12 + minVal[3];
       break;
   }
-  int target = (note - lowest) * 1024 / 12;
-  while (abs(pos - target) > 10) {
+  int actSpeed = 255;
+  Serial.println(target);
+
+  if (abs(pos - target) > 20) {
     if (pos > target) {
-      rev(50, s); //50 is arbitrary speed
+      rev(actSpeed, s); //50 is arbitrary speed
     }
     else {
-      fwd(50, s);
+      fwd(actSpeed, s);
     }
+    switch(s){
+      case G:
+        pos = analogRead(gPot); //pot for G string
+        break;
+      case C:
+        pos = analogRead(cPot); //pot for C string
+        break;
+      case E:
+        pos = analogRead(ePot); //pot for E string
+        break;
+      case A:
+        pos = analogRead(aPot); //pot for A string
+        break;
+    }
+  } else {
+    brake(s);
+    
   }
-  brake(s);
   return 0;
 }
 
-void fwd(int speed, str s)
+void calibrate () {
+  const int delayTime = 1000;
+  
+  rev(255, G);
+  delay(delayTime);
+  minVal[0] = analogRead(gPot);
+  fwd(255, G);
+  delay(delayTime);
+  maxVal[0] = analogRead(gPot);
+  brake(G);
+
+  rev(255, C);
+  delay(delayTime);
+  minVal[1] = analogRead(cPot);
+  fwd(255, C);
+  delay(delayTime);
+  maxVal[1] = analogRead(cPot);
+  brake(C);
+
+  rev(255, E);
+  delay(delayTime);
+  minVal[2] = analogRead(ePot);
+  fwd(255, E);
+  delay(delayTime);
+  maxVal[2] = analogRead(ePot);
+  brake(E);
+
+  rev(255, A);
+  delay(delayTime);
+  minVal[3] = analogRead(aPot);
+  fwd(255, A);
+  delay(delayTime);
+  maxVal[3] = analogRead(aPot);
+  brake(A);
+
+  for (int i = 0; i < 4; i++) {
+    threshRange[i] = maxVal[i] - minVal[i];
+    Serial.println(threshRange[i]);
+  }
+  Serial.println("Calibration done!");
+}
+
+void calibrateTog () {
+  const int delayTime = 2000;
+  
+//  rev(255, G);
+//  rev(255, A);
+  rev(255, C);
+//  rev(255, E);
+
+  delay(delayTime);
+
+  minVal[0] = analogRead(gPot);
+  minVal[1] = analogRead(cPot);
+  minVal[2] = analogRead(ePot);
+  minVal[3] = analogRead(aPot);
+
+//  fwd(255, G);
+//  fwd(255, A);
+  fwd(255, C);
+//  fwd(255, E);
+
+  delay(delayTime);
+
+  maxVal[0] = analogRead(gPot);
+  maxVal[1] = analogRead(cPot);
+  maxVal[2] = analogRead(ePot);
+  maxVal[3] = analogRead(aPot);
+
+  brake(G);
+  brake(C);
+  brake(E);
+  brake(A);
+
+  for (int i = 0; i < 4; i++) {
+    threshRange[i] = maxVal[i] - minVal[i];
+    Serial.println(threshRange[i]);
+  }
+  Serial.println("Calibration done!");
+}
+
+void fwd(int speedS, str s)
 {
   int AIN1 = 0;
   int AIN2 = 0;
@@ -137,9 +319,9 @@ void fwd(int speed, str s)
   }
   digitalWrite(AIN1, HIGH);
   digitalWrite(AIN2, LOW);
-  analogWrite(PWMA, speed);
+  analogWrite(PWMA, speedS);
 }
-void rev(int speed, str s)
+void rev(int speedS, str s)
 { 
   int AIN1 = 0;
   int AIN2 = 0;
@@ -168,7 +350,7 @@ void rev(int speed, str s)
   }
   digitalWrite(AIN1, LOW);
   digitalWrite(AIN2, HIGH);
-  analogWrite(PWMA, speed);
+  analogWrite(PWMA, speedS);
 }
 
 void brake(str s)
