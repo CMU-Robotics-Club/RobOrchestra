@@ -110,9 +110,9 @@ void loop(){
 
     int pastErrors[] = {0, 0, 0, 0};
     
-    noteToPos(A, notesA[notesLen[i]], pastErrors);
+//    noteToPos(A, notesA[notesLen[i]], pastErrors);
     noteToPos(G, notesG[notesLen[i]], pastErrors);
-    noteToPos(C, notesC[notesLen[i]], pastErrors);
+//    noteToPos(C, notesC[notesLen[i]], pastErrors);
     noteToPos(E, notesE[notesLen[i]], pastErrors);
 }
 
@@ -162,26 +162,31 @@ int noteToPos(str curr, int note, int pastErrors[]) {
 int moveToPos(int note, str s, int lowest, int pastErrors[]) {
   int pos;
   int target;
+  int i;
   int pastError;
   switch(s){
     case G:
       pos = analogRead(gPot); //pot for G string
+      i = 0; 
       pastError = pastErrors[0];
       target = (note - lowest) * threshRange[0] / 12 + minVal[0];
       break;
     case C:
       pos = analogRead(cPot); //pot for C string
-      pastError = pastErrors[1];
+      i = 1;
+      pastError = pastErrors[i];
       target = (note - lowest) * threshRange[1] / 12 + minVal[1];
       break;
     case E:
       pos = analogRead(ePot); //pot for E string
-      pastError = pastErrors[2];
+      i = 2;
+      pastError = pastErrors[i];
       target = (note - lowest) * threshRange[2] / 12 + minVal[2];
       break;
     case A:
       pos = analogRead(aPot); //pot for A string
-      pastError = pastErrors[3];
+      i = 3;
+      pastError = pastErrors[i];
       target = (note - lowest) * threshRange[3] / 12 + minVal[3];
       break;
   }
@@ -218,6 +223,7 @@ int moveToPos(int note, str s, int lowest, int pastErrors[]) {
     brake(s);
     
   }
+  pastErrors[i] = error;
   return 0;
 }
 
