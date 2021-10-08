@@ -107,11 +107,13 @@ void loop(){
 //      Serial.println();
     }
     else counter++;
+
+    int pastErrors[] = {0, 0, 0, 0};
     
-    noteToPos(A, notesA[notesLen[i]]);
-    noteToPos(G, notesG[notesLen[i]]);
-    noteToPos(C, notesC[notesLen[i]]);
-    noteToPos(E, notesE[notesLen[i]]);
+//    noteToPos(A, notesA[notesLen[i]], pastErrors);
+    noteToPos(G, notesG[notesLen[i]], pastErrors);
+//    noteToPos(C, notesC[notesLen[i]], pastErrors);
+    noteToPos(E, notesE[notesLen[i]], pastErrors);
 }
 
 //str noteToString(int note) {
@@ -136,56 +138,71 @@ void loop(){
 //  }
 //  else if (smallest == bases[3]) {
 //    return A;
-//  }
+//  }p
 //}
 
-int noteToPos(str curr, int note) {
+int noteToPos(str curr, int note, int pastErrors[]) {
   str s = curr;
   
   if (s == G && note >= 67 && note <= 79){
-    return moveToPos(note, s, 67);
+    return moveToPos(note, s, 67, pastErrors);
   }
   else if (s == C && note >= 60 && note <= 72){
-    return moveToPos(note, s, 60);
+    return moveToPos(note, s, 60, pastErrors);
   }
   else if (s == E && note >= 64 && note <= 76){
-    return moveToPos(note, s, 64);
+    return moveToPos(note, s, 64, pastErrors);
   }
   else if (s == A && note >= 69 && note <= 81){
-    return moveToPos(note, s, 69);
+    return moveToPos(note, s, 69, pastErrors);
   }
   return -1;
 }
 
-int moveToPos(int note, str s, int lowest) {
+int moveToPos(int note, str s, int lowest, int pastErrors[]) {
   int pos;
   int target;
+  int i;
+  int pastError;
   switch(s){
     case G:
       pos = analogRead(gPot); //pot for G string
+      i = 0; 
+      pastError = pastErrors[0];
       target = (note - lowest) * threshRange[0] / 12 + minVal[0];
       break;
     case C:
       pos = analogRead(cPot); //pot for C string
+      i = 1;
+      pastError = pastErrors[i];
       target = (note - lowest) * threshRange[1] / 12 + minVal[1];
       break;
     case E:
       pos = analogRead(ePot); //pot for E string
+      i = 2;
+      pastError = pastErrors[i];
       target = (note - lowest) * threshRange[2] / 12 + minVal[2];
       break;
     case A:
       pos = analogRead(aPot); //pot for A string
+      i = 3;
+      pastError = pastErrors[i];
       target = (note - lowest) * threshRange[3] / 12 + minVal[3];
       break;
   }
   int actSpeed = 255;
   Serial.println(target);
 
-  if (abs(pos - target) > 20) {
+  int error = pos - target;
+  int Kp = 0.1;
+
+  if (abs(error) > 20) {
     if (pos > target) {
-      rev(actSpeed, s); //50 is arbitrary speed
+      int actSpeed = Kp*error + Kp*(pastError - error);
+      rev(actSpeed, s);
     }
     else {
+      int actSpeed = Kp*error + Kp*pastError;
       fwd(actSpeed, s);
     }
     switch(s){
@@ -206,6 +223,7 @@ int moveToPos(int note, str s, int lowest) {
     brake(s);
     
   }
+  pastErrors[i] = error;
   return 0;
 }
 
