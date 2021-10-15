@@ -5,7 +5,7 @@ import themidibus.*; //Library documentation: http://www.smallbutdigital.com/the
 
 MidiBus myBus; //Creates a MidiBus object
 int channel = 0; //channel xylobot is on
-int noteLen = 1000;
+int noteLen = 1;
 
 Serial mySerial;
 PrintWriter output;
@@ -13,7 +13,7 @@ int lf = 10;    // Linefeed in ASCII
 boolean shouldRead;
 int getDevNumb(String[] devs) {
    for (int i = 0; i < devs.length; i++) {
-     if (devs[i].equals("/dev/tty.usbmodem14201"))
+     if (devs[i].equals("/dev/tty.usbmodem14201")) //Whatever's in Arduino's Tools->Port
        return i;
    }
    return -1;
@@ -24,7 +24,8 @@ void setup() {
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[dev_numb], 9600);
+   mySerial = new Serial( this, devs[dev_numb], 115200); //9600 for chromatic, 115200 for theremin
+   //If port is busy, close Arduino serial monitor
   
   System.out.println("");   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
