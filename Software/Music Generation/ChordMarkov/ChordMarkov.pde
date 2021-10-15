@@ -25,8 +25,8 @@ int statelength = 20; //INPUT
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 2);
+  myBus = new MidiBus(this, 0, 3);
+  compBus = new MidiBus(this, 0, 3);
   
   File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("Despacito5.mid"));
