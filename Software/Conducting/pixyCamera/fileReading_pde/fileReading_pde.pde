@@ -23,11 +23,11 @@ void setup() {
    filename = filename.replace(' ', '_');
    filename = filename.replace(':', '_');
    filename = "positionData/" + filename;
-   shouldRead = false;
+   shouldRead = true;
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[7], 9600 );
+   mySerial = new Serial( this, devs[1], 9600   );
    output = createWriter( filename );
 }
 void draw() {
