@@ -5,7 +5,7 @@ import themidibus.*; //Library documentation: http://www.smallbutdigital.com/the
 
 MidiBus myBus; //Creates a MidiBus object
 int channel = 0; //channel xylobot is on
-int noteLen = 1;
+int noteLen = 5;
 
 Serial mySerial;
 PrintWriter output;
@@ -24,7 +24,7 @@ void setup() {
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[dev_numb], 115200); //9600 for chromatic, 115200 for theremin
+   mySerial = new Serial( this, devs[0], 115200); //9600 for chromatic, 115200 for theremin
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   
@@ -42,7 +42,7 @@ void draw() {
               println(value);
               
                 int x = parseInt(value);
-                Note mynote = new Note(channel, x, 100, noteLen);
+                Note mynote = new Note(channel, 60, x, noteLen);
       
                 //sends note to Xylobot 
                 myBus.sendNoteOn(mynote);
