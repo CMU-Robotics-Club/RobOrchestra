@@ -42,7 +42,11 @@ void loop()
   if(xmax || xmin || ymax || ymin){
     Serial.println("Beat");
   }
+  else{
+    Serial.println("");
+  }
 
   oldoldx = oldx; oldx = fx;
   oldoldy = oldy; oldy = fy;
+  delay(100);
 }
