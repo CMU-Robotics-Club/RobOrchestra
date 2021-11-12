@@ -4,7 +4,7 @@
 %at this point, insert the code to initialize the variable you will be
 %storing the words in
 %then
-fid = fopen('C:\Users\Roboclub\Documents\GitHub\RobOrchestra\Software\pixyCamera\fileReading_pde\positionData\position20_11_2019_17_02_48.txt','rt');
+fid = fopen('positionData\position20_11_2019_17_02_48.txt','rt');
 A = [];
 xArr = [];
 yArr = [];
