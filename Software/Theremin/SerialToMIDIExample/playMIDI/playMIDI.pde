@@ -24,7 +24,7 @@ void setup() {
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[0], 115200); //9600 for chromatic, 115200 for theremin
+   mySerial = new Serial( this, devs[1], 115200); //9600 for chromatic, 115200 for theremin
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   

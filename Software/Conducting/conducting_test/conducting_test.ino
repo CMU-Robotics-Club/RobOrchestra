@@ -9,6 +9,8 @@ float oldoldx;
 float oldy;
 float oldoldy;
 
+int cooldown = 0;
+
 void setup()
 {
   Serial.begin(115200);
@@ -23,6 +25,7 @@ void setup()
  
 void loop()
 {
+  cooldown--;
   // grab blocks!
   pixy.ccc.getBlocks();
   unsigned int width = pixy.ccc.blocks[0].m_width; //from 1 to 316
@@ -38,9 +41,13 @@ void loop()
   bool xmin = (oldx < oldoldx && oldx < fx);
   bool ymax = (oldy > oldoldy && oldy > fy);
   bool ymin = (oldy < oldoldy && oldy < fy);
+
   
-  if(xmax || xmin || ymax || ymin){
+  if( (xmax || xmin || ymax || ymin) && (x*y > 0 && cooldown <= 0) ){
+
     Serial.println("Beat");
+    cooldown = 6;
+
   }
   else{
     Serial.println("");
