@@ -72,6 +72,7 @@ void setup()
 
   Serial.begin(9600);
 
+  // get the highest and lowest values for each potentiometer
   calibrate();
 
 }
@@ -92,6 +93,7 @@ int minVal[] = {0, 0, 0, 0};
 int maxVal[] = {1024, 1024, 1024, 1024};
 int threshRange[] = {1024, 1024, 1024, 1024};
 
+// constantly move the linear actuators to the next note
 void loop(){
     if(counter == 10){
       counter = 0;
@@ -141,6 +143,8 @@ void loop(){
 //  }p
 //}
 
+
+// command to move a given string to the location for a given note
 int noteToPos(str curr, int note, int pastErrors[]) {
   str s = curr;
   
@@ -159,6 +163,8 @@ int noteToPos(str curr, int note, int pastErrors[]) {
   return -1;
 }
 
+
+// move a string toward a target note
 int moveToPos(int note, str s, int lowest, int pastErrors[]) {
   int pos;
   int target;
