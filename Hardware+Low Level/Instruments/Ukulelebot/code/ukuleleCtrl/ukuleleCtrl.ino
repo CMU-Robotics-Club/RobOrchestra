@@ -48,6 +48,10 @@ const int feedback[]= {feedbackA, feedbackB, feedbackC, feedbackD};
 
 int i = 0;
 int counter = 0;
+
+
+
+
 void setup()
 {
   pinMode(gPot, INPUT);//feedback from actuator
