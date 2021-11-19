@@ -27,7 +27,7 @@ void loop()
 {
   cooldown--;
   // grab blocks!
-  pixy.ccc.getBlocks();
+  pixy.ccc.getBlocks(true,2);
   unsigned int width = pixy.ccc.blocks[0].m_width; //from 1 to 316
   unsigned int height = pixy.ccc.blocks[0].m_height; //from 1 to 208
 
