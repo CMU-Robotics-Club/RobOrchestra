@@ -24,7 +24,7 @@ void setup() {
    printArray(Serial.list());
    String[] devs = Serial.list();
    int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[1], 115200); //9600 for chromatic, 115200 for theremin
+   mySerial = new Serial( this, devs[0], 115200); //9600 for chromatic, 115200 for theremin
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   
@@ -39,6 +39,8 @@ void draw() {
          String value = mySerial.readStringUntil(lf);
          if (shouldRead == true && value != null) {
            String[] vals = value.split(" ");
+           if(vals.length < 2) {return;}
+           println(value);
            int pitch = parseInt(vals[0]);
            int volume = parseInt(vals[1]);
            println("Pitch: " + String.valueOf(pitch) + ", volume: " + String.valueOf(volume) );
