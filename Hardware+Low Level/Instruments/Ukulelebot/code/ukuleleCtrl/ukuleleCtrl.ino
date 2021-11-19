@@ -206,7 +206,7 @@ int moveToPos(int note, str s, int lowest, int pastErrors[]) {
   int error = pos - target;
   int Kp = 0.1;
 
-  if (abs(error) > 20) {
+  while (abs(error) > 20) {
     if (pos > target) {
       int actSpeed = Kp*error + Kp*(pastError - error);
       rev(actSpeed, s);
@@ -229,12 +229,11 @@ int moveToPos(int note, str s, int lowest, int pastErrors[]) {
         pos = analogRead(aPot); //pot for A string
         break;
     }
-  } else {
-    brake(s);
-    
   }
-  pastErrors[i] = error;
-  return 0;
+    brake(s);
+    return 0;
+  //pastErrors[i] = error;
+  //return 0;
 }
 
 void calibrate () {
