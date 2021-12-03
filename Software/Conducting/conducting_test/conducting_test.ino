@@ -46,7 +46,7 @@ void loop()
   if( (xmax || xmin || ymax || ymin) && (x*y > 0 && cooldown <= 0) ){
 
     Serial.println("Beat");
-    cooldown = 6;
+    cooldown = 3;
 
   }
   else{
