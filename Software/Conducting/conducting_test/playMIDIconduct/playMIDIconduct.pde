@@ -51,8 +51,8 @@ void draw() {
                 myBus.sendNoteOff(mynote);
               }
             
-              int x = parseInt(value);
-              mynote = new Note(channel, pitch, 100, noteLen);
+              //int x = parseInt(value);
+              mynote = new Note(channel, pitch, 100);
     
               //sends note to Xylobot 
               myBus.sendNoteOn(mynote);
