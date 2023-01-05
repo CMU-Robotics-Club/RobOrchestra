@@ -71,6 +71,7 @@ void setup()
 
 void loop()
 {
+Serial.println("New print");
 for(int i = 3; i > -1;i--){
   prev[i] = position_L[i];
   position_L[i] = analogRead(feedback[i]);  // read the input on analog pin 0:
@@ -96,8 +97,8 @@ for(int i = 3; i > -1;i--){
 */
 
 }
-delay(20);
- 
+
+ delay(2000);
   //Serial.print("  Positions = ");
  // Serial.println(position_L[]);
 

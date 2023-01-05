@@ -21,12 +21,12 @@ MIDIReader_hash hashreader;
 int precision = 20;
 
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
-int statelength = 20; //INPUT
+int statelength = 1  ; //INPUT
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 3);
-  compBus = new MidiBus(this, 0, 3);
+  myBus = new MidiBus(this, 0, 1);
+  compBus = new MidiBus(this, 0, 1);
   
   File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("Despacito5.mid"));

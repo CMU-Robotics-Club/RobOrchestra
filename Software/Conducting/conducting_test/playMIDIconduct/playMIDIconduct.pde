@@ -14,20 +14,20 @@ Serial mySerial;
 PrintWriter output;
 int lf = 10;    // Linefeed in ASCII
 boolean shouldRead;
-int getDevNumb(String[] devs) {
+/*int getDevNumb(String[] devs) {
    for (int i = 0; i < devs.length; i++) {
      if (devs[i].equals("/dev/tty.usbmodem14201")) //Whatever's in Arduino's Tools->Port
        return i;
    }
    return -1;
-}
+}*/
 
 void setup() {
    shouldRead = true;
    printArray(Serial.list());
    String[] devs = Serial.list();
-   int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[0], 115200); //9600 for chromatic, 115200 for theremin
+   //int dev_numb = getDevNumb(devs);
+   mySerial = new Serial( this, devs[3], 115200); //9600 for chromatic, 115200 for theremin
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   
