@@ -25,7 +25,7 @@ public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#",
 MidiBus myBus; //Creates a MidiBus object
 MidiBus compBus; //Creates a MidiBus object
 int channel = 0; //set channel. 0 for speakers
-int globalVolume = 100; //melody note volume
+int globalVolume = 50; //melody note volume
 
 double legato = 0.5;
 double lenmult = 1; //Note length multiplier (to speed up/slow down output)

@@ -41,7 +41,7 @@ void hitDrum() {
 
 void setup()
 {
-  servo_near.attach(5);
+  servo_near.attach(5); //DIGITAL ports!
   servo_middle.attach(4);
 
   //Initialize to up

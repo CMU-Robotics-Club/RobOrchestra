@@ -12,7 +12,7 @@ void setup() {
 }
 
 void draw() {
-  test = new Note(0, 37, 100);
+  test = new Note(1, 36, 100); //36 for snare
   snareBus.sendNoteOn(test);
   println("Note");
   delay(500);
