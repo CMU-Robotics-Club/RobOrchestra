@@ -336,9 +336,10 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
       toneIndex = (prev_tone_index+2) % scaleOffsets[curScale][curSubScale].length;    
     }
     else if(r < .50){
+      double r2 = Math.random();
       for(int i = 0; i < scaleOffsets[curScale][curSubScale].length; i++) {
-        r -= probs[i];
-        if(r < 0) {
+        r2 -= probs[i];
+        if(r2 < 0) {
           toneIndex = i; 
           break;      
         }

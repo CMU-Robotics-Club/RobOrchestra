@@ -6,11 +6,11 @@ import themidibus.*; //Library documentation: http://www.smallbutdigital.com/the
 
 MidiBus myBus; //Creates a MidiBus object
 int channel = 0; //channel xylobot is on
-int noteLen = 2000; //set note length in milliseconds
+int noteLen = 100; //set note length in milliseconds
 
 //Bounds on range (MIDI values)
 int lo = 60; //60 = middle C (C4)
-int hi = 84; //76 = E5
+int hi = 76; //76 = E5
 
 //Parameters
 int nreps = 1; //Number of times to repeat each note
