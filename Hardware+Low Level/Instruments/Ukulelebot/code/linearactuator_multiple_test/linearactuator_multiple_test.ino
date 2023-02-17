@@ -98,7 +98,7 @@ for(int i = 3; i > -1;i--){
 
 }
 
- delay(2000);
+ delay(100);
   //Serial.print("  Positions = ");
  // Serial.println(position_L[]);
 

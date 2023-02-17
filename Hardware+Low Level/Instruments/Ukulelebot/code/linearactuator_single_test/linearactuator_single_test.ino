@@ -30,16 +30,16 @@ position_LA = analogRead(A3);  // read the input on analog pin 0:
 Serial.println(position_LA);
 
 
-if((position_LA >= prev) && position_LA < 750)
+if(/*(position_LA >= prev) && */position_LA < 750)
   {
-    fwd(50);
+    fwd(10);
   }
 
-else if (( position_LA < prev) && position_LA > 250)
+else if (/*( position_LA < prev) &&*/ position_LA > 250)
 {
-  rev(50);
+  rev(10);
 }
-delay(20);
+delay(200);
  
   Serial.print("  Position LA  = ");
   Serial.println(position_LA);

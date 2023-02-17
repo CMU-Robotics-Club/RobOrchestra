@@ -18,10 +18,10 @@ int percussionLen = 1000; //Overwritten in setup
 int chordVolume = 100;
 
 MIDIReader_hash hashreader;
-int precision = 20; //Time discretization. NOT statelength
+int precision = 30; //Time discretization. NOT statelength
 
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
-int statelength = 20  ; //INPUT
+int statelength = 2  ; //INPUT
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!

@@ -8,6 +8,7 @@ int channel = 0; //channel xylobot is on
 int noteLen = 5;
 
 int pitch = 60;
+int maxpitch = 72;
 Note mynote = null;
 
 Serial mySerial;
@@ -57,7 +58,7 @@ void draw() {
               //sends note to Xylobot 
               myBus.sendNoteOn(mynote);
               pitch++;
-              if (pitch > 72){pitch = 60;}
+              if (pitch > maxpitch){pitch = 60;}
                 
          }
     }
