@@ -34,15 +34,14 @@ void loop()
   unsigned int x = pixy.ccc.blocks[0].m_x; //from 1 to 316??
   unsigned int y = pixy.ccc.blocks[0].m_y; //from 1 to 208??
 
-  
-
   fx = w*fx + (1-w)*x;
   fy = w*fy + (1-w)*y;
 
-  bool xmax = (oldx > oldoldx && oldx > fx);
-  bool xmin = (oldx < oldoldx && oldx < fx);
-  bool ymax = (oldy > oldoldy && oldy > fy);
-  bool ymin = (oldy < oldoldy && oldy < fy);
+  float thresh = 0.03;
+  bool xmax = (oldx > oldoldx + thresh && oldx > fx + thresh);
+  bool xmin = (oldx < oldoldx - thresh && oldx < fx - thresh);
+  bool ymax = (oldy > oldoldy + thresh && oldy > fy + thresh);
+  bool ymin = (oldy < oldoldy - thresh && oldy < fy - thresh);
 
   
   if( (xmax || xmin || ymax || ymin) && (width*height > 0 && cooldown <= 0) ){
