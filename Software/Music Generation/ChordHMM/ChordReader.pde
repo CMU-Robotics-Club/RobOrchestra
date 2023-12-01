@@ -11,6 +11,8 @@ import java.io.PrintWriter;
 
 import javax.sound.midi.MetaMessage;
 import javax.sound.midi.MidiEvent;
+//TODO: delete
+// unknown function
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;

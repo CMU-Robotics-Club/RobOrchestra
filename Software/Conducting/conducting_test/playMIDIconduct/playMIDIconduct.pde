@@ -41,7 +41,7 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, 0, 2); //Creates bus to send MIDI data to xylobot
+  myBus = new MidiBus(this, 0, 1); //Creates bus to send MIDI data to xylobot
   intervals = new ArrayList<Long>();
   bpm = 0; //  intervals.size() * 60.0 / threshold;
   millisPerBeat = 0;  //intervals.size() * 60.0 / threshold;

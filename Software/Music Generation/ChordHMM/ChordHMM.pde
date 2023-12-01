@@ -1,7 +1,7 @@
 import themidibus.*; //Import midi library
 
 MarkovChain<ChordState> mc;
-ChordState mystate;
+ComparableIntArr mystate;
 
 MidiBus myBus; //Creates a MidiBus object
 MidiBus compBus; //Creates a MidiBus object
@@ -27,6 +27,7 @@ public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
+HMM<ComparableIntArr> hmm;
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 2); //Melody
@@ -40,40 +41,47 @@ void setup(){
   
   
   //MIDIReader reader = new MIDIReader(myFile, new int[]{0}, statelength);
-  ChordReader reader = new ChordReader(myFile, new int[]{1}, statelength); //The "1" is an INPUT (melody reader track(s) )
-  mc = new MarkovChain(reader.states, reader.transitions);
-  println(reader.states);
+  MIDIReader_hash midireader_hash = new MIDIReader_hash(myFile, new int[]{0}, precision);
+  MIDIReaderPlusChords mrpc = new MIDIReaderPlusChords(myFile, new int[]{0}, 1, midireader_hash);
+  hmm = new HMM<ComparableIntArr>(midireader_hash.chords, midireader_hash.transitions, mrpc.states, mrpc.transitions);
+  //ChordReader reader = new ChordReader(myFile, new int[]{1}, statelength); //The "1" is an INPUT (melody reader track(s) )
+  //mc = new MarkovChain(reader.states, reader.transitions);
+  //println(reader.states);
 
-  mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
-  println(mc.objects.size());
-  for(int i = 0; i < mc.objects.size(); i++){
-    println(i);
-    printArray(mc.probs[i]);
-  }
+  mystate = hmm.objects.get((int)(Math.random()*hmm.objects.size()));
+  //println(mc.objects.size());
+  //for(int i = 0; i < mc.objects.size(); i++){
+  //  println(i);
+  //  printArray(mc.probs[i]);
+  //}
 
-  //TODO: Currently dead code, consider resurrecting
-  //Get percussion beat length by iterating the Markov chain a lot to get a common length value
-  ChordState tempstate = mc.objects.get((int)(Math.random()*mc.objects.size()));
-  for(int x = 0; x < 100; x++){
-    tempstate = mc.getNext(tempstate);
-  }
-  percussionLen = tempstate.lengths[tempstate.lengths.length-1];
+  ////TODO: Currently dead code, consider resurrecting
+  ////Get percussion beat length by iterating the Markov chain a lot to get a common length value
+  //ChordState tempstate = mc.objects.get((int)(Math.random()*mc.objects.size()));
+  //for(int x = 0; x < 100; x++){
+  //  tempstate = mc.getNext(tempstate);
+  //}
+  //percussionLen = tempstate.lengths[tempstate.lengths.length-1];
   //thread("playPercussion");
+  
+  
 }
 
 void draw(){
-  mystate = mc.getNext(mystate);
-  int pitch = mystate.roots[mystate.roots.length-1];
-  int type = mystate.types[mystate.types.length-1];
-  pitch = pitch%12 + 60; //Wrap to fit Xylobot
-  int len = mystate.lengths[mystate.lengths.length-1];
-  Note note = new Note(channel, pitch, velocity);
+  mystate = hmm.getNext(mystate);
+  State myNote = hmm.getNote(mystate);
+  int chordRoot = mystate.value[0];
+  int type = mystate.value[1];
+  chordRoot = chordRoot%12 + 60; //Wrap to fit Xylobot
+  int melodyPitch = myNote.pitches[myNote.pitches.length-1];
+  int len = myNote.lengths[myNote.lengths.length-1];
+  Note note = new Note(channel, melodyPitch, velocity);
   
-  int[] myChord = {pitch, type};
+  int[] myChord = {chordRoot, type};
   PlayNoteThread t = new PlayNoteThread(note, len, sendNoteOffCommands, myChord);
   t.start();
   
-  delay((int)(lenmult*mystate.delays[mystate.delays.length-1]));
+  delay((int)(lenmult*myNote.delays[myNote.delays.length-1]));
 }
 
 void playPercussion(){
