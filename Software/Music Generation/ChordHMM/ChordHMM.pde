@@ -67,8 +67,10 @@ void draw(){
   int type = mystate.value[1];
   chordRoot = chordRoot%12 + 60; //Wrap to fit Xylobot
   int melodyPitch = myNote.pitches[myNote.pitches.length-1];
+  /* broken low e
   if (melodyPitch == 64)
     melodyPitch = 76;
+   */
   int len = myNote.lengths[myNote.lengths.length-1];
   Note note = new Note(channel, melodyPitch, velocity);
   
