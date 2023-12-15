@@ -41,8 +41,8 @@ public class MIDIReader_hash{
   
   //Defaults to a 1 note state and a 1 length state
   public MIDIReader_hash(File file, int[] toRead, int p){
-    ComparableIntArr firstChord;
-    ComparableIntArr] newChord;
+    ComparableIntArr firstChord = null;
+    ComparableIntArr newChord = null;
     ComparableIntArr oldChord = null;
     precision = p;
     try{  
@@ -112,6 +112,7 @@ public class MIDIReader_hash{
              {  
                newChord = new ComparableIntArr(ChordDetection.findChordWrapped(notesPlaying.toArray(new ShortMessage[notesPlaying.size()])));
                chords.add(newChord);
+               transitions.add(new ArrayList<ComparableIntArr>());
                firstChord = newChord;
              }
               else
@@ -124,6 +125,9 @@ public class MIDIReader_hash{
                   chords.add(newChord);
                   transitions.add(new ArrayList<ComparableIntArr>());
                 }
+                //System.out.println(transitions);
+                //System.out.println(chords);
+                assert(chords.contains(oldChord));
                 transitions.get(chords.indexOf(oldChord)).add(newChord);
               }
               oldChord = newChord;

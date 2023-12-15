@@ -28,7 +28,6 @@ class PlayNoteThread extends Thread{
   private void scaleOn(int[] c){
     //println(c[0]);
     //println(c[1]);
-    
     double r = Math.random();
     //if(r > 0.25) return;
     

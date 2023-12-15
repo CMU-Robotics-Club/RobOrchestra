@@ -21,14 +21,14 @@ MIDIReader_hash hashreader;
 int precision = 30; //Time discretization. NOT statelength
 
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
-int statelength = 2  ; //INPUT
+int statelength = 20  ; //INPUT
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 1);
+  compBus = new MidiBus(this, 0, 2);
   
-  File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
+  File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("Despacito5.mid"));
   
   File chordFile = myFile;
@@ -42,7 +42,7 @@ void setup(){
   mystate = mc.objects.get((int)(Math.random()*mc.objects.size()));
   println(mc.objects.size());
 
-  hashreader = new MIDIReader_hash(chordFile, new int[]{1}, precision); //The "1" is an INPUT (harmony reader track(s) )
+  hashreader = new MIDIReader_hash(chordFile, new int[]{2}, precision); //The "1" is an INPUT (harmony reader track(s) )
   //hashreader = new MIDIReader_hash(chordFile, new int[]{4}, precision);
   
   Object[] timestamps = hashreader.mMap.keySet().toArray();
@@ -65,6 +65,14 @@ void draw(){
   mystate = mc.getNext(mystate);
   int pitch = mystate.pitches[mystate.pitches.length-1];
   pitch = pitch%12 + 60;
+  // broken low e 
+  /*
+  if (pitch == 64) 
+  {
+    pitch = 76;
+  }
+  */
+  System.out.println(pitch);
   int len = mystate.lengths[mystate.lengths.length-1];
   Note note = new Note(channel, pitch, velocity);
   ShortMessage[] chordArray;

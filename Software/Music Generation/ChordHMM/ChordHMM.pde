@@ -9,7 +9,7 @@ int channel = 0; //set channel. 0 for speakers
 int velocity = 120; //melody note volume
 
 double legato = 0.9;
-double lenmult = 0.2; //Note length multiplier (to speed up/slow down output)
+double lenmult = 1; //Note length multiplier (to speed up/slow down output)
 boolean sendNoteOffCommands = false;
 boolean percussionNoteOff = false;
 
@@ -30,30 +30,23 @@ public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#",
 HMM<ComparableIntArr> hmm;
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 2); //Melody
-  compBus = new MidiBus(this, 0, 1); //Harmony
+  myBus = new MidiBus(this, 0, 1); //Melody
+  compBus = new MidiBus(this, 0, 2); //Harmony
   
-  File myFile = new File(dataPath("MuseScore Midi/Demons-Imagine_Dragons.mid")); //INPUT
+  File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("Despacito5.mid"));
   
   File chordFile = myFile;
   //chordFile = new File(dataPath("CMajChordTest.mid"));
+  System.out.println("chordFile");
   
+  MIDIReader_hash midireader_hash = new MIDIReader_hash(chordFile, new int[]{2}, precision);
+
+  MIDIReaderPlusChords mrpc = new MIDIReaderPlusChords(myFile, new int[]{1}, 1, midireader_hash, midireader_hash.chords);
   
-  //MIDIReader reader = new MIDIReader(myFile, new int[]{0}, statelength);
-  MIDIReader_hash midireader_hash = new MIDIReader_hash(myFile, new int[]{0}, precision);
-  MIDIReaderPlusChords mrpc = new MIDIReaderPlusChords(myFile, new int[]{0}, 1, midireader_hash);
-  hmm = new HMM<ComparableIntArr>(midireader_hash.chords, midireader_hash.transitions, mrpc.states, mrpc.transitions);
-  //ChordReader reader = new ChordReader(myFile, new int[]{1}, statelength); //The "1" is an INPUT (melody reader track(s) )
-  //mc = new MarkovChain(reader.states, reader.transitions);
-  //println(reader.states);
+  hmm = new HMM<ComparableIntArr>(mrpc.chords, mrpc.transitionsToChords, mrpc.states, mrpc.transitions);
 
   mystate = hmm.objects.get((int)(Math.random()*hmm.objects.size()));
-  //println(mc.objects.size());
-  //for(int i = 0; i < mc.objects.size(); i++){
-  //  println(i);
-  //  printArray(mc.probs[i]);
-  //}
 
   ////TODO: Currently dead code, consider resurrecting
   ////Get percussion beat length by iterating the Markov chain a lot to get a common length value
@@ -74,6 +67,8 @@ void draw(){
   int type = mystate.value[1];
   chordRoot = chordRoot%12 + 60; //Wrap to fit Xylobot
   int melodyPitch = myNote.pitches[myNote.pitches.length-1];
+  if (melodyPitch == 64)
+    melodyPitch = 76;
   int len = myNote.lengths[myNote.lengths.length-1];
   Note note = new Note(channel, melodyPitch, velocity);
   

@@ -4,6 +4,8 @@
 //When note ends, set the end
 //Whenever the first note is complete, add it to buffer, compute Markov chain stuff then do recursion to check next note...
 
+//TODO: use to get transitions and transitions to states
+
 import java.io.File;
 import java.util.Arrays;
 
@@ -31,6 +33,7 @@ public class MIDIReaderPlusChords{
   ArrayList<State> states = new ArrayList<State>();
   ArrayList<ComparableIntArr> chords = new ArrayList<ComparableIntArr>();
   ArrayList<ArrayList<State>> transitions = new ArrayList<ArrayList<State>>();
+  ArrayList<ArrayList<ComparableIntArr>> transitionsToChords = new ArrayList<ArrayList<ComparableIntArr>>();
   double mspertick;
   int noteCount;
   
@@ -42,13 +45,19 @@ public class MIDIReaderPlusChords{
   private State prevState = null;
   private ArrayList<PartialNote> initialNotes = new ArrayList<PartialNote>();
   private MIDIReader_hash midireader_hash;
-  
+  private ComparableIntArr oldChord = null;
+  private ComparableIntArr firstChord = null;
   //public MIDIReaderPlusChords(File file){
   //  this(file, new int[] {0}, 1, );
   //}
   
   //One state, storing stateLength notes/pitches. Assumes they overlap
-  public MIDIReaderPlusChords(File file, int[] toRead, int stateLength, MIDIReader_hash mrh){
+  public MIDIReaderPlusChords(File file, int[] toRead, int stateLength, MIDIReader_hash mrh, ArrayList<ComparableIntArr> chordsIn){
+    //chords = chordsIn;
+    //for (int i = 0; i < chordsIn.size(); i++)
+    //{
+    //  transitions.add(new ArrayList<State>());
+    //}
     noteCount = 0;
     try{
       Sequence sequence = MidiSystem.getSequence(file);
@@ -171,7 +180,6 @@ public class MIDIReaderPlusChords{
           //if(timeBuffer[x] < 10){timeBuffer[x] = 10;}
           if(timeBuffer[x] > 1){timeBuffer[x] = 1;}
         }*/
-          
         if(pitchBuffer.length == stateLength){
           State s = new State(pitchBuffer, lengthBuffer, delayBuffer, timeBuffer);
           long time = timeBuffer[stateLength - 1] / midireader_hash.precision * midireader_hash.precision;
@@ -179,10 +187,32 @@ public class MIDIReaderPlusChords{
           ComparableIntArr chord = new ComparableIntArr(ChordDetection.findChordWrapped(prechord.toArray(new ShortMessage[prechord.size()])));
           
           if(!chords.contains(chord)){
+            
             chords.add(chord);
             transitions.add(new ArrayList<State>());
+            transitionsToChords.add(new ArrayList<ComparableIntArr>());
           }
+          if (!states.contains(s))
+          {
+            states.add(s);
+          }
+          //System.out.println(s);
           transitions.get(chords.indexOf(chord)).add(s);
+          
+          if (oldChord == null)
+          {
+              // probably not needed
+             firstChord = chord;
+          }
+          else
+          {
+            //System.out.println(chords);
+            //System.out.println(transitionsToChords);
+            //System.out.println(oldChord);
+            //System.out.println(chord);
+            transitionsToChords.get(chords.indexOf(oldChord)).add(chord);
+          }
+          oldChord = chord;
         }
         
         //If it's one of the first notes, store it

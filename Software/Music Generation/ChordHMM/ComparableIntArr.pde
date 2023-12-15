@@ -42,4 +42,19 @@ public class ComparableIntArr implements Comparable<ComparableIntArr>
       }
     }
   }
+  
+  public String toString()
+  {
+    String res = "[";
+    for (int x = 0; x < value.length; x++){
+      res += value[x];
+      if(x < value.length-1)
+      {
+        res += ", ";
+      }
+    }
+    res += "]";
+    return res;
+  }
+  
 }

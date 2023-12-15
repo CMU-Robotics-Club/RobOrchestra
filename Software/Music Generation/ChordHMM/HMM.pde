@@ -23,7 +23,7 @@ public class HMM<T extends Comparable<T>>{
             ArrayList templ = transitions.get(y);
             transitions.set(y, transitions.get(y-1));
             transitions.set(y-1, templ);
-            templ = transitions.get(y);
+            templ = transitionsToStates.get(y);
             transitionsToStates.set(y, transitionsToStates.get(y-1));
             transitionsToStates.set(y-1, templ);
          }
@@ -56,6 +56,7 @@ public class HMM<T extends Comparable<T>>{
        }
     }
     //Compute probabilities based on list of transitions
+    System.out.println("states size: " + states.size());
     probsToStates = new double[chords.size()][states.size()];
     for(int x = 0; x < chords.size(); x++){
       int total = transitionsToStates.get(x).size();
@@ -65,6 +66,9 @@ public class HMM<T extends Comparable<T>>{
         probsToStates[x][0] = 1; //So arbitrarily always go to first state
       }
       for(int y = 0; y < total; y++){
+        //System.out.println(states);
+        //System.out.println(transitionsToStates.get(x).get(y));
+        //System.out.println(transitionsToStates.get(x));
         probsToStates[x][states.indexOf(transitionsToStates.get(x).get(y))] += 1.0/total;
       }
     }
