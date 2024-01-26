@@ -30,8 +30,6 @@ public static class ChordDetection{
   //Returns second number for chord type --> see list above
   public static int[] findChord(ShortMessage[] arr){
     int[] out = findChordWrapped(arr);
-    printArray(out);
-    println();
     if(out[1] != -1){
       /*for(int x = 0; x < 12; x++){
         //prevMajorMinorArr[x] = out[1];
@@ -66,7 +64,6 @@ public static class ChordDetection{
       }
     }
     
-    printArray(chordTest);
     
     //If no notes are detected
     if(chordTest[0] == -1) return new int[]{-1, -1};

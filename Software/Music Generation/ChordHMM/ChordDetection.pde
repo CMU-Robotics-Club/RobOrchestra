@@ -66,7 +66,7 @@ public static class ChordDetection{
       }
     }
     
-    printArray(chordTest);
+    //printArray(chordTest);
     
     //If no notes are detected
     if(chordTest[0] == -1) return new int[]{-1, -1};
