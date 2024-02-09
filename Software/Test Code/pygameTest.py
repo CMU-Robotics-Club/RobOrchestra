@@ -1,5 +1,6 @@
 import pygame
 from pygame import midi
+import torch
 import time
 
 def main():
