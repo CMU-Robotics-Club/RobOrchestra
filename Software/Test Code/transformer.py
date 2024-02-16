@@ -62,6 +62,8 @@ from torch import nn, Tensor
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.utils.data import dataset
 
+import pygameTest2
+
 class TransformerModel(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
@@ -188,9 +190,14 @@ vocab.set_default_index(vocab['<unk>'])
 def data_process(raw_text_iter: dataset.IterableDataset) -> Tensor:
     """Converts raw text into a flat Tensor."""
     print(type(raw_text_iter))
-    # data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in range(len())]
 
     data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+
+    print(type(data))  #This is a giant tensor
+    print(pygameTest2.main())
+    return torch.tensor(pygameTest2.main())
+    #print(data)
+
     return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
 
 # ``train_iter`` was "consumed" by the process of building the vocab,
@@ -201,9 +208,12 @@ val_data = data_process(val_iter)
 
 test_data = data_process(test_iter)
 torch.set_printoptions(profile="full")
-print(type(train_iter))
 
-assert(False)
+#print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+#print(type(train_iter))
+#print(type(train_data))
+
+#assert(False)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def batchify(data: Tensor, bsz: int) -> Tensor:
@@ -217,9 +227,17 @@ def batchify(data: Tensor, bsz: int) -> Tensor:
     Returns:
         Tensor of shape ``[N // bsz, bsz]``
     """
-    seq_len = data.size(0) // bsz
+    print(data)
+    print(data.size)
+    print(data.size(0))
+    seq_len = data.size(0) // bsz #Input length 57, seq len = 2 (57//20)
     data = data[:seq_len * bsz]
-    data = data.view(bsz, seq_len).t().contiguous()
+    print(data)
+#    data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
+    data = data.view(seq_len, bsz).contiguous() #Fixed?
+
+    print(data)
+    #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     return data.to(device)
 
 batch_size = 20
@@ -315,10 +333,19 @@ def train(model: nn.Module) -> None:
     start_time = time.time()
 
     num_batches = len(train_data) // bptt
+    #print(type(train_data))
+    #print(train_data)
+    #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
         data, targets = get_batch(train_data, i)
         output = model(data)
         output_flat = output.view(-1, ntokens)
+        # print("Data")
+        # print(data)
+        # print("Output?")
+        # print(output_flat.size()) #20 by 28782. We have 20 inputs
+        # print(output_flat[0][60:80])
+        # print(output_flat[1][60:80])
         loss = criterion(output_flat, targets)
 
         optimizer.zero_grad()
@@ -347,15 +374,26 @@ def evaluate(model: nn.Module, eval_data: Tensor) -> float:
             seq_len = data.size(0)
             output = model(data)
             output_flat = output.view(-1, ntokens)
+            print("Data")
+            print(data)
+            print("Output?")
+            print(output_flat.size()) #20 by 28782. We have 20 inputs
+            print(output_flat[0][60:80])
+            print(output_flat[1][60:80])
+            print(output_flat[17][60:80])
+            print(output_flat[18][60:80])
+            print(output_flat[19][60:80])
+
             total_loss += seq_len * criterion(output_flat, targets).item()
-    return total_loss / (len(eval_data) - 1)
+    return total_loss / (len(eval_data) - 1) #Looks like they throw out one of the batches in train and eval. Not sure why...
 
 ######################################################################
 # Loop over epochs. Save the model if the validation loss is the best
 # we've seen so far. Adjust the learning rate after each epoch.
 
+
 best_val_loss = float('inf')
-epochs = 3
+epochs = 300
 
 with TemporaryDirectory() as tempdir:
     best_model_params_path = os.path.join(tempdir, "best_model_params.pt")

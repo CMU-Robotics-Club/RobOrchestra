@@ -63,77 +63,78 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.utils.data import dataset
 
 import pygameTest2
+from TransformerModel import TransformerModel
 
-class TransformerModel(nn.Module):
+# class TransformerModel(nn.Module):
 
-    def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
-                 nlayers: int, dropout: float = 0.5):
-        super().__init__()
-        self.model_type = 'Transformer'
-        self.pos_encoder = PositionalEncoding(d_model, dropout)
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.embedding = nn.Embedding(ntoken, d_model)
-        self.d_model = d_model
-        self.linear = nn.Linear(d_model, ntoken)
+#     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
+#                  nlayers: int, dropout: float = 0.5):
+#         super().__init__()
+#         self.model_type = 'Transformer'
+#         self.pos_encoder = PositionalEncoding(d_model, dropout)
+#         encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
+#         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+#         self.embedding = nn.Embedding(ntoken, d_model)
+#         self.d_model = d_model
+#         self.linear = nn.Linear(d_model, ntoken)
 
-        self.init_weights()
+#         self.init_weights()
 
-    def init_weights(self) -> None:
-        initrange = 0.1
-        self.embedding.weight.data.uniform_(-initrange, initrange)
-        self.linear.bias.data.zero_()
-        self.linear.weight.data.uniform_(-initrange, initrange)
+#     def init_weights(self) -> None:
+#         initrange = 0.1
+#         self.embedding.weight.data.uniform_(-initrange, initrange)
+#         self.linear.bias.data.zero_()
+#         self.linear.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src: Tensor, src_mask: Tensor = None) -> Tensor:
-        """
-        Arguments:
-            src: Tensor, shape ``[seq_len, batch_size]``
-            src_mask: Tensor, shape ``[seq_len, seq_len]``
+#     def forward(self, src: Tensor, src_mask: Tensor = None) -> Tensor:
+#         """
+#         Arguments:
+#             src: Tensor, shape ``[seq_len, batch_size]``
+#             src_mask: Tensor, shape ``[seq_len, seq_len]``
 
-        Returns:
-            output Tensor of shape ``[seq_len, batch_size, ntoken]``
-        """
-        src = self.embedding(src) * math.sqrt(self.d_model)
-        src = self.pos_encoder(src)
-        if src_mask is None:
-            """Generate a square causal mask for the sequence. The masked positions are filled with float('-inf').
-            Unmasked positions are filled with float(0.0).
-            """
-            src_mask = nn.Transformer.generate_square_subsequent_mask(len(src)).to(device)
-        output = self.transformer_encoder(src, src_mask)
-        output = self.linear(output)
-        return output
+#         Returns:
+#             output Tensor of shape ``[seq_len, batch_size, ntoken]``
+#         """
+#         src = self.embedding(src) * math.sqrt(self.d_model)
+#         src = self.pos_encoder(src)
+#         if src_mask is None:
+#             """Generate a square causal mask for the sequence. The masked positions are filled with float('-inf').
+#             Unmasked positions are filled with float(0.0).
+#             """
+#             src_mask = nn.Transformer.generate_square_subsequent_mask(len(src)).to(device)
+#         output = self.transformer_encoder(src, src_mask)
+#         output = self.linear(output)
+#         return output
 
 
-######################################################################
-# ``PositionalEncoding`` module injects some information about the
-# relative or absolute position of the tokens in the sequence. The
-# positional encodings have the same dimension as the embeddings so that
-# the two can be summed. Here, we use ``sine`` and ``cosine`` functions of
-# different frequencies.
-#
+# ######################################################################
+# # ``PositionalEncoding`` module injects some information about the
+# # relative or absolute position of the tokens in the sequence. The
+# # positional encodings have the same dimension as the embeddings so that
+# # the two can be summed. Here, we use ``sine`` and ``cosine`` functions of
+# # different frequencies.
+# #
 
-class PositionalEncoding(nn.Module):
+# class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
-        super().__init__()
-        self.dropout = nn.Dropout(p=dropout)
+#     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
+#         super().__init__()
+#         self.dropout = nn.Dropout(p=dropout)
 
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
+#         position = torch.arange(max_len).unsqueeze(1)
+#         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+#         pe = torch.zeros(max_len, 1, d_model)
+#         pe[:, 0, 0::2] = torch.sin(position * div_term)
+#         pe[:, 0, 1::2] = torch.cos(position * div_term)
+#         self.register_buffer('pe', pe)
 
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-        """
-        x = x + self.pe[:x.size(0)]
-        return self.dropout(x)
+#     def forward(self, x: Tensor) -> Tensor:
+#         """
+#         Arguments:
+#             x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+#         """
+#         x = x + self.pe[:x.size(0)]
+#         return self.dropout(x)
 
 
 ######################################################################
@@ -195,7 +196,7 @@ def data_process(raw_text_iter: dataset.IterableDataset) -> Tensor:
 
     print(type(data))  #This is a giant tensor
     print(pygameTest2.main())
-    return torch.tensor(pygameTest2.main())
+    return torch.tensor(pygameTest2.main()*5)
     #print(data)
 
     return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
@@ -378,11 +379,9 @@ def evaluate(model: nn.Module, eval_data: Tensor) -> float:
             print(data)
             print("Output?")
             print(output_flat.size()) #20 by 28782. We have 20 inputs
-            print(output_flat[0][60:80])
-            print(output_flat[1][60:80])
-            print(output_flat[17][60:80])
-            print(output_flat[18][60:80])
-            print(output_flat[19][60:80])
+            for i in [0, 1, 17, 18, 19]:
+                print(i)
+                print(output_flat[i][60:80])
 
             total_loss += seq_len * criterion(output_flat, targets).item()
     return total_loss / (len(eval_data) - 1) #Looks like they throw out one of the batches in train and eval. Not sure why...
@@ -428,3 +427,20 @@ print('=' * 89)
 print(f'| End of training | test loss {test_loss:5.2f} | '
       f'test ppl {test_ppl:8.2f}')
 print('=' * 89)
+
+model.save("auldlangsynebot.model")
+
+def playStuff(model):
+    while(True):
+        song = [72]
+        output = model(torch.tensor(song))
+        print(output)
+
+        output_flat = output.view(-1, ntokens)
+        newnote = torch.argmax(output_flat[len(song)-1])
+        print(newnote)
+        
+        song = song + [newnote]
+
+
+playStuff(model)

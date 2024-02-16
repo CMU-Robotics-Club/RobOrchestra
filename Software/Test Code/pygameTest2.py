@@ -11,8 +11,8 @@ def main():
 
     #Playback - either comment out block or open SimpleSynth
     otpts = mido.get_output_names()
-    assert(len(otpts) > 0)
-    outport = mido.open_output(otpts[0])
+    #assert(len(otpts) > 0)
+    #outport = mido.open_output(otpts[0])
 
     lis = []
     for msg in mdata.tracks[1]:
