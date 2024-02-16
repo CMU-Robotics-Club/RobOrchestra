@@ -49,7 +49,6 @@ def sampleNote(probarray):
     p = random.random()
     ind = minnote
     while p > 0 and ind <= maxnote:
-        print(ind)
         p -= float(probarray[ind]/normconst)
         ind += 1
     return ind-1
