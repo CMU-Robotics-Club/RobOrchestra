@@ -296,7 +296,7 @@ def get_batch(source: Tensor, i: int) -> Tuple[Tensor, Tensor]:
 # equal to the length of the vocab object.
 #
 
-ntokens = len(vocab)  # size of vocabulary
+ntokens = 100  # size of vocabulary
 emsize = 200  # embedding dimension
 d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
 nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
@@ -430,17 +430,17 @@ print('=' * 89)
 
 model.save("auldlangsynebot.model")
 
-def playStuff(model):
-    while(True):
-        song = [72]
-        output = model(torch.tensor(song))
-        print(output)
+# def playStuff(model):
+#     while(True):
+#         song = [72]
+#         output = model(torch.tensor(song))
+#         print(output)
 
-        output_flat = output.view(-1, ntokens)
-        newnote = torch.argmax(output_flat[len(song)-1])
-        print(newnote)
+#         output_flat = output.view(-1, ntokens)
+#         newnote = torch.argmax(output_flat[len(song)-1])
+#         print(newnote)
         
-        song = song + [newnote]
+#         song = song + [newnote]
 
 
-playStuff(model)
+# playStuff(model)

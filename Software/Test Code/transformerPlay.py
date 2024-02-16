@@ -31,7 +31,7 @@ train_iter = WikiText2(split='train')
 tokenizer = get_tokenizer('basic_english')
 vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
 
-ntokens = len(vocab)  # size of vocabulary
+ntokens = 100  # size of vocabulary
 emsize = 200  # embedding dimension
 d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
 nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
