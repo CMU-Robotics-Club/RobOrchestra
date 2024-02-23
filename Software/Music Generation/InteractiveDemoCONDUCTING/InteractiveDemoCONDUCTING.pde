@@ -144,7 +144,7 @@ long startTime = System.currentTimeMillis();
 void setup() {
   surface.setSize(380 * scale, 278 * scale);
   cp5 = new ControlP5(this);
-  myBus = new MidiBus(this, 0, 2);
+  myBus = new MidiBus(this, 0, 1`);
   MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
@@ -154,7 +154,7 @@ void setup() {
    printArray(Serial.list());
    String[] devs = Serial.list();
    //int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[1], 115200); //9600 for chromatic, 115200 for theremin
+   mySerial = new Serial( this, devs[2], 115200); //9600 for chromatic, 115200 for theremin
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   

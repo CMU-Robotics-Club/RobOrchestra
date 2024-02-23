@@ -38,13 +38,14 @@ long mintimestamp = 0;
 
 void setup(){
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 2);
-  compBus = new MidiBus(this, 0, 2);
+  myBus = new MidiBus(this, 0, 1);
+  compBus = new MidiBus(this, 0, 2); //Does nothing???
+  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
-  //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
   //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
-  File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
+  //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   
   try{
     Sequence sequence = MidiSystem.getSequence(myFile);
@@ -79,7 +80,7 @@ void setup(){
     }*/
     
     for(int trackNumber = 0; trackNumber < tracks.length; trackNumber++){
-      threads[trackNumber] = new PlayChannelThread(myFile, trackNumber);
+      threads[trackNumber] = new PlayChannelThread(myFile, trackNumber, myBus);
     }
     for(int trackNumber = 0; trackNumber < tracks.length; trackNumber++){
       threads[trackNumber].start();
