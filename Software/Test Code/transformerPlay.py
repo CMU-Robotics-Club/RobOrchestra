@@ -19,6 +19,7 @@ from torchtext.vocab import build_vocab_from_iterator
 
 import pygame
 from pygame import midi
+import mido
 import torch
 import time
 
@@ -58,13 +59,19 @@ def playStuff(model):
     assert(pygame.midi.get_init())
     print('test')
 
+    mido.set_backend('mido.backends.rtmidi')
+    midi.init()
+    otpts = mido.get_output_names()
+    assert(len(otpts) > 0)
+    outport = mido.open_output(otpts[0])  
+    
     nDevices = midi.get_count()
     print(nDevices)
     for devnum in range(nDevices):
         print(midi.get_device_info(devnum))
 
     myBus = midi.Output(0)
-    compBus = myBus#midi.Output(0)
+    # compBus = myBus#midi.Output(0)
 
     # for p in range(60, 73):
     #     myBus.note_on(p, velocity=100, channel=0)
@@ -91,9 +98,10 @@ def playStuff(model):
         
         song = song + [newnote]
         print(song)
-
+        # outport.send(mido.Message('note_on', note=newnote, velocity=100, channel=0))
         myBus.note_on(newnote, velocity=100, channel=0)
         time.sleep(0.5)
         myBus.note_off(newnote, velocity=100, channel=0)
+        # outport.send(mido.Message('note_off', note=newnote, velocity=100, channel=0))
 
 playStuff(model)
