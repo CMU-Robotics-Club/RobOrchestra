@@ -9,8 +9,8 @@ int channel = 0; //channel xylobot is on
 int noteLen = 1000; //set note length in milliseconds
 
 //Bounds on range (MIDI values)
-int lo = 56; //60 = middle C (C4)
-int hi = 62; //76 = E5
+int lo = 60; //60 = middle C (C4)
+int hi = 76; //76 = E5
 
 //Parameters
 int nreps = 1; //Number of times to repeat each note

@@ -11,12 +11,14 @@ class PlayChannelThread extends Thread{
   private int[] delayBuffer = new int[0];
   private long[] timeBuffer = new long[0];
   
-  public PlayChannelThread(File inFile, int trackNumber){
+  private MidiBus myBus;
+    
+  public PlayChannelThread(File inFile, int trackNumber, MidiBus m){
     myFile = inFile;
     trackNumbers = new int[1];
     trackNumbers[0] = trackNumber;
 
-    
+    myBus = m;
   }
   
   public void run(){
@@ -142,11 +144,16 @@ catch(IOException e){
         activeNotes.remove(p);
         
         //NEW in PlaySong - play the finished note
+        channel = 0;
+        if(p.pitch > 30 && p.pitch < 40){
+          //Percussion, send on channel 1
+          channel = 1;
+        }
         Note snareNote = new Note(channel, p.pitch, globalVolume);
         int[] chord = {-1, -1};
         println(trackNumbers);
         println(p);
-        PlayNoteThread t = new PlayNoteThread(snareNote, p.len, sendNoteOffCommands, chord);
+        PlayNoteThread t = new PlayNoteThread(snareNote, p.len, sendNoteOffCommands, chord, myBus);
         t.start();
         delay(p.delay);
       }
