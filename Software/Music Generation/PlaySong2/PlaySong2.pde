@@ -35,58 +35,39 @@ boolean sendNoteOffCommands = true;
 int stateLength = 1000  ; //INPUT
 
 long mintimestamp = 0;
+int nChannels = 0;
+double mspertick;
+MidiEvent[] nextevents;
 
 void setup(){
-  MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 1);
-  compBus = new MidiBus(this, 0, 2); //Does nothing???
+  //Time-based or event-based? Try time-based first, shouldn't be hard to switch
+  //Get next message from all channels
+  //While true, check all next messages
+  //If any happen now or earlier, apply them, get next next message, check it immediately
+  //If out of messages, set next message to null
+  //Have a stopLoop variable, default true, set to false if we're not out of messages
   
+  
+  
+  MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
+  myBus = new MidiBus(this, 0, 1);  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
-  //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
   //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
-  File myFile = new File(dataPath("Undertale_-_Megalovania2.mid")); //INPUT
+  //File myFile = new File(dataPath("Undertale_-_Megalovania2.mid")); //INPUT
   
   try{
-    Sequence sequence = MidiSystem.getSequence(myFile);
+    Sequence sequence = MidiSystem.getSequence(myFile);      
+    mspertick = 1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000;
+    
           
     Track[] tracks = sequence.getTracks();
     PlayChannelThread[] threads = new PlayChannelThread[tracks.length];
     
-    /*for(int trackNumber = 0; trackNumber < tracks.length; trackNumber++){
-        Track track = tracks[trackNumber];
-      
-      //TODO start thread here
-      System.out.println("Track " + trackNumber + ": size = " + track.size());
-      System.out.println();
-      for (int i=0; i < track.size(); i++) { 
-          MidiEvent event = track.get(i);
-          long timestamp = event.getTick();
-          MidiMessage message = event.getMessage();
-          if (message instanceof ShortMessage) {
-              ShortMessage sm = (ShortMessage) message;
-              if (sm.getCommand() == NOTE_ON) {
-                  
-                  if(sm.getData2() > 0){ //Make sure you're not just setting the velocity to 0...
-                    if(mintimestamp == -1 || timestamp < mintimestamp){
-                      println(timestamp);
-                      mintimestamp = timestamp;
-                      //break;
-                    }
-                  }
-              }
-          }
-      }
-    }*/
-    
-    for(int trackNumber = 0; trackNumber < tracks.length; trackNumber++){
-      threads[trackNumber] = new PlayChannelThread(myFile, trackNumber, myBus);
-    }
-    for(int trackNumber = 0; trackNumber < tracks.length; trackNumber++){
-      threads[trackNumber].start();
-    }
-  
+    nChannels = threads.length;
+    //test David doing stuff
   }
   catch(InvalidMidiDataException e){
     println("Bad file input");
@@ -99,5 +80,7 @@ void setup(){
 }
 
 void draw(){
-  //Do nothing, we've played everything in setup
+  boolean endSong = true;
+  
+  
 }
