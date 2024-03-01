@@ -67,20 +67,20 @@ void loop()
   }/**/
   
   if(millis() - clock1 > stickdown){
-    servo_near.write(100);
+    servo_near.write(110);
   }
   if(millis() - clock2 > stickdown){
-    servo_middle.write(120); //Second servo's reversed, so 120 is up
+    servo_middle.write(80); //Second servo's reversed, so 120 is up
   }
 }
 
 void hit() {
   clock1 = millis();
-  servo_near.write(110);
+  servo_near.write(100);
 }
 
 
 void hit2() {
   clock2 = millis();
-  servo_middle.write(80);
+  servo_middle.write(120);
 }
