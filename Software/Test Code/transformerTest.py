@@ -252,14 +252,15 @@ def main(songname):
         print(data)
     #    data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
         data = data.view(seq_len, bsz).contiguous() #Fixed?
+        return data.to(device)
 
-batch_size = 20 #Setting to 20 fails on alternating CDCDCD (gets stuck on one note). 21 works there. Indexing issue??
-eval_batch_size = batch_size
-print(train_data)
+    batch_size = 20 #Setting to 20 fails on alternating CDCDCD (gets stuck on one note). 21 works there. Indexing issue??
+    eval_batch_size = batch_size
+    print(train_data)
 
-train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
-val_data = batchify(val_data, eval_batch_size)
-test_data = batchify(test_data, eval_batch_size)
+    train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
+    val_data = batchify(val_data, eval_batch_size)
+    test_data = batchify(test_data, eval_batch_size)
 
 
     ######################################################################
@@ -310,12 +311,12 @@ test_data = batchify(test_data, eval_batch_size)
     # equal to the length of the vocab object.
     #
 
-    ntokens = 100  # size of vocabulary
-    emsize = 200  # embedding dimension
-    d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-    nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+    ntokens = 128  # size of vocabulary
+    emsize = 1024  # embedding dimension
+    d_hid = 1024  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    nlayers = 3  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
     nhead = 2  # number of heads in ``nn.MultiheadAttention``
-    dropout = 0.2  # dropout probability
+    dropout = 0.1  # dropout probability
     model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 
 
