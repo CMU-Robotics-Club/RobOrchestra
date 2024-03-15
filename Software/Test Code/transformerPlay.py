@@ -22,9 +22,10 @@ from pygame import midi
 import mido
 import torch
 import time
-
+import sys
+import glob
 import random
-
+import transformerTest
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -40,7 +41,32 @@ nhead = 2  # number of heads in ``nn.MultiheadAttention``
 dropout = 0.2  # dropout probability
 model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 
-model.load("auldlangsynebot.model")
+def get_file():
+    assert(len(sys.argv) > 0)
+    files = glob.glob(sys.argv[1])
+    assert(len(files) > 0)
+    return files[0]
+
+def get_song_name(filename):
+    return filename.split(".")[0]
+
+filename = get_file()
+
+def get_model():
+
+    songname = get_song_name(filename)
+    model_list = glob.glob(songname + ".model")
+    print(model_list)
+    if len(model_list) > 0:
+        model.load(songname + ".model")
+    else:
+        transformerTest.main(songname)
+        model.load(songname + ".model")
+        
+
+# model.load("auldlangsynebot.model")
+get_model()
+
 
 def sampleNote(probarray):
     minnote = 60 #C4
@@ -82,11 +108,12 @@ def playStuff(model):
     #     myBus.note_off(p+7, velocity=100, channel=0)
 
 
-    song = [72]
+    song = [55]
     while(True):
         
         output = model(torch.tensor(song))
-
+        print(output.view(-1, ntokens))
+        assert(False)
         output_flat = output.view(-1, ntokens)
         #print(output_flat.size())
         newnote = int(torch.argmax(output_flat[len(song)-1]))
@@ -98,10 +125,10 @@ def playStuff(model):
         
         song = song + [newnote]
         print(song)
-        # outport.send(mido.Message('note_on', note=newnote, velocity=100, channel=0))
-        myBus.note_on(newnote, velocity=100, channel=0)
+        outport.send(mido.Message('note_on', note=newnote, velocity=100, channel=0))
+        # myBus.note_on(newnote, velocity=100, channel=0)
         time.sleep(0.5)
-        myBus.note_off(newnote, velocity=100, channel=0)
+        # myBus.note_off(newnote, velocity=100, channel=0)
         # outport.send(mido.Message('note_off', note=newnote, velocity=100, channel=0))
 
 playStuff(model)

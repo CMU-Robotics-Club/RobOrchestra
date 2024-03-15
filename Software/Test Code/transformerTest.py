@@ -65,6 +65,7 @@ from torch.utils.data import dataset
 import pygameTest2
 from TransformerModel import TransformerModel
 
+
 # class TransformerModel(nn.Module):
 
 #     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
@@ -182,265 +183,280 @@ from TransformerModel import TransformerModel
 from torchtext.datasets import WikiText2
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
+import mido
+import sys
+import glob
+import copy
 
-train_iter = WikiText2(split='train')
-tokenizer = get_tokenizer('basic_english')
-vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
-vocab.set_default_index(vocab['<unk>'])
+def main(songname):
+    def get_notes(filename):
+        mdata = mido.MidiFile(filename)
+        lis = []
+        for i in range(len(mdata.tracks)):
+            lis.append([])
+            for msg in mdata.tracks[i]:
+                if msg.type == 'note_on' and msg.velocity > 0:
+                    lis[i].append(msg.note)
 
-def data_process(raw_text_iter: dataset.IterableDataset) -> Tensor:
-    """Converts raw text into a flat Tensor."""
-    print(type(raw_text_iter))
+        for i in range(len(mdata.tracks)):
+            
+            print(f"{i}: {mdata.tracks[i].name} (length {len(lis[i])})")
 
-    data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+        track = int(input(("Enter track num: ")))
+        return lis[track]
 
-    print(type(data))  #This is a giant tensor
-    print(pygameTest2.main())
-    return torch.tensor(pygameTest2.main()*5)
-    #print(data)
+    # train_iter = WikiText2(split='train')
+    # tokenizer = get_tokenizer('basic_english')
+    # vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
+    # vocab.set_default_index(vocab['<unk>'])
 
-    return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+    def data_process() -> Tensor:
+        """Converts raw text into a flat Tensor."""
+        # print(type(raw_text_iter))
 
-# ``train_iter`` was "consumed" by the process of building the vocab,
-# so we have to create it again
-train_iter, val_iter, test_iter = WikiText2()
-train_data = data_process(train_iter)
-val_data = data_process(val_iter)
+        # data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
 
-test_data = data_process(test_iter)
-torch.set_printoptions(profile="full")
+        # print(type(data))  #This is a giant tensor
+        # print(pygameTest2.main())
+        return torch.tensor(get_notes(songname + ".mid"))
 
-#print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-#print(type(train_iter))
-#print(type(train_data))
+    # ``train_iter`` was "consumed" by the process of building the vocab,
+    # so we have to create it again
+    # train_iter, val_iter, test_iter = WikiText2()
 
-#assert(False)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # val_data = data_process(val_iter)
+    # test_data = data_process(test_iter)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def batchify(data: Tensor, bsz: int) -> Tensor:
-    """Divides the data into ``bsz`` separate sequences, removing extra elements
-    that wouldn't cleanly fit.
+    train_data = data_process()
+    val_data = copy.deepcopy(train_data)
+    test_data = copy.deepcopy(train_data)
+    torch.set_printoptions(profile="full")
 
-    Arguments:
-        data: Tensor, shape ``[N]``
-        bsz: int, batch size
+    def batchify(data: Tensor, bsz: int) -> Tensor:
+        """Divides the data into ``bsz`` separate sequences, removing extra elements
+        that wouldn't cleanly fit.
 
-    Returns:
-        Tensor of shape ``[N // bsz, bsz]``
-    """
-    print(data)
-    print(data.size)
-    print(data.size(0))
-    seq_len = data.size(0) // bsz #Input length 57, seq len = 2 (57//20)
-    data = data[:seq_len * bsz]
-    print(data)
-#    data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
-    data = data.view(seq_len, bsz).contiguous() #Fixed?
+        Arguments:
+            data: Tensor, shape ``[N]``
+            bsz: int, batch size
 
-    print(data)
-    #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-    return data.to(device)
+        Returns:
+            Tensor of shape ``[N // bsz, bsz]``
+        """
+        print(data)
+        print(data.size)
+        print(data.size(0))
+        seq_len = data.size(0) // bsz #Input length 57, seq len = 2 (57//20)
+        data = data[:seq_len * bsz]
+        print(data)
+    #    data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
+        data = data.view(seq_len, bsz).contiguous() #Fixed?
 
-batch_size = 20
-eval_batch_size = 10
-train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
-val_data = batchify(val_data, eval_batch_size)
-test_data = batchify(test_data, eval_batch_size)
+        print(data)
+        #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        return data.to(device)
 
-
-######################################################################
-# Functions to generate input and target sequence
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-
-
-######################################################################
-# ``get_batch()`` generates a pair of input-target sequences for
-# the transformer model. It subdivides the source data into chunks of
-# length ``bptt``. For the language modeling task, the model needs the
-# following words as ``Target``. For example, with a ``bptt`` value of 2,
-# we’d get the following two Variables for ``i`` = 0:
-#
-# .. image:: ../_static/img/transformer_input_target.png
-#
-# It should be noted that the chunks are along dimension 0, consistent
-# with the ``S`` dimension in the Transformer model. The batch dimension
-# ``N`` is along dimension 1.
-#
-
-bptt = 35
-def get_batch(source: Tensor, i: int) -> Tuple[Tensor, Tensor]:
-    """
-    Args:
-        source: Tensor, shape ``[full_seq_len, batch_size]``
-        i: int
-
-    Returns:
-        tuple (data, target), where data has shape ``[seq_len, batch_size]`` and
-        target has shape ``[seq_len * batch_size]``
-    """
-    seq_len = min(bptt, len(source) - 1 - i)
-    data = source[i:i+seq_len]
-    target = source[i+1:i+1+seq_len].reshape(-1)
-    return data, target
+    batch_size = 20
+    eval_batch_size = 10
+    train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
+    val_data = batchify(val_data, eval_batch_size)
+    test_data = batchify(test_data, eval_batch_size)
 
 
-######################################################################
-# Initiate an instance
-# --------------------
-#
+    ######################################################################
+    # Functions to generate input and target sequence
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #
 
 
-######################################################################
-# The model hyperparameters are defined below. The ``vocab`` size is
-# equal to the length of the vocab object.
-#
+    ######################################################################
+    # ``get_batch()`` generates a pair of input-target sequences for
+    # the transformer model. It subdivides the source data into chunks of
+    # length ``bptt``. For the language modeling task, the model needs the
+    # following words as ``Target``. For example, with a ``bptt`` value of 2,
+    # we’d get the following two Variables for ``i`` = 0:
+    #
+    # .. image:: ../_static/img/transformer_input_target.png
+    #
+    # It should be noted that the chunks are along dimension 0, consistent
+    # with the ``S`` dimension in the Transformer model. The batch dimension
+    # ``N`` is along dimension 1.
+    #
 
-ntokens = 100  # size of vocabulary
-emsize = 200  # embedding dimension
-d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
-nhead = 2  # number of heads in ``nn.MultiheadAttention``
-dropout = 0.2  # dropout probability
-model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
+    bptt = 35
+    def get_batch(source: Tensor, i: int) -> Tuple[Tensor, Tensor]:
+        """
+        Args:
+            source: Tensor, shape ``[full_seq_len, batch_size]``
+            i: int
+
+        Returns:
+            tuple (data, target), where data has shape ``[seq_len, batch_size]`` and
+            target has shape ``[seq_len * batch_size]``
+        """
+        seq_len = min(bptt, len(source) - 1 - i)
+        data = source[i:i+seq_len]
+        target = source[i+1:i+1+seq_len].reshape(-1)
+        return data, target
 
 
-######################################################################
-# Run the model
-# -------------
-#
+    ######################################################################
+    # Initiate an instance
+    # --------------------
+    #
 
 
-######################################################################
-# We use `CrossEntropyLoss <https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html>`__
-# with the `SGD <https://pytorch.org/docs/stable/generated/torch.optim.SGD.html>`__
-# (stochastic gradient descent) optimizer. The learning rate is initially set to
-# 5.0 and follows a `StepLR <https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.StepLR.html>`__
-# schedule. During training, we use `nn.utils.clip_grad_norm\_ <https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html>`__
-# to prevent gradients from exploding.
-#
+    ######################################################################
+    # The model hyperparameters are defined below. The ``vocab`` size is
+    # equal to the length of the vocab object.
+    #
 
-import time
+    ntokens = 100  # size of vocabulary
+    emsize = 200  # embedding dimension
+    d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+    nhead = 2  # number of heads in ``nn.MultiheadAttention``
+    dropout = 0.2  # dropout probability
+    model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 
-criterion = nn.CrossEntropyLoss()
-lr = 5.0  # learning rate
-optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
-def train(model: nn.Module) -> None:
-    model.train()  # turn on train mode
-    total_loss = 0.
-    log_interval = 200
-    start_time = time.time()
+    ######################################################################
+    # Run the model
+    # -------------
+    #
 
-    num_batches = len(train_data) // bptt
-    #print(type(train_data))
-    #print(train_data)
-    #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
-        data, targets = get_batch(train_data, i)
-        output = model(data)
-        output_flat = output.view(-1, ntokens)
-        # print("Data")
-        # print(data)
-        # print("Output?")
-        # print(output_flat.size()) #20 by 28782. We have 20 inputs
-        # print(output_flat[0][60:80])
-        # print(output_flat[1][60:80])
-        loss = criterion(output_flat, targets)
 
-        optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-        optimizer.step()
+    ######################################################################
+    # We use `CrossEntropyLoss <https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html>`__
+    # with the `SGD <https://pytorch.org/docs/stable/generated/torch.optim.SGD.html>`__
+    # (stochastic gradient descent) optimizer. The learning rate is initially set to
+    # 5.0 and follows a `StepLR <https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.StepLR.html>`__
+    # schedule. During training, we use `nn.utils.clip_grad_norm\_ <https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html>`__
+    # to prevent gradients from exploding.
+    #
 
-        total_loss += loss.item()
-        if batch % log_interval == 0 and batch > 0:
-            lr = scheduler.get_last_lr()[0]
-            ms_per_batch = (time.time() - start_time) * 1000 / log_interval
-            cur_loss = total_loss / log_interval
-            ppl = math.exp(cur_loss)
-            print(f'| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | '
-                  f'lr {lr:02.2f} | ms/batch {ms_per_batch:5.2f} | '
-                  f'loss {cur_loss:5.2f} | ppl {ppl:8.2f}')
-            total_loss = 0
-            start_time = time.time()
+    import time
 
-def evaluate(model: nn.Module, eval_data: Tensor) -> float:
-    model.eval()  # turn on evaluation mode
-    total_loss = 0.
-    with torch.no_grad():
-        for i in range(0, eval_data.size(0) - 1, bptt):
-            data, targets = get_batch(eval_data, i)
-            seq_len = data.size(0)
+    criterion = nn.CrossEntropyLoss()
+    lr = 5.0  # learning rate
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
+
+    def train(model: nn.Module) -> None:
+        model.train()  # turn on train mode
+        total_loss = 0.
+        log_interval = 200
+        start_time = time.time()
+
+        num_batches = len(train_data) // bptt
+        #print(type(train_data))
+        #print(train_data)
+        #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
+            data, targets = get_batch(train_data, i)
             output = model(data)
             output_flat = output.view(-1, ntokens)
-            print("Data")
-            print(data)
-            print("Output?")
-            print(output_flat.size()) #20 by 28782. We have 20 inputs
-            for i in [0, 1, 17, 18, 19]:
-                print(i)
-                print(output_flat[i][60:80])
+            # print("Data")
+            # print(data)
+            # print("Output?")
+            # print(output_flat.size()) #20 by 28782. We have 20 inputs
+            # print(output_flat[0][60:80])
+            # print(output_flat[1][60:80])
+            loss = criterion(output_flat, targets)
 
-            total_loss += seq_len * criterion(output_flat, targets).item()
-    return total_loss / (len(eval_data) - 1) #Looks like they throw out one of the batches in train and eval. Not sure why...
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+            optimizer.step()
 
-######################################################################
-# Loop over epochs. Save the model if the validation loss is the best
-# we've seen so far. Adjust the learning rate after each epoch.
+            total_loss += loss.item()
+            if batch % log_interval == 0 and batch > 0:
+                lr = scheduler.get_last_lr()[0]
+                ms_per_batch = (time.time() - start_time) * 1000 / log_interval
+                cur_loss = total_loss / log_interval
+                ppl = math.exp(cur_loss)
+                print(f'| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | '
+                    f'lr {lr:02.2f} | ms/batch {ms_per_batch:5.2f} | '
+                    f'loss {cur_loss:5.2f} | ppl {ppl:8.2f}')
+                total_loss = 0
+                start_time = time.time()
 
+    def evaluate(model: nn.Module, eval_data: Tensor) -> float:
+        model.eval()  # turn on evaluation mode
+        total_loss = 0.
+        with torch.no_grad():
+            for i in range(0, eval_data.size(0) - 1, bptt):
+                data, targets = get_batch(eval_data, i)
+                seq_len = data.size(0)
+                output = model(data)
+                output_flat = output.view(-1, ntokens)
+                # print("Data")
+                # print(data)
+                # print("Output?")
+                # print(output_flat.size()) #20 by 28782. We have 20 inputs
+                # for i in [0, 1, 17, 18, 19]:
+                #     print(i)
+                #     print(output_flat[i][60:80])
 
-best_val_loss = float('inf')
-epochs = 300
+                total_loss += seq_len * criterion(output_flat, targets).item()
+        return total_loss / (len(eval_data) - 1) #Looks like they throw out one of the batches in train and eval. Not sure why...
 
-with TemporaryDirectory() as tempdir:
-    best_model_params_path = os.path.join(tempdir, "best_model_params.pt")
-
-    for epoch in range(1, epochs + 1):
-        epoch_start_time = time.time()
-        train(model)
-        val_loss = evaluate(model, val_data)
-        val_ppl = math.exp(val_loss)
-        elapsed = time.time() - epoch_start_time
-        print('-' * 89)
-        print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | '
-            f'valid loss {val_loss:5.2f} | valid ppl {val_ppl:8.2f}')
-        print('-' * 89)
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save(model.state_dict(), best_model_params_path)
-
-        scheduler.step()
-    model.load_state_dict(torch.load(best_model_params_path)) # load best model states
-
-
-######################################################################
-# Evaluate the best model on the test dataset
-# -------------------------------------------
-#
-
-test_loss = evaluate(model, test_data)
-test_ppl = math.exp(test_loss)
-print('=' * 89)
-print(f'| End of training | test loss {test_loss:5.2f} | '
-      f'test ppl {test_ppl:8.2f}')
-print('=' * 89)
-
-model.save("auldlangsynebot.model")
-
-# def playStuff(model):
-#     while(True):
-#         song = [72]
-#         output = model(torch.tensor(song))
-#         print(output)
-
-#         output_flat = output.view(-1, ntokens)
-#         newnote = torch.argmax(output_flat[len(song)-1])
-#         print(newnote)
-        
-#         song = song + [newnote]
+    ######################################################################
+    # Loop over epochs. Save the model if the validation loss is the best
+    # we've seen so far. Adjust the learning rate after each epoch.
 
 
-# playStuff(model)
+    best_val_loss = float('inf')
+    epochs = 300
+
+    with TemporaryDirectory() as tempdir:
+        best_model_params_path = os.path.join(tempdir, "best_model_params.pt")
+
+        for epoch in range(1, epochs + 1):
+            epoch_start_time = time.time()
+            train(model)
+            val_loss = evaluate(model, val_data)
+            val_ppl = math.exp(val_loss)
+            elapsed = time.time() - epoch_start_time
+            print('-' * 89)
+            print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | '
+                f'valid loss {val_loss:5.2f} | valid ppl {val_ppl:8.2f}')
+            print('-' * 89)
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                torch.save(model.state_dict(), best_model_params_path)
+
+            scheduler.step()
+        model.load_state_dict(torch.load(best_model_params_path)) # load best model states
+
+
+    ######################################################################
+    # Evaluate the best model on the test dataset
+    # -------------------------------------------
+    #
+
+    test_loss = evaluate(model, test_data)
+    test_ppl = math.exp(test_loss)
+    print('=' * 89)
+    print(f'| End of training | test loss {test_loss:5.2f} | '
+        f'test ppl {test_ppl:8.2f}')
+    print('=' * 89)
+    modelname = songname + ".model"
+    model.save(modelname)
+    print("Saved as " + modelname)
+    # def playStuff(model):
+    #     while(True):
+    #         song = [72]
+    #         output = model(torch.tensor(song))
+    #         print(output)
+
+    #         output_flat = output.view(-1, ntokens)
+    #         newnote = torch.argmax(output_flat[len(song)-1])
+    #         print(newnote)
+            
+    #         song = song + [newnote]
+
+
+    # playStuff(model)
