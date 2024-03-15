@@ -179,35 +179,46 @@ from TransformerModel import TransformerModel
 # ``G`` and ``F`` can not be learned in the example above.
 #
 
-from torchtext.datasets import WikiText2
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
+#from torchtext.datasets import WikiText2
+#from torchtext.data.utils import get_tokenizer
+#from torchtext.vocab import build_vocab_from_iterator
 
-train_iter = WikiText2(split='train')
-tokenizer = get_tokenizer('basic_english')
-vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
-vocab.set_default_index(vocab['<unk>'])
+#train_iter = WikiText2(split='train')
+#tokenizer = get_tokenizer('basic_english')
+#vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
+#vocab.set_default_index(vocab['<unk>'])
 
-def data_process(raw_text_iter: dataset.IterableDataset) -> Tensor:
-    """Converts raw text into a flat Tensor."""
-    print(type(raw_text_iter))
+# def data_process(raw_text_iter: dataset.IterableDataset) -> Tensor:
+#     """Converts raw text into a flat Tensor."""
+#     print(type(raw_text_iter))
 
-    data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+#     data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
 
-    print(type(data))  #This is a giant tensor
-    print(pygameTest2.main())
+#     print(type(data))  #This is a giant tensor
+#     print(pygameTest2.main())
+#     return torch.tensor(pygameTest2.main()*5)
+#     #print(data)
+
+#     return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+
+def data_process_pygame():
+    #print(pygameTest2.main())
     return torch.tensor(pygameTest2.main()*5)
-    #print(data)
-
-    return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
 
 # ``train_iter`` was "consumed" by the process of building the vocab,
 # so we have to create it again
-train_iter, val_iter, test_iter = WikiText2()
-train_data = data_process(train_iter)
-val_data = data_process(val_iter)
+# train_iter, val_iter, test_iter = WikiText2()
+# train_data = data_process(train_iter)
+# val_data = data_process(val_iter)
 
-test_data = data_process(test_iter)
+# test_data = data_process(test_iter)
+# torch.set_printoptions(profile="full")
+
+
+train_data = data_process_pygame()
+val_data = data_process_pygame()
+
+test_data = data_process_pygame()
 torch.set_printoptions(profile="full")
 
 #print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
@@ -241,8 +252,10 @@ def batchify(data: Tensor, bsz: int) -> Tensor:
     #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     return data.to(device)
 
-batch_size = 20
-eval_batch_size = 10
+batch_size = 20 #Setting to 20 fails on alternating CDCDCD (gets stuck on one note). 21 works there. Indexing issue??
+eval_batch_size = batch_size
+print(train_data)
+
 train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
 val_data = batchify(val_data, eval_batch_size)
 test_data = batchify(test_data, eval_batch_size)
@@ -296,12 +309,12 @@ def get_batch(source: Tensor, i: int) -> Tuple[Tensor, Tensor]:
 # equal to the length of the vocab object.
 #
 
-ntokens = 100  # size of vocabulary
-emsize = 200  # embedding dimension
-d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+ntokens = 128  # size of vocabulary
+emsize = 1024  # embedding dimension
+d_hid = 1024  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+nlayers = 3  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
 nhead = 2  # number of heads in ``nn.MultiheadAttention``
-dropout = 0.2  # dropout probability
+dropout = 0.1  # dropout probability
 model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 
 
@@ -374,7 +387,8 @@ def evaluate(model: nn.Module, eval_data: Tensor) -> float:
             data, targets = get_batch(eval_data, i)
             seq_len = data.size(0)
             output = model(data)
-            output_flat = output.view(-1, ntokens)
+            print(output.size())
+            output_flat = output.view(-1, ntokens) #Are we supposed to be flattening here?? What are we flattening?
             print("Data")
             print(data)
             print("Output?")

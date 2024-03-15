@@ -28,16 +28,16 @@ import random
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-train_iter = WikiText2(split='train')
-tokenizer = get_tokenizer('basic_english')
-vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
+#train_iter = WikiText2(split='train')
+#tokenizer = get_tokenizer('basic_english')
+#vocab = build_vocab_from_iterator(map(tokenizer, train_iter), specials=['<unk>'])
 
-ntokens = 100  # size of vocabulary
-emsize = 200  # embedding dimension
-d_hid = 200  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+ntokens = 128  # size of vocabulary
+emsize = 1024  # embedding dimension
+d_hid = 1024  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+nlayers = 3  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
 nhead = 2  # number of heads in ``nn.MultiheadAttention``
-dropout = 0.2  # dropout probability
+dropout = 0.1  # dropout probability
 model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 
 model.load("auldlangsynebot.model")
@@ -82,17 +82,25 @@ def playStuff(model):
     #     myBus.note_off(p+7, velocity=100, channel=0)
 
 
-    song = [72]
+    song = [72, 74, 72, 74, 72, 74]
     while(True):
         
-        output = model(torch.tensor(song))
+        # output = model(torch.tensor(song))
+        # print([song[-1]])
+        model.load("auldlangsynebot.model")
 
+        output = model(torch.tensor([72]))
+
+        print(output.size())
         output_flat = output.view(-1, ntokens)
-        #print(output_flat.size())
-        newnote = int(torch.argmax(output_flat[len(song)-1]))
+        print(output_flat.size())
+        #newnote = int(torch.argmax(output_flat[len(song)-1]))
+
+        #newnote = int(torch.argmax(output[output.size(0)-1][1])) #Pretty sure we're not supposed to flatten, and that from there we're misindexing
+        newnote = int(torch.argmax(output[0][0])) #Pretty sure we're not supposed to flatten, and that from there we're misindexing
 
         #TODO sample from output_flat instead
-        newnote = sampleNote(output_flat[len(song)-1])
+        #newnote = sampleNote(output_flat[len(song)-1])
 
         print(newnote)
         
