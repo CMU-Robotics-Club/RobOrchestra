@@ -253,15 +253,13 @@ def main(songname):
     #    data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
         data = data.view(seq_len, bsz).contiguous() #Fixed?
 
-        print(data)
-        #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-        return data.to(device)
+batch_size = 20 #Setting to 20 fails on alternating CDCDCD (gets stuck on one note). 21 works there. Indexing issue??
+eval_batch_size = batch_size
+print(train_data)
 
-    batch_size = 20
-    eval_batch_size = 10
-    train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
-    val_data = batchify(val_data, eval_batch_size)
-    test_data = batchify(test_data, eval_batch_size)
+train_data = batchify(train_data, batch_size)  # shape ``[seq_len, batch_size]``
+val_data = batchify(val_data, eval_batch_size)
+test_data = batchify(test_data, eval_batch_size)
 
 
     ######################################################################
