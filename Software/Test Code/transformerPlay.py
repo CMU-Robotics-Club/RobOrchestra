@@ -68,9 +68,12 @@ def get_model():
 get_model()
 
 
-def sampleNote(probarray):
-    minnote = 60 #C4
+def sampleNote(probarrayin):
+    minnote = 72 #C4
     maxnote = 84 #C6
+
+    probarray = torch.exp(probarrayin)
+    #probarray = probarrayin
 
     normconst = torch.sum(probarray[minnote:maxnote+1])
     p = random.random()
@@ -108,14 +111,21 @@ def playStuff(model):
     #     myBus.note_off(p+7, velocity=100, channel=0)
 
 
-    song = [72, 74, 72, 74, 72, 74]
+    song = [72, 74, 76, 77, 79, 81, 83, 84, 83, 81, 79, 77, 76, 74, 72, 72]
+    song = [67, 72, 72, 72, 76, 74, 72, 74, 76, 72, 72, 76, 79]
     while(True):
         
         # output = model(torch.tensor(song))
         # print([song[-1]])
-        model.load("auldlangsynebot.model")
+        #model.load("auldlangsynebot.model")
 
-        output = model(torch.tensor([72]))
+        #output = model(torch.tensor([72]))
+
+        #output = model(torch.tensor(song[-1])) #1024x1x128 #1024 = embedding size = hidden layer size
+
+        #output = model(torch.tensor(song[-1:])) #1x1x128 #When passing in whole song, size of output is nxnx128, n=length of song
+        #output = model(torch.tensor([song[-2:]]).t()) #2x2x128
+        output = model(torch.tensor([song[-5:]]).t()) #2x1x128
 
         print(output.size())
         output_flat = output.view(-1, ntokens)
@@ -123,9 +133,15 @@ def playStuff(model):
         #newnote = int(torch.argmax(output_flat[len(song)-1]))
 
         #newnote = int(torch.argmax(output[output.size(0)-1][1])) #Pretty sure we're not supposed to flatten, and that from there we're misindexing
-        newnote = int(torch.argmax(output[0][0])) #Pretty sure we're not supposed to flatten, and that from there we're misindexing
+        newnote = int(torch.argmax(output[-1][-1])) #Pretty sure we're not supposed to flatten, and that from there we're misindexing
+        #newnote = int(torch.argmax(output[0][-2])) #Giving thirds. Or duplicate notes. Depends on start state - start on thirds, stay on thirds, at least until 77 breaks stuff
+        #Second index of -2 tries to predict the note after the second-to-last note in the input
+        #No clue what the first index does
 
-        #TODO sample from output_flat instead
+        #newnote = sampleNote(output[-1][-1])
+
+        #print(output[0][-1][72:85])
+        #Sample from output_flat instead
         #newnote = sampleNote(output_flat[len(song)-1])
 
         print(newnote)

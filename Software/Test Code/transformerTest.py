@@ -21,6 +21,8 @@ can be easily adapted/composed.
 
 """
 
+#https://pytorch.org/tutorials/beginner/transformer_tutorial.html#run-the-model
+
 ######################################################################
 # Define the model
 # ----------------
@@ -244,17 +246,25 @@ def main(songname):
         Returns:
             Tensor of shape ``[N // bsz, bsz]``
         """
-        print(data)
-        print(data.size)
-        print(data.size(0))
+    #     print(data)
+    #     print(data.size)
+    #     print(data.size(0))
         seq_len = data.size(0) // bsz #Input length 57, seq len = 2 (57//20)
         data = data[:seq_len * bsz]
+        # print(data)
+        data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
+    #     data = data.view(seq_len, bsz).contiguous() #Fixed?
+
+        # datalen = data.size(0)
+        # temparr = []
+        # for i in range(datalen-bsz+1):
+        #     temparr.append(data[i:i+bsz].tolist())
+        # data = torch.tensor(temparr)
+        print("Batchify data")
         print(data)
-    #    data = data.view(bsz, seq_len).t().contiguous() #This is apparently splitting list with indices 1, 2, 3, ..., 40 into [1, 3, 5, 7, ..., 39] and [2, 4, 6, ..., 40]. Umm... is it supposed to do that??
-        data = data.view(seq_len, bsz).contiguous() #Fixed?
         return data.to(device)
 
-    batch_size = 20 #Setting to 20 fails on alternating CDCDCD (gets stuck on one note). 21 works there. Indexing issue??
+    batch_size = 5#20 #Setting to 20 fails on alternating CDCDCD (gets stuck on one note). 21 works there. Indexing issue??
     eval_batch_size = batch_size
     print(train_data)
 
@@ -283,7 +293,7 @@ def main(songname):
     # ``N`` is along dimension 1.
     #
 
-    bptt = 35
+    bptt = 10#35
     def get_batch(source: Tensor, i: int) -> Tuple[Tensor, Tensor]:
         """
         Args:
@@ -297,6 +307,12 @@ def main(songname):
         seq_len = min(bptt, len(source) - 1 - i)
         data = source[i:i+seq_len]
         target = source[i+1:i+1+seq_len].reshape(-1)
+        # print("Source")
+        # print(source)
+        # print("Data")
+        # print(data)
+        # print("Target")
+        # print(source[i+1:i+1+seq_len])
         return data, target
 
 
@@ -353,6 +369,8 @@ def main(songname):
         #print(train_data)
         #aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
+            #print("Train_data")
+            #print(train_data)
             data, targets = get_batch(train_data, i)
             output = model(data)
             output_flat = output.view(-1, ntokens)
