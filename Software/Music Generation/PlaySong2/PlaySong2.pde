@@ -54,7 +54,7 @@ void setup(){
   
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 1);  
+  myBus = new MidiBus(this, 0, 2);  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("Megalovania.mid")); //INPUT
