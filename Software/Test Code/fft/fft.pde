@@ -70,6 +70,9 @@ void draw()
 
 //This works, TODO do clever log space things eventually? (Take log of freq, then divide by 12thrt2)
 int MIDIfromPitch(double freq){
+  if(freq <= 10){
+    return 0;
+  }
   double twelfthrt2 = Math.pow(2, 1.0/12); //=1.something_small
   int midiA = 69;
   float freqA = 440;
