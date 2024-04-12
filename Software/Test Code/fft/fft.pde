@@ -17,7 +17,8 @@ int midi;
 ArrayList<Integer> notes;
 int maxLength = 10;
 float ampScale = 800;
-float ampThreshold = .03 * ampScale;
+
+float ampThreshold = 0.03;
 //float[] spectrum = new float[bands];
 
 Note oldNote = null;
@@ -65,7 +66,7 @@ void draw()
 { 
   //fft.analyze(spectrum);
   float freq = pd.analyze();
-  float amplitude = ampScale * amp.analyze();
+  float amplitude = amp.analyze();
   System.out.println(amplitude);
   
   //for(int i = 0; i < bands; i++)
@@ -80,7 +81,7 @@ void draw()
     stroke(255, 0, 0);
     line(x-1, height - yOld, x, height - y);
     stroke(0, 0, 255);
-    line(x-1, height - ampOld, x, height - amplitude);
+    line(x-1, height - ampOld * ampScale, x, height - amplitude * ampScale);
     ampOld = amplitude;
     //System.out.println(freq);
   
