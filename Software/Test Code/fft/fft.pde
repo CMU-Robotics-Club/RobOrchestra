@@ -2,7 +2,7 @@ import processing.sound.*;
 import themidibus.*;;
 import java.util.ArrayList;
 
-FFT fft;
+FFT fft; //Not used, we're using PitchDetector apparently
 AudioIn in;
 PitchDetector pd;
 MidiBus myBus;
@@ -17,21 +17,33 @@ int midi;
 ArrayList<Integer> notes;
 int maxLength = 10;
 float ampScale = 800;
-float ampThreshold = 0.03 * ampScale;
+float ampThreshold = .03 * ampScale;
 //float[] spectrum = new float[bands];
 
 Note oldNote = null;
 
+SinOsc osc;
+Sound s;
+
 void setup()
 {
+
   size(1000, 800);
   background(255);
   System.out.println(Sound.list());
+  
+  Sound s = new Sound(this);
+  s.outputDevice(4); //Warning about static method seems fine probably
+  
   // Create an Input stream which is routed into the Amplitude analyzer
   //fft = new FFT(this, bands);
-  pd = new PitchDetector(this, 0.55);
+  pd = new PitchDetector(this, 0.55); //Last arg is confidence - increase to filter out more garbage
   in = new AudioIn(this, 0);
   amp = new Amplitude(this);
+
+  osc = new SinOsc(this);
+  osc.freq(440);
+  osc.play();
   
   myBus = new MidiBus(this, 0, 2);
   MidiBus.list();
@@ -87,27 +99,62 @@ void draw()
     //}
     //myBus.sendNoteOn(newNote);
     //oldNote = newNote;
+    
+      Note newNote = new Note(0, midi, 0); //Low volume for now so we don't pick up ourself
+      if (oldNote != null){
+        myBus.sendNoteOff(oldNote);
+      }
+      myBus.sendNoteOn(newNote);
+      oldNote = newNote;
+      
+      osc.freq((float)pitchFromMIDI(midi));
+      osc.play();
+      println(MIDIfromPitch(y));
   }
+  else{
+    osc.stop();
+  }
+
+
+  delay(10);
   
   //System.out.println(notes);
 }
 
-//This works, TODO do clever log space things eventually? (Take log of freq, then divide by 12thrt2)
 int MIDIfromPitch(double freq){
   if(freq <= 10){
     return 0;
   }
-  double twelfthrt2 = Math.pow(2, 1.0/12); //=1.something_small
+  
+  double logfreq = Math.log(freq);
+  double log12thrt2 = Math.log(Math.pow(2, 1.0/12));
+  int freqA = 440;
+  double logfreqA = Math.log(freqA);
   int midiA = 69;
-  float freqA = 440;
-  int midi = midiA;
-  while(freq > freqA*Math.sqrt(twelfthrt2)){
-    freq /= twelfthrt2;
-    midi++;
-  }
-  while(freq < freqA/Math.sqrt(twelfthrt2)){
-    freq *= twelfthrt2;
-    midi--;
-  }
+  
+  //Factors of 12thrt2 turn into multiples of log12thrt2 in log space
+  //logfreq of 0 corresponds to freq of 1 (e^0 = 1)
+  int midi = (int) Math.round(logfreq/log12thrt2 - logfreqA/log12thrt2 + midiA);
+  
+  //assert(midi == MIDIfromPitch(freq));
   return midi;
+}
+
+double pitchFromMIDI(int midi){
+  if(midi <= 0){
+    return 0;
+  }
+  
+  // midi = logfreq/log12thrt2 - logfreqA/log12thrt2 + midiA
+  //logfreq = (midi - midiA + logfreqA/log12thrt2)*log12thrt2
+  
+  double log12thrt2 = Math.log(Math.pow(2, 1.0/12));
+  int freqA = 440;
+  double logfreqA = Math.log(freqA);
+  int midiA = 69;
+  
+  double logfreq = (midi - midiA + logfreqA/log12thrt2)*log12thrt2;
+  double freq = Math.exp(logfreq);
+  
+  return freq;
 }

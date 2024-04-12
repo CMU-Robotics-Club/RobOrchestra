@@ -57,10 +57,11 @@ void setup(){
   myBus = new MidiBus(this, 0, 2);  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
+  File myFile = new File(dataPath("twinkle_twinkle_melody.mid")); //INPUT
   //File myFile = new File(dataPath("Megalovania.mid")); //INPUT
   //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
-  File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
   
   try{
     Sequence sequence = MidiSystem.getSequence(myFile);      
