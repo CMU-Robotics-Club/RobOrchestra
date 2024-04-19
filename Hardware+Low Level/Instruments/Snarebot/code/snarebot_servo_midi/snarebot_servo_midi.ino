@@ -45,7 +45,7 @@ void setup()
   servo_middle.attach(4);
 
   //Initialize to up
-  servo_near.write(95);
+  servo_near.write(110);
   servo_middle.write(120);
 
   MIDI.setHandleNoteOn(handleNoteOn);
@@ -67,7 +67,7 @@ void loop()
   }/**/
   
   if(millis() - clock1 > stickdown){
-    servo_near.write(110);
+    servo_near.write(125);
   }
   if(millis() - clock2 > stickdown){
     servo_middle.write(80); //Second servo's reversed, so 120 is up
