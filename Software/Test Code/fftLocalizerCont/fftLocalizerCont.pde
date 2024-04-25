@@ -34,12 +34,11 @@ int msPerMeasure = 1600; //Probably about 2000??
 int msPerBucket = msPerMeasure/bucketsPerMeasure;
 double beatThresh = 0.1; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
 
-int oldtime; //Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
+int oldtime = millis(); //Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
 int pitch = 0;
-double temponoise = 0.5; //TODO do something better than just noise/2 at +/-1, go see if Processing has a Gaussian table or something
 
-double beatSD = 1; //SD on Gaussians for whether we heard a beat (in #buckets)
-double tempoSD = 1; //SD on Gaussians around moving through time (in #buckets)
+double beatSD = 0.5; //SD on Gaussians for whether we heard a beat (in #buckets)
+double tempoSD = 0.5; //SD on Gaussians around moving through time (in #buckets)
 
 void setup()
 {
@@ -112,19 +111,11 @@ void setup()
 
 void draw()
 {
-  oldtime = millis();
-  int newtime = oldtime;
-  boolean isBeat = false;
-  while(newtime%msPerBucket >= oldtime%msPerBucket){
-    oldtime = newtime;
-    newtime = millis();
-    //Wait and listen for high amplitude
-    if(amp.analyze() > beatThresh){
-      //System.out.println("Beat");
-      isBeat = true;
-    }
-    delay(msPerBucket/10); //Small wait - should get 10 reads per cycle. (Slightly less since code doesn't run instantaneously)
-  }
+  int newtime = millis();
+  float t = (float)(newtime - oldtime)/msPerBucket;
+  oldtime = newtime;
+  
+  boolean isBeat = amp.analyze() > beatThresh;
   
   //Compute new probs
   double[] newprobs = new double[bucketsPerMeasure];
@@ -134,17 +125,21 @@ void draw()
     newprobs[i] = 0;
   }
 
+  //Going to bucket i from bucket j in time t (t is in buckets and likely small)
   for(int i = 0; i < bucketsPerMeasure; i++){
     
     for(int j = 0; j < bucketsPerMeasure; j++){
-     int disp = min(abs( (i-j)%bucketsPerMeasure), abs( (j-i)%bucketsPerMeasure));
+      
+      //Ugly brute-force mod stuff because wraparound is annoying!
+      float[] stuffToTry = {abs( (i-(j+t)+bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+t)-i+bucketsPerMeasure)%bucketsPerMeasure), abs( (i-(j+t)-bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+t)-i-bucketsPerMeasure)%bucketsPerMeasure)};
+     float disp = min(stuffToTry);
      //Disp = #buckets off from i that we are
-      newprobs[(i+1)%bucketsPerMeasure] += probs[j]*GaussPDF(disp, 0, tempoSD);
+      newprobs[i] += probs[j]*GaussPDF(disp, 0, tempoSD);
    }
    
     
     //Move forward one bucket and add noise
-    newprobs[i] = temponoise/2*probs[(i-2+bucketsPerMeasure)%bucketsPerMeasure] + (1-temponoise)*probs[(i-1+bucketsPerMeasure)%bucketsPerMeasure] + (temponoise/2)*probs[(i-0+bucketsPerMeasure)%bucketsPerMeasure];
+    //newprobs[i] = temponoise/2*probs[(i-2+bucketsPerMeasure)%bucketsPerMeasure] + (1-temponoise)*probs[(i-1+bucketsPerMeasure)%bucketsPerMeasure] + (temponoise/2)*probs[(i-0+bucketsPerMeasure)%bucketsPerMeasure];
     //Update based on hearing beats or not (Bayes)
     if(isBeat){
       newprobs[i] *= beatProbs[i];
@@ -188,6 +183,8 @@ void draw()
   System.out.println(oldtime);
   
   System.out.println(isBeat);
+  
+  delay(msPerBucket/8);
 }
 
 int MIDIfromPitch(double freq){
