@@ -26,7 +26,7 @@ Note oldNote = null;
 SinOsc osc;
 Sound s;
 
-int bucketsPerMeasure = 16; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
+int bucketsPerMeasure = 64; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
 int nTempoBuckets = 16;
 double[] probs = new double[bucketsPerMeasure];
 double[][] probs2 = new double[bucketsPerMeasure][nTempoBuckets];
@@ -34,7 +34,7 @@ double[] beatProbs = new double[bucketsPerMeasure]; //P(location | heard a beat)
 int[] playMe = new int[bucketsPerMeasure];
 
 int minMsPerMeasure = 800;
-int maxMsPerMeasure = 3200;
+int maxMsPerMeasure = 6400;
 int[] msPerBucket = new int[nTempoBuckets];
 
 //int msPerMeasure = 1600; //Probably about 2000??
@@ -44,18 +44,16 @@ double beatThresh = 0.1; //Amplitude threshold to be considered a beat; TODO tun
 int oldtime = millis(); //Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
 int pitch = 0;
 
-double beatSD = 0.5; //SD on Gaussians for whether we heard a beat (in #buckets)
-double tempoSD = 0.5; //SD on Gaussians around moving through time (in #buckets)
-double dtempoSD = 0.5;
+double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
+
+double beatSD = 1; //SD on Gaussians for whether we heard a beat (in #buckets)
+double tempoSD = 1; //SD on Gaussians around moving through time (in #buckets)
+double dtempoSD = 1;
 
 void setup()
 {
   size(1000, 800);
   background(255);
-  System.out.println(Sound.list());
-  
-  Sound s = new Sound(this);
-  s.outputDevice(4); //Warning about static method seems fine probably
   
   // Create an Input stream which is routed into the Amplitude analyzer
   //fft = new FFT(this, bands);
@@ -84,16 +82,17 @@ void setup()
   
   int minMsPerMeasure = 800;
   int maxMsPerMeasure = 3200;
-  int[] msPerBucket = new int[nTempoBuckets];
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
     msPerBucket[i] = (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerMeasure;
+    assert(msPerBucket[i] > 0);
   }
  
  for(int i = 0; i < bucketsPerMeasure; i++){
    probs[i] = 1.0/bucketsPerMeasure;
    for(int j = 0; j < nTempoBuckets; j++){
      probs2[i][j] = 1.0/bucketsPerMeasure/nTempoBuckets;
+     //println(probs2[i][j]);
    }
    playMe[i] = 0;
    beatProbs[i] = 0.01; //We'll normalize this later
@@ -105,11 +104,11 @@ void setup()
  playMe[bucketsPerMeasure/2] = 67;
  playMe[bucketsPerMeasure*3/4] = 72;
  
- for(int i = 0; i < bucketsPerMeasure*3/4; i+=bucketsPerMeasure/4){
+ for(int i = 0; i < bucketsPerMeasure*1/4; i+=bucketsPerMeasure/4){
    for(int j = 0; j < bucketsPerMeasure; j++){
      int disp = min(abs( (i-j)%bucketsPerMeasure), abs( (j-i)%bucketsPerMeasure));
      //Disp = #buckets off from i that we are
-     beatProbs[j] += GaussPDF(disp, 0, beatSD);
+     beatProbs[j] += beatprobamp * GaussPDF(disp, 0, beatSD);
    }
    /*beatProbs[i] = 10;
    //Add some probability for being adjacent to a beat when we hear something
@@ -138,36 +137,32 @@ void draw()
   boolean isBeat = amp.analyze() > beatThresh;
   
   //Compute new probs
-  double[] newprobs = new double[bucketsPerMeasure];
   double[][] newprobs2 = new double[bucketsPerMeasure][nTempoBuckets];
   double newprobsum = 0;
   
   for(int i = 0; i < bucketsPerMeasure; i++){
-    newprobs[i] = 0;
+    for(int j = 0; j < nTempoBuckets; j++){
+      newprobs2[i][j] = 0;
+    }
   }
 
   //Going to bucket i from bucket j in time t (t is in buckets and likely small)
   for(int i = 0; i < bucketsPerMeasure; i++){
     for(int k = 0; k < nTempoBuckets; k++){
-      
-    for(int j = 0; j < bucketsPerMeasure; j++){
-      
-      
-     
-       for(int l = 0; l < nTempoBuckets; l++){
-         
-         //TODO t should be divided out by msPerBucket[k]
-           //Ugly brute-force mod stuff because wraparound is annoying!
-         float tbuckets = t / msPerBucket[k];  
-         float[] stuffToTry = {abs( (i-(j+tbuckets)+bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+tbuckets)-i+bucketsPerMeasure)%bucketsPerMeasure), abs( (i-(j+tbuckets)-bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+tbuckets)-i-bucketsPerMeasure)%bucketsPerMeasure)};
-         float disp = min(stuffToTry); //nBuckets you're off in the time direction
-         
-         
-         newprobs2[i][k] += probs2[j][l]*GaussPDF(disp, 0, tempoSD)*GaussPDF(k-l, 0, dtempoSD);
-         
-       }
-       
-     }
+      for(int j = 0; j < bucketsPerMeasure; j++){
+         for(int l = 0; l < nTempoBuckets; l++){
+           
+           //TODO t should be divided out by msPerBucket[k]
+             //Ugly brute-force mod stuff because wraparound is annoying!
+           float tbuckets = (float)t / msPerBucket[k]; 
+           float[] stuffToTry = {abs( (i-(j+tbuckets)+bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+tbuckets)-i+bucketsPerMeasure)%bucketsPerMeasure), abs( (i-(j+tbuckets)-bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+tbuckets)-i-bucketsPerMeasure)%bucketsPerMeasure)};
+           float disp = min(stuffToTry); //nBuckets you're off in the time direction
+           
+           //No need for fancy mod stuff with tempo; tempo doesn't wrap around!
+           newprobs2[i][k] += probs2[j][l]*GaussPDF(disp, 0, tempoSD)*GaussPDF(k-l, 0, dtempoSD);
+           
+         }//end l
+       }//end j
      //Disp = #buckets off from i that we are
       //newprobs[i] += probs[j]*GaussPDF(disp, 0, tempoSD);
       
@@ -184,7 +179,7 @@ void draw()
   } //end i
   
   //Normalize and get most likely
-  double newprobmax = 0.2;
+  double newprobmax = -1;
   int newprobmaxind = -1;
   for(int i = 0; i < bucketsPerMeasure; i++){
     //Normalize, then drop stuff back into probs
@@ -201,7 +196,7 @@ void draw()
   }
 
   probs2 = newprobs2;
-  dispProbArray(probs);
+  dispProbArray(probs, isBeat);
   
   if(newprobmaxind > -1){ //Throw out cases where we're super non-confident about where we are
     int newpitch = playMe[newprobmaxind];
@@ -224,7 +219,10 @@ void draw()
   
   System.out.println(isBeat);
   
-  delay(200); //Hardcoded to whatever worked in the continuous 1D version
+  //println(t);
+  
+  //No need to explicitly delay - code is slow enough already
+  //delay(12); //Hardcoded to whatever worked in the continuous 1D version
 }
 
 int MIDIfromPitch(double freq){
@@ -266,13 +264,17 @@ double pitchFromMIDI(int midi){
 }
 
 
-void dispProbArray(double[] A){
+void dispProbArray(double[] A, boolean isBeat){
   background(255);
+  
   int n = A.length;
   for(int i = 0; i < n; i++){
     //stroke(255, 0, 0);
-    line((float) (i*width/n), (float) (height), (float) ((i+1)*width/n - 1), (float) (height-A[i]*height));
+    //line((float) (i*width/n), (float) (height), (float) ((i+1)*width/n - 1), (float) (height-A[i]*height));
     fill(0);
+    if(isBeat){
+      fill(200, 100, 0);
+    }
     rect(i*width/n, (1- (float)A[i])*height, width/n, (float) A[i]*height); //Works
     //rect((float) (i*width/n), (float) (height), (float) width/n, (float) A[i]*height);
   }

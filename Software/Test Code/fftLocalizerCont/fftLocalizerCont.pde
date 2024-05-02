@@ -26,7 +26,7 @@ Note oldNote = null;
 SinOsc osc;
 Sound s;
 
-int bucketsPerMeasure = 16; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
+int bucketsPerMeasure = 64; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
 double[] probs = new double[bucketsPerMeasure];
 double[] beatProbs = new double[bucketsPerMeasure]; //P(location | heard a beat)
 int[] playMe = new int[bucketsPerMeasure];
@@ -38,16 +38,13 @@ int oldtime = millis(); //Processing has 64 bit integers, so we probably don't o
 int pitch = 0;
 
 double beatSD = 0.5; //SD on Gaussians for whether we heard a beat (in #buckets)
-double tempoSD = 0.5; //SD on Gaussians around moving through time (in #buckets)
+double tempoSD = 0.3; //SD on Gaussians around moving through time (in #buckets)
 
 void setup()
 {
   size(1000, 800);
   background(255);
   System.out.println(Sound.list());
-  
-  Sound s = new Sound(this);
-  s.outputDevice(4); //Warning about static method seems fine probably
   
   // Create an Input stream which is routed into the Amplitude analyzer
   //fft = new FFT(this, bands);
@@ -184,7 +181,8 @@ void draw()
   
   System.out.println(isBeat);
   
-  delay(msPerBucket/8);
+  delay(100/8);
+  //delay(msPerBucket/8);
 }
 
 int MIDIfromPitch(double freq){
