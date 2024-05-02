@@ -26,8 +26,11 @@ Note oldNote = null;
 SinOsc osc;
 Sound s;
 
-int bucketsPerMeasure = 64; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
-int nTempoBuckets = 16;
+int measure = 0;
+int bucket = 0;
+
+int bucketsPerMeasure = 32; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
+int nTempoBuckets = 32;
 double[] probs = new double[bucketsPerMeasure];
 double[][] probs2 = new double[bucketsPerMeasure][nTempoBuckets];
 double[] beatProbs = new double[bucketsPerMeasure]; //P(location | heard a beat)
@@ -46,8 +49,8 @@ int pitch = 0;
 
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 
-double beatSD = 1; //SD on Gaussians for whether we heard a beat (in #buckets)
-double tempoSD = 1; //SD on Gaussians around moving through time (in #buckets)
+double beatSD = 0.3; //SD on Gaussians for where we heard a beat (in #buckets)
+double tempoSD = 0.3; //SD on Gaussians around moving through time (in #buckets)
 double dtempoSD = 1;
 
 void setup()
@@ -104,7 +107,7 @@ void setup()
  playMe[bucketsPerMeasure/2] = 67;
  playMe[bucketsPerMeasure*3/4] = 72;
  
- for(int i = 0; i < bucketsPerMeasure*1/4; i+=bucketsPerMeasure/4){
+ for(int i = 0; i < bucketsPerMeasure*3/4; i+=bucketsPerMeasure/4){
    for(int j = 0; j < bucketsPerMeasure; j++){
      int disp = min(abs( (i-j)%bucketsPerMeasure), abs( (j-i)%bucketsPerMeasure));
      //Disp = #buckets off from i that we are
@@ -199,7 +202,7 @@ void draw()
   dispProbArray(probs, isBeat);
   
   if(newprobmaxind > -1){ //Throw out cases where we're super non-confident about where we are
-    int newpitch = playMe[newprobmaxind];
+    int newpitch = getNote(measure, newprobmaxind); //playMe[newprobmaxind];
     if(newpitch > 0){ //So we stop each note when the next note starts
       if(pitch > 0){
         myBus.sendNoteOff(new Note(0, pitch, 100));
@@ -223,6 +226,11 @@ void draw()
   
   //No need to explicitly delay - code is slow enough already
   //delay(12); //Hardcoded to whatever worked in the continuous 1D version
+  
+  if(newprobmaxind + bucketsPerMeasure/4 < bucket){
+    measure++;
+  }
+  bucket = newprobmaxind;
 }
 
 int MIDIfromPitch(double freq){
@@ -284,4 +292,9 @@ double GaussPDF(double x, double mu, double sigma){
   float pi = 3.1415926; //But no one cares since it just shows up as a constant normalization factor anyway
   //mu = mean, sigma = st. dev.
   return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
+}
+
+int getNote(int measure, int bucket){
+  //Ignoring measure for now, it'll happen when we do a real song
+  return playMe[bucket];
 }
