@@ -333,11 +333,6 @@ try
     {
       MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
       byte[] b = mm.getMessage();
-      for (int k = 0; k < b.length; k++)
-      {
-        System.out.format("%x ", b[k]);
-      }
-      System.out.println();
       if (b[1] == 0x51)
       {
         if (b[2] != 3)
@@ -398,12 +393,13 @@ try
         }
       }
     }
+    System.out.println("pre pad buckets: " + notes.size());
     while (notes.size() % bucketsPerMeasure != 0)
     {
       notes.add(0);
     }
     System.out.println(notes);
-    System.out.println("Buckets: " + notes.size());
+    System.out.println("post pad buckets: " + notes.size());
   }
   catch (InvalidMidiDataException e)
   {
