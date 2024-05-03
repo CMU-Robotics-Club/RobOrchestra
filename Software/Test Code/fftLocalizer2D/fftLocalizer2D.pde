@@ -2,6 +2,24 @@ import processing.sound.*;
 import themidibus.*;;
 import java.util.ArrayList;
 
+import java.io.File;
+import java.lang.*;
+import java.util.Arrays;
+import java.io.FileInputStream;
+
+import javax.sound.midi.MetaMessage;
+import javax.sound.midi.MidiEvent;
+import javax.sound.midi.MidiMessage;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Sequence;
+import javax.sound.midi.ShortMessage;
+import javax.sound.midi.Track;
+import javax.sound.midi.InvalidMidiDataException;
+
+public static final int NOTE_ON = 0x90;
+public static final int NOTE_OFF = 0x80;
+public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
 FFT fft; //Not used, we're using PitchDetector apparently
 AudioIn in;
 PitchDetector pd;
@@ -53,6 +71,11 @@ double beatSD = 0.3; //SD on Gaussians for where we heard a beat (in #buckets)
 double tempoSD = 0.3; //SD on Gaussians around moving through time (in #buckets)
 double dtempoSD = 1;
 
+double mspertick;
+
+
+
+
 void setup()
 {
   size(1000, 800);
@@ -81,6 +104,7 @@ void setup()
   background(255);
   System.out.println("amp threshold is " + ampThreshold);
   notes = new ArrayList<Integer>();
+  noteArray();
   
   
   int minMsPerMeasure = 800;
@@ -294,7 +318,97 @@ double GaussPDF(double x, double mu, double sigma){
   return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
 }
 
+void noteArray()
+{
+try
+  {
+    File myFile = new File(dataPath("WWRY.mid"));
+    Sequence sequence = MidiSystem.getSequence(myFile);
+    Track[] tracks = sequence.getTracks();
+    mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
+    int metaidx = 0;
+    int beatspermeasure = 4;
+    double msperbeat = 500;
+    while (tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
+    {
+      MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
+      byte[] b = mm.getMessage();
+      for (int k = 0; k < b.length; k++)
+      {
+        System.out.format("%x ", b[k]);
+      }
+      System.out.println();
+      if (b[1] == 0x51)
+      {
+        assert(b[2] == 3);
+        msperbeat = (b[3] << 16 | b[4] << 8 | b[5]) / 1000.0;
+        
+        double a = 60000.0 / msperbeat;
+        System.out.println(a);
+      }
+      else if (b[1] == 0x58)
+      {
+        beatspermeasure = b[3];
+      }
+      metaidx++;
+    }
+          
+    for (int i = 0; i < 1; i++) // go through tracks, limited to track 0 for now
+    {
+      System.out.println("Track " + i);
+      for (int j = 0; j < tracks[i].size()/2; j++)
+      {
+        MidiEvent event = tracks[i].get(j);
+        MidiMessage message = event.getMessage(); // get message
+        if (message instanceof ShortMessage)
+        {
+          ShortMessage sm = (ShortMessage) message;
+          if (sm.getCommand() == NOTE_ON) // note on
+          {
+            if (sm.getData2() > 0)
+            {
+              // if ShortMessage that actually sends a note, 
+              int key = sm.getData1();
+              int octave = (key / 12) - 1;
+              long newTick = event.getTick();
+              //System.out.println("note " + j + " is " + key + " at timestamp " + newTick);
+              double pos = ((newTick * mspertick) / msperbeat) + 10e-8;
+              System.out.format("current position %f\n", pos);
+              //System.out.format("milliseconds per beat %f\n", msperbeat);
+              int measure = (int) (pos / beatspermeasure);
+              double beat = pos % beatspermeasure;
+              int buckets = (int) Math.round((pos * bucketsPerMeasure) / beatspermeasure);
+              System.out.println(buckets + "th bucket"); 
+              
+              while (notes.size() < buckets)
+              {
+                notes.add(0);
+                System.out.println("Add");
+              }
+              notes.add(key);
+
+              System.out.format("At measure %d with beat %f\n", measure, beat);
+            }
+          }
+
+        }
+      }
+    }
+    System.out.println("Total num of ticks is " + sequence.getTickLength());
+    System.out.println(notes);
+  }
+  catch (InvalidMidiDataException e)
+  {
+    System.out.println("Bad file input");
+    exit();
+  }
+  catch (IOException e)
+  {
+    println("Bad file input");
+    exit();
+  }
+}
 int getNote(int measure, int bucket){
   //Ignoring measure for now, it'll happen when we do a real song
-  return playMe[bucket];
+  return notes.get(measure * bucketsPerMeasure + bucket);
 }
