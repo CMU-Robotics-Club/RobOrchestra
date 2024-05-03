@@ -340,14 +340,20 @@ try
       System.out.println();
       if (b[1] == 0x51)
       {
-        assert(b[2] == 3);
+        if (b[2] != 3)
+        {
+          System.out.println("Bad meta message");
+          assert(false);
+        }
         msperbeat = (b[3] << 16 | b[4] << 8 | b[5]) / 1000.0;
-        
-        double a = 60000.0 / msperbeat;
-        System.out.println(a);
       }
       else if (b[1] == 0x58)
       {
+        if (b[2] < 4)
+        {
+          System.out.println("Bad meta message");
+          assert(false);
+        }
         beatspermeasure = b[3];
       }
       metaidx++;
@@ -355,7 +361,7 @@ try
           
     for (int i = 0; i < 1; i++) // go through tracks, limited to track 0 for now
     {
-      System.out.println("Track " + i);
+      //System.out.println("Track " + i);
       for (int j = 0; j < tracks[i].size()/2; j++)
       {
         MidiEvent event = tracks[i].get(j);
@@ -369,33 +375,35 @@ try
             {
               // if ShortMessage that actually sends a note, 
               int key = sm.getData1();
-              int octave = (key / 12) - 1;
-              long newTick = event.getTick();
+              long tick = event.getTick();
               //System.out.println("note " + j + " is " + key + " at timestamp " + newTick);
-              double pos = ((newTick * mspertick) / msperbeat) + 10e-8;
-              System.out.format("current position %f\n", pos);
+              double pos = ((tick * mspertick) / msperbeat) + 10e-8;
+              //System.out.format("current position %f\n", pos);
               //System.out.format("milliseconds per beat %f\n", msperbeat);
               int measure = (int) (pos / beatspermeasure);
               double beat = pos % beatspermeasure;
-              int buckets = (int) Math.round((pos * bucketsPerMeasure) / beatspermeasure);
-              System.out.println(buckets + "th bucket"); 
+              int bucket = (int) Math.round((pos * bucketsPerMeasure) / beatspermeasure);
+              //System.out.println(buckets + "th bucket"); 
               
-              while (notes.size() < buckets)
+              while (notes.size() < bucket)
               {
                 notes.add(0);
-                System.out.println("Add");
+                //System.out.println("Add");
               }
               notes.add(key);
 
-              System.out.format("At measure %d with beat %f\n", measure, beat);
+              //System.out.format("At measure %d with beat %f\n", measure, beat);
             }
           }
-
         }
       }
     }
-    System.out.println("Total num of ticks is " + sequence.getTickLength());
+    while (notes.size() % bucketsPerMeasure != 0)
+    {
+      notes.add(0);
+    }
     System.out.println(notes);
+    System.out.println("Buckets: " + notes.size());
   }
   catch (InvalidMidiDataException e)
   {
