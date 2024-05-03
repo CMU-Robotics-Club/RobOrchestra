@@ -1,6 +1,19 @@
 import processing.sound.*;
-import themidibus.*;;
+import themidibus.*;
+import java.io.File;
+import java.lang.*;
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.io.FileInputStream;
+
+import javax.sound.midi.MetaMessage;
+import javax.sound.midi.MidiEvent;
+import javax.sound.midi.MidiMessage;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.Sequence;
+import javax.sound.midi.ShortMessage;
+import javax.sound.midi.Track;
+import javax.sound.midi.InvalidMidiDataException;
 
 FFT fft; //Not used, we're using PitchDetector apparently
 AudioIn in;
@@ -17,7 +30,8 @@ int midi;
 ArrayList<Integer> notes;
 int maxLength = 10;
 float ampScale = 800;
-
+double mspertick;
+int currentTick;
 float ampThreshold = 0.03;
 //float[] spectrum = new float[bands];
 
@@ -25,7 +39,9 @@ Note oldNote = null;
 
 SinOsc osc;
 Sound s;
-
+Track[] tracks;
+int numBuckets;
+double[] buckets;
 void setup()
 {
 
@@ -34,7 +50,7 @@ void setup()
   System.out.println(Sound.list());
   
   Sound s = new Sound(this);
-  s.outputDevice(4); //Warning about static method seems fine probably
+  //s.outputDevice(4); //Warning about static method seems fine probably
   
   // Create an Input stream which is routed into the Amplitude analyzer
   //fft = new FFT(this, bands);
@@ -47,6 +63,31 @@ void setup()
   osc.play();
   
   myBus = new MidiBus(this, 0, 2);
+  File myFile = new File(dataPath("auldlangsyne.mid"));
+  try
+  {
+    
+    Sequence sequence = MidiSystem.getSequence(myFile);
+    tracks = sequence.getTracks();
+    numBuckets = (int) sequence.getTickLength()/30;
+    System.out.println(sequence.getTickLength() + " ticks -> "  + numBuckets + " buckets");
+    mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
+    buckets = new double[numBuckets];
+    for (int i = 0; i < numBuckets; i++)
+    {
+      buckets[i] = 1.0/numBuckets;
+    }
+  }
+  catch (InvalidMidiDataException e)
+  {
+    System.out.println("Bad file input");
+    exit();
+  }
+  catch (IOException e)
+  {
+    println("Bad file input");
+    exit();
+  }
   MidiBus.list();
   in.amp(1);
   // start the Audio Input
