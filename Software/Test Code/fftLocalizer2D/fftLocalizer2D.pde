@@ -54,8 +54,8 @@ double[][] probs2 = new double[bucketsPerMeasure][nTempoBuckets];
 double[] beatProbs = new double[bucketsPerMeasure]; //P(location | heard a beat)
 int[] playMe = new int[bucketsPerMeasure];
 
-int minMsPerMeasure = 800;
-int maxMsPerMeasure = 6400;
+int minMsPerMeasure = 500;
+int maxMsPerMeasure = 2000;
 int[] msPerBucket = new int[nTempoBuckets];
 
 //int msPerMeasure = 1600; //Probably about 2000??
@@ -67,9 +67,9 @@ int pitch = 0;
 
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 
-double beatSD = 0.3; //SD on Gaussians for where we heard a beat (in #buckets)
-double tempoSD = 0.3; //SD on Gaussians around moving through time (in #buckets)
-double dtempoSD = 1;
+double beatSD = 0.1; //SD on Gaussians for where we heard a beat (in #buckets)
+double tempoSD = 0.1; //SD on Gaussians around moving through time (in #buckets)
+double dtempoSD = 8;
 
 double mspertick;
 
@@ -107,8 +107,6 @@ void setup()
   noteArray();
   
   
-  int minMsPerMeasure = 800;
-  int maxMsPerMeasure = 3200;
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
     msPerBucket[i] = (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerMeasure;
@@ -131,7 +129,10 @@ void setup()
  playMe[bucketsPerMeasure/2] = 67;
  playMe[bucketsPerMeasure*3/4] = 72;
  
- for(int i = 0; i < bucketsPerMeasure*3/4; i+=bucketsPerMeasure/4){
+// int[] beatpositions = {bucketsPerMeasure*0/8, bucketsPerMeasure*1/8, bucketsPerMeasure*2/8, bucketsPerMeasure*4/8, bucketsPerMeasure*5/8, bucketsPerMeasure*6/8}; 
+ int[] beatpositions = {bucketsPerMeasure*0/4, bucketsPerMeasure*1/4, bucketsPerMeasure*2/4}; 
+ 
+ for(int i:beatpositions){
    for(int j = 0; j < bucketsPerMeasure; j++){
      int disp = min(abs( (i-j)%bucketsPerMeasure), abs( (j-i)%bucketsPerMeasure));
      //Disp = #buckets off from i that we are
@@ -322,7 +323,7 @@ void noteArray()
 {
 try
   {
-    File myFile = new File(dataPath("WWRY.mid"));
+    File myFile = new File(dataPath("WWRY2.mid"));
     Sequence sequence = MidiSystem.getSequence(myFile);
     Track[] tracks = sequence.getTracks();
     mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
@@ -418,5 +419,6 @@ try
 }
 int getNote(int measure, int bucket){
   //Ignoring measure for now, it'll happen when we do a real song
-  return notes.get(measure * bucketsPerMeasure + bucket);
+  int ind = (measure * bucketsPerMeasure + bucket)%notes.size();
+  return notes.get(ind);
 }
