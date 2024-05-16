@@ -32,7 +32,7 @@ float y = 0;
 float yOld = 0;
 float ampOld = 0;
 int midi;
-ArrayList<Integer> notes;
+ArrayList<ArrayList<Integer>> notes;
 int maxLength = 10;
 float ampScale = 800;
 
@@ -55,7 +55,7 @@ double[] beatProbs = new double[bucketsPerMeasure]; //P(location | heard a beat)
 int[] playMe = new int[bucketsPerMeasure];
 
 int minMsPerMeasure = 500;
-int maxMsPerMeasure = 2000;
+int maxMsPerMeasure = 4000;
 int[] msPerBucket = new int[nTempoBuckets];
 
 //int msPerMeasure = 1600; //Probably about 2000??
@@ -63,13 +63,13 @@ int[] msPerBucket = new int[nTempoBuckets];
 double beatThresh = 0.1; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
 
 int oldtime = millis(); //Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
-int pitch = 0;
+ArrayList<Integer> pitch = new ArrayList<Integer>();
 
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 
-double beatSD = 0.1; //SD on Gaussians for where we heard a beat (in #buckets)
-double tempoSD = 0.1; //SD on Gaussians around moving through time (in #buckets)
-double dtempoSD = 8;
+double beatSD = 0.1; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
+double tempoSD = .01; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double dtempoSD = 1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 double mspertick;
 
@@ -103,7 +103,7 @@ void setup()
   amp.input(in);
   background(255);
   System.out.println("amp threshold is " + ampThreshold);
-  notes = new ArrayList<Integer>();
+  notes = new ArrayList<ArrayList<Integer>>();
   noteArray();
   
   
@@ -119,16 +119,10 @@ void setup()
      probs2[i][j] = 1.0/bucketsPerMeasure/nTempoBuckets;
      //println(probs2[i][j]);
    }
-   playMe[i] = 0;
    beatProbs[i] = 0.01; //We'll normalize this later
  }
  
- //Tell it to play arpeggios
- playMe[0] = 60;
- playMe[bucketsPerMeasure/4] = 64;
- playMe[bucketsPerMeasure/2] = 67;
- playMe[bucketsPerMeasure*3/4] = 72;
- 
+ //TODO read this from track 1 rather than hardcoding
 // int[] beatpositions = {bucketsPerMeasure*0/8, bucketsPerMeasure*1/8, bucketsPerMeasure*2/8, bucketsPerMeasure*4/8, bucketsPerMeasure*5/8, bucketsPerMeasure*6/8}; 
  int[] beatpositions = {bucketsPerMeasure*0/4, bucketsPerMeasure*1/4, bucketsPerMeasure*2/4}; 
  
@@ -180,7 +174,6 @@ void draw()
       for(int j = 0; j < bucketsPerMeasure; j++){
          for(int l = 0; l < nTempoBuckets; l++){
            
-           //TODO t should be divided out by msPerBucket[k]
              //Ugly brute-force mod stuff because wraparound is annoying!
            float tbuckets = (float)t / msPerBucket[k]; 
            float[] stuffToTry = {abs( (i-(j+tbuckets)+bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+tbuckets)-i+bucketsPerMeasure)%bucketsPerMeasure), abs( (i-(j+tbuckets)-bucketsPerMeasure)%bucketsPerMeasure), abs( ((j+tbuckets)-i-bucketsPerMeasure)%bucketsPerMeasure)};
@@ -226,33 +219,27 @@ void draw()
   probs2 = newprobs2;
   dispProbArray(probs, isBeat);
   
-  if(newprobmaxind > -1){ //Throw out cases where we're super non-confident about where we are
-    int newpitch = getNote(measure, newprobmaxind); //playMe[newprobmaxind];
-    if(newpitch > 0){ //So we stop each note when the next note starts
-      if(pitch > 0){
-        myBus.sendNoteOff(new Note(0, pitch, 100));
+  if(newprobmaxind > -1){ //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
+    ArrayList<Integer> newpitch = getNote(measure, newprobmaxind); //playMe[newprobmaxind];
+    if(newpitch.size() > 0){ //So we stop each note when the next note starts
+      for(Integer ppitch: pitch){
+        myBus.sendNoteOff(new Note(0, ppitch.intValue(), 100));
       }
       //Start new note
       pitch = newpitch; //Which we know is non-zero because of outer if statement
-      myBus.sendNoteOn(new Note(0, pitch, 100));
-
+      for(Integer ppitch: pitch){
+        myBus.sendNoteOn(new Note(0, ppitch.intValue(), 100));
+      }
     }
   }
   else{
     System.out.println("Help I'm lost");
   }
   
-  System.out.println(newtime);
-  System.out.println(oldtime);
-  
-  System.out.println(isBeat);
-  
-  //println(t);
-  
   //No need to explicitly delay - code is slow enough already
   //delay(12); //Hardcoded to whatever worked in the continuous 1D version
   
-  if(newprobmaxind + bucketsPerMeasure/4 < bucket){
+  if(newprobmaxind + bucketsPerMeasure/2 <= bucket){ //If we've backed up by more than half a measure, that probably means we skipped across to the next measure
     measure++;
   }
   bucket = newprobmaxind;
@@ -330,6 +317,9 @@ try
     int metaidx = 0;
     int beatspermeasure = 4;
     double msperbeat = 500;
+    
+    //Grab all the MetaMessage stuff from the start of the first track to get tempo and time signature information
+    //Assumes tempo and time signature won't change later, should be fine if we stick to simple songs for now
     while (tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
     {
       MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
@@ -358,7 +348,7 @@ try
     for (int i = 0; i < 1; i++) // go through tracks, limited to track 0 for now
     {
       //System.out.println("Track " + i);
-      for (int j = 0; j < tracks[i].size()/2; j++)
+      for (int j = 0; j < tracks[i].size(); j++)
       {
         MidiEvent event = tracks[i].get(j);
         MidiMessage message = event.getMessage(); // get message
@@ -373,7 +363,7 @@ try
               int key = sm.getData1();
               long tick = event.getTick();
               //System.out.println("note " + j + " is " + key + " at timestamp " + newTick);
-              double pos = ((tick * mspertick) / msperbeat) + 10e-8;
+              double pos = ((tick * mspertick) / msperbeat) + 10e-5; //Number of beats into the piece (plus a little so it doesn't truncate to one beat early but this shouldn't matter now that we're just returning the bucket number)
               //System.out.format("current position %f\n", pos);
               //System.out.format("milliseconds per beat %f\n", msperbeat);
               int measure = (int) (pos / beatspermeasure);
@@ -381,23 +371,22 @@ try
               int bucket = (int) Math.round((pos * bucketsPerMeasure) / beatspermeasure);
               //System.out.println(buckets + "th bucket"); 
               
-              while (notes.size() < bucket)
+              while (notes.size() <= bucket)
               {
-                notes.add(0);
+                notes.add(new ArrayList<Integer>());
                 //System.out.println("Add");
               }
-              notes.add(key);
+              notes.get(bucket).add(key);
 
-              //System.out.format("At measure %d with beat %f\n", measure, beat);
+              System.out.format("At measure %d with beat %f; bucket %d\n", measure, beat, bucket);
             }
           }
         }
       }
     }
-    System.out.println("pre pad buckets: " + notes.size());
     while (notes.size() % bucketsPerMeasure != 0)
     {
-      notes.add(0);
+      notes.add(new ArrayList<Integer>());
     }
     System.out.println(notes);
     System.out.println("post pad buckets: " + notes.size());
@@ -413,8 +402,7 @@ try
     exit();
   }
 }
-int getNote(int measure, int bucket){
-  //Ignoring measure for now, it'll happen when we do a real song
+ArrayList<Integer> getNote(int measure, int bucket){
   int ind = (measure * bucketsPerMeasure + bucket)%notes.size();
   return notes.get(ind);
 }
