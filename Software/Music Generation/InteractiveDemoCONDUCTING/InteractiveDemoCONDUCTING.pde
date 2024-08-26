@@ -142,7 +142,8 @@ float bpm;
 float millisPerBeat;
 long startTime = System.currentTimeMillis();
 void setup() {
-  surface.setSize(380 * scale, 278 * scale);
+  size(10000, 10000); //Doesn't take variables, changes window size and controlP5 responsive area
+  surface.setSize(380 * scale, 278 * scale); //Takes variables, changes window size but apparently not controlP5 responsive area
   cp5 = new ControlP5(this);
   myBus = new MidiBus(this, 0, 2);
   MidiBus.list();
