@@ -15,8 +15,8 @@ Slider xyloSlider;
 Slider snareSlider;
 Slider tomSlider;
 
-Knob tonicKnob;
-Knob tempoKnob;
+Slider tonicSlider;
+Slider tempoSlider;
 
 Textlabel rootNote;
 Textlabel tempoBPM;
@@ -227,40 +227,39 @@ void setup() {
   tomSlider.getCaptionLabel().align(ControlP5.LEFT, ControlP5.CENTER).setPaddingX(10 * scale);
   tomSlider.getValueLabel().align(ControlP5.RIGHT, ControlP5.CENTER).setPaddingX(10 * scale);
   
-  tonicKnob = cp5.addKnob("tonic")
-    .setPosition(20 * scale, 118 * scale)
-    .setRadius(30 * scale)
+  int i = -2;
+  tonicSlider = cp5.addSlider("tonic")
+    .setPosition((350 - (260 / notes.length) * (notes.length - i - 1) - (260 / notes.length - 5)) * scale, 118 * scale)
+    .setSize((260 / notes.length - 5) * scale, 130 * scale)
     .setRange(60, 71)
     .setValue(60)
-    .setDragDirection(Knob.VERTICAL)
-    .setCaptionLabel("Root")
-    .setColorBackground(color(103, 0, 0))
-    .setColorForeground(color(204, 0, 43))
-    .setColorActive(color(204, 0, 43))
-  ;
-  tonicKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-41 * scale).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7 * scale, true), 7 * scale));
-  tonicKnob.getValueLabel().setVisible(false);
+    .setColorBackground(color(0, 103, 103))
+    .setColorForeground(color(43, 204, 204))
+    .setColorActive(color(43, 204, 204))
+   ;
+   tonicSlider.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-17 * scale);
+   tonicSlider.getValueLabel().setVisible(false);
   
   rootNote = cp5.addTextlabel("rootNote")
-    .setPosition(10 * scale, 145 * scale)
+    .setPosition(-10 * scale, 215 * scale)  
   ;
   rootNote.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 
-  tempoKnob = cp5.addKnob("tempo")
-    .setPosition(20 * scale, 188 * scale)
-    .setRadius(30 * scale)
-    .setRange(30, 220)
+  i = -1;
+  tempoSlider = cp5.addSlider("tempo")
+    .setPosition((350 - (260 / notes.length) * (notes.length - i - 1) - (260 / notes.length - 5)) * scale, 118 * scale)
+    .setSize((260 / notes.length - 5) * scale, 130 * scale)
+    .setRange(30, 240)
     .setValue(120)
-    .setDragDirection(Knob.VERTICAL)
-    .setCaptionLabel("BPM")
-    .setColorForeground(color(24, 100, 204))
-    .setColorActive(color(24, 100, 204))
-  ;
-  tempoKnob.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-41 * scale).setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 7 * scale, true), 7 * scale));
-  tempoKnob.getValueLabel().setVisible(false);
-  
+    .setColorBackground(color(103, 103, 0))
+    .setColorForeground(color(204, 204, 43))
+    .setColorActive(color(204, 204, 43))
+   ;
+   tempoSlider.getCaptionLabel().align(ControlP5.CENTER, ControlP5.BOTTOM_OUTSIDE).setPaddingY(-17 * scale);
+   tempoSlider.getValueLabel().setVisible(false);
+     
   tempoBPM = cp5.addTextlabel("tempoBPM")
-    .setPosition(10 * scale, 215 * scale)  
+    .setPosition(25 * scale, 215 * scale)  
   ;
   tempoBPM.getValueLabel().align(ControlP5.CENTER, ControlP5.CENTER);
 }
@@ -291,7 +290,7 @@ void draw() {
   
   rootNote.setText(noteNames[tonic % 12]);
   tempoBPM.setText(Integer.toString(tempo));
-      
+
   for(int i = 0; i < notes.length; i++) {
     noteSliders[i].setCaptionLabel(noteNames[(tonic + scaleOffsets[curScale][curSubScale][i]) % 12]);
   }
