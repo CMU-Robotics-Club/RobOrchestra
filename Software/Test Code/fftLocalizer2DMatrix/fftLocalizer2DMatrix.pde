@@ -38,7 +38,6 @@ ArrayList<ArrayList<Integer>> notes;
 int maxLength = 10;
 float ampScale = 800;
 
-float ampThreshold = 0.01;
 //float[] spectrum = new float[bands];
 
 Note oldNote = null;
@@ -49,7 +48,7 @@ Sound s;
 int measure = 0;
 int bucket = 0;
 
-int bucketsPerMeasure = 16; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
+int bucketsPerMeasure = 24; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
 int nTempoBuckets = 16;
 Matrix probs = new Matrix(bucketsPerMeasure, 1);
 Matrix probsonemat = new Matrix(nTempoBuckets, 1, 1);
@@ -71,8 +70,8 @@ ArrayList<Integer> pitch = new ArrayList<Integer>();
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 
 double beatSD = 0.1; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double tempoSD = 1; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double dtempoSD = 2; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = 0.5; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double dtempoSD = 1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 double mspertick;
 int starttime; //For debug only TODO delete
@@ -103,7 +102,6 @@ void setup()
   pd.input(in);
   amp.input(in);
   background(255);
-  System.out.println("amp threshold is " + ampThreshold);
   notes = new ArrayList<ArrayList<Integer>>();
   noteArray();
   
@@ -157,7 +155,8 @@ void draw()
   int t = newtime - oldtime;
   oldtime = newtime;
   
-  boolean isBeat = amp.analyze() > beatThresh;
+  boolean isBeat = (amp.analyze() > beatThresh) || keyPressed;
+  //boolean isBeat = keyPressed;
   
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerMeasure, nTempoBuckets);
@@ -234,7 +233,7 @@ void draw()
   probs2 = newprobs2;
   dispProbArray(probs, isBeat);
   
-  if(newprobmaxind > -1){ //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
+  if(newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
     ArrayList<Integer> newpitch = getNote(measure, newprobmaxind); //playMe[newprobmaxind];
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
@@ -262,8 +261,7 @@ void draw()
   }
   bucket = newprobmaxind;
   
-  
-  delay(100);
+  //delay(25);
 }
 
 int MIDIfromPitch(double freq){
@@ -410,8 +408,8 @@ try
     {
       notes.add(new ArrayList<Integer>());
     }
-    System.out.println(notes);
-    System.out.println("post pad buckets: " + notes.size());
+    //System.out.println(notes);
+    //System.out.println("post pad buckets: " + notes.size());
   }
   catch (InvalidMidiDataException e)
   {

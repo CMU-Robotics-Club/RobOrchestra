@@ -24,7 +24,7 @@ Track[] tracks;
 double mspertick;
 long newTick;
 long minDiff; // minimum difference in notes, in ticks (may need to be converted)
-double msperbeat;
+double msperbeat = 0.0;
 int beatspermeasure;
 ArrayList<Integer> notes;
 int bucketspermeasure = 16;
@@ -36,7 +36,7 @@ void setup()
   background(255);
   notes = new ArrayList<Integer>();
   myBus = new MidiBus(this, 0, 1);
-  File myFile = new File(dataPath("auldlangsyne.mid"));
+  File myFile = new File(dataPath("twinkle_twinkle_melody.mid"));
   try
   {
     Sequence sequence = MidiSystem.getSequence(myFile);
@@ -61,11 +61,18 @@ void setup()
       if (b[1] == 0x51) // 0x51 == set tempo in microseconds per beat
       {
         assert(b[2] == 3); // if the meta message is set tempo, there should be 3 bytes of data
-        msperbeat = (b[3] << 16) + (b[4] << 8) + b[5];
+        int top = b[3] << 16;
+        int mid = b[4] << 8;
+        int bot = b[5];
+        System.out.format("%x \n", top);
+        int temp = top + mid + bot;
+        msperbeat = temp;
+        System.out.format("%x \n", temp);
 
         msperbeat = msperbeat / 1000.0;
         
         double a = 60000.0 / msperbeat; // convert to beats per minute
+        
         System.out.println("BPM: " + a);
       }
       else if (b[1] == 0x58) // 0x58 == time signature 
@@ -75,7 +82,7 @@ void setup()
       metaidx++;
     }
           
-    for (int i = 1; i <= 1; i++) // go through tracks, limited to track 1 for now
+    for (int i = 0; i < 1; i++) // go through tracks, limited to track 1 for now
     {
       System.out.println("Track " + i);
       for (int j = 0; j < tracks[i].size(); j++)
@@ -104,7 +111,7 @@ void setup()
               double beat = pos % beatspermeasure;
               // approximate the bucket that this note belongs in
               int buckets = (int) Math.round((pos * bucketspermeasure) / beatspermeasure);
-              System.out.println(buckets + "th bucket"); 
+              //System.out.println(buckets + "th bucket"); 
               
               // pad the empty buckets in between
               while (notes.size() < buckets)
@@ -113,7 +120,7 @@ void setup()
               }
               notes.add(key);
 
-              System.out.format("At measure %d with beat %f\n", measure, beat);
+              //System.out.format("At measure %d with beat %f\n", measure, beat);
             }
             
             else
@@ -271,7 +278,6 @@ void print(double[] list)
 // creates a subsequence of list starting at start with length (end - start)
 int[] sublist(int[] list, int start, int end)
 {
-  System.out.println("start = " + start + ", end = " + end);
   assert(end > start && start >= 0 && start <= end);
   int[] res = new int[end - start];
   for(int i = 0; i < end - start; i++)

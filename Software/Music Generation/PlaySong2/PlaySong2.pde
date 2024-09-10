@@ -16,7 +16,7 @@ import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 import javax.sound.midi.InvalidMidiDataException;
 
-private static boolean printThings = false;
+private static boolean printThings = true;
 
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
@@ -54,7 +54,7 @@ void setup(){
   
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 2);  
+  myBus = new MidiBus(this, 1, 2);  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("twinkle_twinkle_melody.mid")); //INPUT
@@ -62,9 +62,9 @@ void setup(){
   //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("jingle_bells-2.mid")); //INPUT
-  //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
   //File myFile = new File(dataPath("We-Will-Rock-You maybe??.mid")); //INPUT
-  File myFile = new File(dataPath("WWRY.mid")); //INPUT
+  //File myFile = new File(dataPath("WWRY2.mid")); //INPUT
   
   
   try{
@@ -80,6 +80,7 @@ void setup(){
     eventIndices = new int[nChannels];
     
     for (int i=0; i < tracks.length; i++) { 
+          System.out.println(tracks[i].size());
           if (tracks[i].size() != 0) {
             nextevents[i] = tracks[i].get(0);
             eventIndices[i] = 0;
