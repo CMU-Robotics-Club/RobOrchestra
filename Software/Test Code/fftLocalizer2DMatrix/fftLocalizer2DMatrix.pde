@@ -169,33 +169,38 @@ void draw()
     }
   }*/
 
-  //Going to bucket i from bucket j in time t (t is in buckets and likely small)
+  //Going to bucket i from bucket j in time t (tbuckets is in buckets and likely small)
   //TODO vectorize this somehow
   for(int i = 0; i < bucketsPerMeasure; i++){
     for(int k = 0; k < nTempoBuckets; k++){
+      float tbuckets = (float)t / (float)msPerBucket.get(k, 0);
+      
+      float tempik = 0;
+      
       for(int j = 0; j < bucketsPerMeasure; j++){
+         //Ugly brute-force mod stuff because wraparound is annoying!
+         float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)(((j+tbuckets)-i+bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)((i-(j+tbuckets)-bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)(((j+tbuckets)-i-bucketsPerMeasure)%bucketsPerMeasure))};
+         float disp = min(stuffToTry); //nBuckets you're off in the time direction
+         double tempoPDF = GaussPDF(disp, 0, tempoSD);
+
          for(int l = 0; l < nTempoBuckets; l++){
-           
-             //Ugly brute-force mod stuff because wraparound is annoying!
-           float tbuckets = (float)t / (float)msPerBucket.get(k, 0);
-           float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)(((j+tbuckets)-i+bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)((i-(j+tbuckets)-bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)(((j+tbuckets)-i-bucketsPerMeasure)%bucketsPerMeasure))};
-           float disp = min(stuffToTry); //nBuckets you're off in the time direction
-           
+           tempik += probs2.get(j, l)*tempoPDF*GaussPDF(k-l, 0, dtempoSD);
            //No need for fancy mod stuff with tempo; tempo doesn't wrap around!
-           newprobs2.set(i, k, newprobs2.get(i, k) + probs2.get(j, l)*GaussPDF(disp, 0, tempoSD)*GaussPDF(k-l, 0, dtempoSD));
+           
+           
+
            
          }//end l
        }//end j
-     //Disp = #buckets off from i that we are
-      //newprobs[i] += probs[j]*GaussPDF(disp, 0, tempoSD);
       
       if(isBeat){
-        newprobs2.set(i, k, newprobs2.get(i, k) * beatProbs.get(i, 0));
+        tempik *= beatProbs.get(i, 0);
       }
       else{
-        newprobs2.set(i, k, newprobs2.get(i, k) * (1-beatProbs.get(i, 0)));
+        tempik *= (1-beatProbs.get(i, 0));
       }
-       newprobsum += newprobs2.get(i, k);
+      newprobs2.set(i, k, tempik);
+      newprobsum += tempik;//newprobs2.get(i, k);
    } //end k
    
     
@@ -247,9 +252,8 @@ void draw()
     }
   }
   else{
-    newprobs2.times(1e10).print(1,1); //0 everywhere
+    //This had been a problem at one point when I forgot to renormalize probs, but should be fine now
     System.out.println("Help I'm lost");
-    println(newtime - starttime); //Somewhere between 7000 and 12000 before things break, seemingly regardless of whether I tap a beat or not
     exit();
   }
   

@@ -68,7 +68,7 @@ ArrayList<Integer> pitch = new ArrayList<Integer>();
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 
 double beatSD = 0.1; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double tempoSD = .01; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double tempoSD = .5; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double dtempoSD = 1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 double mspertick;
