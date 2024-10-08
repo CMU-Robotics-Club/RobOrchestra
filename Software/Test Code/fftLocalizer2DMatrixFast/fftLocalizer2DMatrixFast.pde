@@ -48,8 +48,8 @@ Sound s;
 int measure = 0;
 int bucket = 0;
 
-int bucketsPerMeasure = 128; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
-int nTempoBuckets = 64;
+int bucketsPerMeasure = 54; //Going to assume we're starting with We Will Rock You and listening for rhythm; have to adjust this (and probably everything) if we try to do something more general
+int nTempoBuckets = 54;
 Matrix probs = new Matrix(bucketsPerMeasure, 1);
 Matrix probsonemat = new Matrix(nTempoBuckets, 1, 1);
 Matrix probs2 = new Matrix(bucketsPerMeasure, nTempoBuckets);
@@ -71,9 +71,9 @@ ArrayList<Integer> pitch = new ArrayList<Integer>();
 
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 
-double beatSD = 0.1; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = 0.5; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = 2;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double beatSD = bucketsPerMeasure/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
+double posSD = bucketsPerMeasure/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 double mspertick;
 int starttime; //For debug only TODO delete
@@ -365,6 +365,9 @@ void draw()
   bucket = newprobmaxind;
   
   //delay(25);
+  if(25-t > 0){
+  delay(25-t);
+  }
 }
 
 int MIDIfromPitch(double freq){
