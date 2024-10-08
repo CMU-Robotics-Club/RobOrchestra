@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
+String fileName = "GoT2.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -12,10 +13,11 @@ PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but w
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
-double beatThresh = 0.1; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
+double beatThresh = 0.5; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
 
-int bucketsPerMeasure = 64; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerMeasure = 96; //Pick something reasonably large (but not so large that it makes computations slow)
 int nTempoBuckets = 64; //Same idea
+int bucketsPerRhythm;
 
 //Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
 int minMsPerMeasure = 500;
@@ -29,12 +31,13 @@ double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets)
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
-Matrix probs = new Matrix(bucketsPerMeasure, 1);
-Matrix probsonemat = new Matrix(nTempoBuckets, 1, 1);
-Matrix probs2 = new Matrix(bucketsPerMeasure, nTempoBuckets);
-Matrix beatProbs = new Matrix(bucketsPerMeasure, 1); //P(location | heard a beat)
+Matrix probs;
+Matrix probsonemat;
+Matrix probs2;
+Matrix beatProbs; //P(location | heard a beat)
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerBucket = new Matrix(nTempoBuckets, 1);
+
 
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
 ArrayList<Integer> pitch = new ArrayList<Integer>(); //All notes currently playing
@@ -65,6 +68,15 @@ void setup()
   background(255);
   notes = new ArrayList<ArrayList<Integer>>();
   noteArray();
+  System.out.println(notes);
+
+  NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
+  ArrayList<ArrayList<Integer>> rhythmPattern = nArr.pattern;
+  bucketsPerRhythm = rhythmPattern.size();
+  probs = new Matrix(bucketsPerRhythm, 1);
+  probsonemat = new Matrix(nTempoBuckets, 1, 1);
+  probs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
+  beatProbs = new Matrix(bucketsPerRhythm, 1); //P(location | heard a beat)
   
   
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
@@ -73,10 +85,10 @@ void setup()
     assert(msPerBucket.get(i, 0) > 0);
   }
  
- for(int i = 0; i < bucketsPerMeasure; i++){
-   probs.set(i, 0, 1.0/bucketsPerMeasure);
+ for(int i = 0; i < bucketsPerRhythm; i++){
+   probs.set(i, 0, 1.0/bucketsPerRhythm);
    for(int j = 0; j < nTempoBuckets; j++){
-     probs2.set(i, j, 1.0/bucketsPerMeasure/nTempoBuckets);
+     probs2.set(i, j, 1.0/bucketsPerRhythm/nTempoBuckets);
    }
    beatProbs.set(i, 0, 0.01); //We'll normalize this later
  }
@@ -85,35 +97,40 @@ void setup()
  //That means replacing this chunk of code with something that gets the rhythmPattern as an ArrayList<ArrayList<Integer>> using Ryan's code
 // int[] beatpositions = {bucketsPerMeasure*0/8, bucketsPerMeasure*1/8, bucketsPerMeasure*2/8, bucketsPerMeasure*4/8, bucketsPerMeasure*5/8, bucketsPerMeasure*6/8}; 
  int[] oldbeatpositions = {bucketsPerMeasure*0/4, bucketsPerMeasure*1/4, bucketsPerMeasure*2/4}; 
- ArrayList<ArrayList<Integer>> rhythmPattern = new ArrayList<ArrayList<Integer>>();
- for(int i = 0; i < bucketsPerMeasure; i++){
-   rhythmPattern.add(new ArrayList<Integer>());
- }
- for(int i: oldbeatpositions){
-   rhythmPattern.get(i).add(42); //Some non-zero number
- }
+ 
+ //ArrayList<ArrayList<Integer>> rhythmPattern = new ArrayList<ArrayList<Integer>>();
+
+
+ 
+ //for(int i = 0; i < bucketsPerMeasure; i++){
+ //  rhythmPattern.add(new ArrayList<Integer>());
+ //}
+ //for(int i: oldbeatpositions){
+ //  rhythmPattern.get(i).add(42); //Some non-zero number
+ //}
+ 
  //End get rhythmPattern
  
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
- for(int i = 0; i < bucketsPerMeasure; i++){
-   if(rhythmPattern.get(i).size() > 0){
+ for(int i = 0; i < bucketsPerRhythm; i++){
+   if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
      beatpositions.add(i);
    }
  }
  
  for(int i:beatpositions){
-   for(int j = 0; j < bucketsPerMeasure; j++){
-     int disp = min(abs( (i-j)%bucketsPerMeasure), abs( (j-i)%bucketsPerMeasure));
+   for(int j = 0; j < bucketsPerRhythm; j++){
+     int disp = min(abs( (i-j)%bucketsPerRhythm), abs( (j-i)%bucketsPerRhythm));
      //disp = #buckets off from i that we are
      beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
    }
  }
  //Normalize beatProbs
  double beatProbSum = 0;
- for(int i = 0; i < bucketsPerMeasure; i++){
+ for(int i = 0; i < bucketsPerRhythm; i++){
    beatProbSum += beatProbs.get(i, 0);
  }
- for(int i = 0; i < bucketsPerMeasure; i++){
+ for(int i = 0; i < bucketsPerRhythm; i++){
    beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
  }
  
@@ -131,28 +148,28 @@ void draw()
 {
   int newtime = millis();
   int t = newtime - oldtime;
-  println(t);
+  //println(t);
   oldtime = newtime;
   
   boolean isBeat = (amp.analyze() > beatThresh) || keyPressed;
   
   //Compute new probs
-  Matrix newprobs2 = new Matrix(bucketsPerMeasure, nTempoBuckets);
+  Matrix newprobs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
   double newprobsum = 0;
   
 
   //Get new position probabilities, based on time since last read and whether we heard a beat
   //Going to bucket i from bucket j in time t 
-  Matrix prenewprobs2 = new Matrix(bucketsPerMeasure, nTempoBuckets);
+  Matrix prenewprobs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
   
-  for(int i = 0; i < bucketsPerMeasure; i++){ //New pos
+  for(int i = 0; i < bucketsPerRhythm; i++){ //New pos
     for(int l = 0; l < nTempoBuckets; l++){ //Old tempo (okay, this gets weird because we're updating position with the old tempo now. Should be close though)
       float tbuckets = (float)t / (float)msPerBucket.get(l, 0); //tbuckets is time in buckets and likely small
       
       float tempil = 0;
       
-      for(int j = 0; j < bucketsPerMeasure; j++){ //Old pos
-        float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)(((j+tbuckets)-i+bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)((i-(j+tbuckets)-bucketsPerMeasure)%bucketsPerMeasure)), abs( (float)(((j+tbuckets)-i-bucketsPerMeasure)%bucketsPerMeasure))};
+      for(int j = 0; j < bucketsPerRhythm; j++){ //Old pos
+        float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerRhythm)%bucketsPerRhythm)), abs( (float)(((j+tbuckets)-i+bucketsPerRhythm)%bucketsPerRhythm)), abs( (float)((i-(j+tbuckets)-bucketsPerRhythm)%bucketsPerRhythm)), abs( (float)(((j+tbuckets)-i-bucketsPerRhythm)%bucketsPerRhythm))};
          float disp = min(stuffToTry); //nBuckets you're off in the time direction
          double tempoPDF = GaussPDF(disp, 0, posSD);
          tempil += probs2.get(j, l)*tempoPDF;
@@ -167,7 +184,7 @@ void draw()
     }
   }
   newprobs2 = prenewprobs2.times(tempoGaussMat);
-  newprobsum = new Matrix(1, bucketsPerMeasure, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
+  newprobsum = new Matrix(1, bucketsPerRhythm, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
         
   //Normalize and get most likely
   double newprobmax = -1;
@@ -177,7 +194,7 @@ void draw()
   newprobs2 = newprobs2.times(1/newprobsum);
   probs = newprobs2.times(probsonemat);
   
-  for(int i = 0; i < bucketsPerMeasure; i++){
+  for(int i = 0; i < bucketsPerRhythm; i++){
     if(probs.get(i, 0) > newprobmax){
       newprobmax = probs.get(i, 0);
       newprobmaxind = i;
@@ -205,7 +222,7 @@ void draw()
     //exit();
   }
   
-  if(newprobmaxind + bucketsPerMeasure/2 <= bucket){ //If we've backed up by more than half a measure, that probably means we skipped across to the next measure
+  if(newprobmaxind + bucketsPerRhythm/2 <= bucket){ //If we've backed up by more than half a measure, that probably means we skipped across to the next measure
     measure++;
   }
   bucket = newprobmaxind;
@@ -277,7 +294,7 @@ void noteArray()
 {
 try
   {
-    File myFile = new File(dataPath("WWRY2.mid"));
+    File myFile = new File(dataPath(fileName));
     Sequence sequence = MidiSystem.getSequence(myFile);
     Track[] tracks = sequence.getTracks();
     double mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
@@ -287,7 +304,7 @@ try
     
     //Grab all the MetaMessage stuff from the start of the first track to get tempo and time signature information
     //Assumes tempo and time signature won't change later, should be fine if we stick to simple songs for now
-    while (tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
+    while (metaidx < tracks[0].size() && tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
     {
       MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
       byte[] b = mm.getMessage();
@@ -298,7 +315,11 @@ try
           System.out.println("Bad meta message");
           assert(false);
         }
-        msperbeat = (b[3] << 16 | b[4] << 8 | b[5]) / 1000.0;
+        //msperbeat = (b[3] << 16 | b[4] << 8 | b[5]) / 1000.0;
+        int top = (b[3] & 0xff);
+        int mid = (b[4] & 0xff);
+        int bot = (b[5] & 0xff);
+        msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
       }
       else if (b[1] == 0x58)
       {
@@ -311,8 +332,10 @@ try
       }
       metaidx++;
     }
+    
+    int melodytrack = 0;
           
-    for (int i = 0; i < 1; i++) // go through tracks, limited to track 0 for now
+    for (int i = melodytrack; i < melodytrack+1; i++) // go through tracks, limited to track 0 for now
     {
       //System.out.println("Track " + i);
       for (int j = 0; j < tracks[i].size(); j++)
@@ -370,6 +393,6 @@ try
   }
 }
 ArrayList<Integer> getNote(int measure, int bucket){
-  int ind = (measure * bucketsPerMeasure + bucket)%notes.size();
+  int ind = (measure * bucketsPerRhythm + bucket)%notes.size();
   return notes.get(ind);
 }

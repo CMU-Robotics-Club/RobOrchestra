@@ -104,6 +104,8 @@ void setup()
   background(255);
   notes = new ArrayList<ArrayList<Integer>>();
   noteArray();
+  NoteArray nArr = new NoteArray("WWRY.mid", bucketsPerMeasure);
+  
   
   
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
