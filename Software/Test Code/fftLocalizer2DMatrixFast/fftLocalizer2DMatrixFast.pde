@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "GoT2.mid";
+String fileName = "GoC.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -14,19 +14,24 @@ Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
 double beatThresh = 0.5; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
+//Want to automatically adjust this based on background volume
+//Median is just bad (probably more non-beats than beats, so it'll be too low)
+//Mean is maybe okay, probably want a little higher
+//Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
+//Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-int bucketsPerMeasure = 96; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray to get a bucketed rhythm pattern, which we then resample to length bucketsPerRhythm
 int nTempoBuckets = 64; //Same idea
-int bucketsPerRhythm;
 
 //Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
-int minMsPerMeasure = 500;
+int minMsPerMeasure = 1000;
 int maxMsPerMeasure = 4000;
 
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
-double beatSD = bucketsPerMeasure/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerMeasure/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
+double posSD = bucketsPerRhythm/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
@@ -71,8 +76,9 @@ void setup()
   System.out.println(notes);
 
   NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
-  ArrayList<ArrayList<Integer>> rhythmPattern = nArr.pattern;
-  bucketsPerRhythm = rhythmPattern.size();
+  ArrayList<ArrayList<Integer>> presampleRhythmPattern = nArr.pattern;
+  ArrayList<ArrayList<Integer>> rhythmPattern = resample(presampleRhythmPattern, bucketsPerRhythm);
+  //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
   probs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
@@ -81,7 +87,7 @@ void setup()
   
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
-    msPerBucket.set(i, 0, (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerMeasure);
+    msPerBucket.set(i, 0, (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerRhythm);
     assert(msPerBucket.get(i, 0) > 0);
   }
  
@@ -92,24 +98,6 @@ void setup()
    }
    beatProbs.set(i, 0, 0.01); //We'll normalize this later
  }
- 
- //TODO read this from track 1 rather than hardcoding
- //That means replacing this chunk of code with something that gets the rhythmPattern as an ArrayList<ArrayList<Integer>> using Ryan's code
-// int[] beatpositions = {bucketsPerMeasure*0/8, bucketsPerMeasure*1/8, bucketsPerMeasure*2/8, bucketsPerMeasure*4/8, bucketsPerMeasure*5/8, bucketsPerMeasure*6/8}; 
- int[] oldbeatpositions = {bucketsPerMeasure*0/4, bucketsPerMeasure*1/4, bucketsPerMeasure*2/4}; 
- 
- //ArrayList<ArrayList<Integer>> rhythmPattern = new ArrayList<ArrayList<Integer>>();
-
-
- 
- //for(int i = 0; i < bucketsPerMeasure; i++){
- //  rhythmPattern.add(new ArrayList<Integer>());
- //}
- //for(int i: oldbeatpositions){
- //  rhythmPattern.get(i).add(42); //Some non-zero number
- //}
- 
- //End get rhythmPattern
  
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
  for(int i = 0; i < bucketsPerRhythm; i++){
@@ -287,6 +275,27 @@ double GaussPDF(double x, double mu, double sigma){
   float pi = 3.1415926; //But no one cares since it just shows up as a constant normalization factor anyway
   //mu = mean, sigma = st. dev.
   return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
+}
+
+ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, int newlen){
+  int oldlen = rhythmSeq.size();
+  ArrayList<ArrayList<Integer>> out = new ArrayList<ArrayList<Integer>>();
+  for(int x = 0; x < newlen; x++){
+    float startbucket = ((float)x/newlen * oldlen);
+    float endbucket = ((float)(x+1)/newlen * oldlen);
+    out.add(new ArrayList<Integer>());
+    if(ceil(startbucket) >= endbucket){
+      out.get(x).add(0);
+    }
+    else{
+      for(int y = (int)ceil(startbucket); y < endbucket; y++){
+        for(Integer pitch: rhythmSeq.get(y)){
+          out.get(x).add(pitch);
+        }
+      }
+    }
+  }
+  return out;
 }
 
 //This function and getNote are just going to keep using ArrayLists, but should be self-contained so it should be fine
