@@ -15,22 +15,26 @@ Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
 double beatThresh = 0.5; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
+//Want to automatically adjust this based on background volume
+//Median is just bad (probably more non-beats than beats, so it'll be too low)
+//Mean is maybe okay, probably want a little higher
+//Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
+//Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-int bucketsPerMeasure = 64; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray to get a bucketed rhythm pattern, which we then resample to length bucketsPerRhythm
 int nTempoBuckets = 64; //Same idea
-int bucketsPerRhythm;
 
 //Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
-int minMsPerMeasure = 500;
-int maxMsPerMeasure = 8000;
-
-int minBPM = 30;
-int maxBPM = 200;
+int minBPM = 60;
+int maxBPM = 60;
+float minMsPerBucket;// = 500;
+float maxMsPerBucket;// = 8000;
 
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
-double beatSD; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
+double posSD = bucketsPerRhythm/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
@@ -77,6 +81,10 @@ void setup()
   notes = nArr.notes.get(0);
   ArrayList<ArrayList<Integer>> rhythmPattern = nArr.pattern;
   bucketsPerRhythm = rhythmPattern.size();
+  ArrayList<ArrayList<Integer>> presampleRhythmPattern = nArr.pattern;
+  ArrayList<ArrayList<Integer>> rhythmPattern = resample(presampleRhythmPattern, bucketsPerRhythm);
+  float measuresPerRhythm = (float)presampleRhythmPattern.size() / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
+  //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
   probs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
@@ -91,7 +99,7 @@ void setup()
   System.out.println(minMsPerMeasure);
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
-    msPerBucket.set(i, 0, (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerMeasure);
+    msPerBucket.set(i, 0, (minMsPerBucket + dMsPerBucket*i)/bucketsPerRhythm);
     assert(msPerBucket.get(i, 0) > 0);
   }
  
@@ -102,24 +110,6 @@ void setup()
    }
    beatProbs.set(i, 0, 0.01); //We'll normalize this later
  }
- 
- //TODO read this from track 1 rather than hardcoding
- //That means replacing this chunk of code with something that gets the rhythmPattern as an ArrayList<ArrayList<Integer>> using Ryan's code
-// int[] beatpositions = {bucketsPerMeasure*0/8, bucketsPerMeasure*1/8, bucketsPerMeasure*2/8, bucketsPerMeasure*4/8, bucketsPerMeasure*5/8, bucketsPerMeasure*6/8}; 
- int[] oldbeatpositions = {bucketsPerMeasure*0/4, bucketsPerMeasure*1/4, bucketsPerMeasure*2/4}; 
- 
- //ArrayList<ArrayList<Integer>> rhythmPattern = new ArrayList<ArrayList<Integer>>();
-
-
- 
- //for(int i = 0; i < bucketsPerMeasure; i++){
- //  rhythmPattern.add(new ArrayList<Integer>());
- //}
- //for(int i: oldbeatpositions){
- //  rhythmPattern.get(i).add(42); //Some non-zero number
- //}
- 
- //End get rhythmPattern
  
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
  for(int i = 0; i < bucketsPerRhythm; i++){
@@ -299,6 +289,130 @@ double GaussPDF(double x, double mu, double sigma){
   return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
 }
 
+ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, int newlen){
+  int oldlen = rhythmSeq.size();
+  ArrayList<ArrayList<Integer>> out = new ArrayList<ArrayList<Integer>>();
+  for(int x = 0; x < newlen; x++){
+    float startbucket = ((float)x/newlen * oldlen);
+    float endbucket = ((float)(x+1)/newlen * oldlen);
+    out.add(new ArrayList<Integer>());
+    if(ceil(startbucket) >= endbucket){
+      out.get(x).add(0);
+    }
+    else{
+      for(int y = (int)ceil(startbucket); y < endbucket; y++){
+        for(Integer pitch: rhythmSeq.get(y)){
+          out.get(x).add(pitch);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+//This function and getNote are just going to keep using ArrayLists, but should be self-contained so it should be fine
+void noteArray()
+{
+try
+  {
+    File myFile = new File(dataPath(fileName));
+    Sequence sequence = MidiSystem.getSequence(myFile);
+    Track[] tracks = sequence.getTracks();
+    double mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
+    int metaidx = 0;
+    int beatspermeasure = 4;
+    double msperbeat = 500;
+    
+    //Grab all the MetaMessage stuff from the start of the first track to get tempo and time signature information
+    //Assumes tempo and time signature won't change later, should be fine if we stick to simple songs for now
+    while (metaidx < tracks[0].size() && tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
+    {
+      MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
+      byte[] b = mm.getMessage();
+      if (b[1] == 0x51)
+      {
+        if (b[2] != 3)
+        {
+          System.out.println("Bad meta message");
+          assert(false);
+        }
+        //msperbeat = (b[3] << 16 | b[4] << 8 | b[5]) / 1000.0;
+        int top = (b[3] & 0xff);
+        int mid = (b[4] & 0xff);
+        int bot = (b[5] & 0xff);
+        msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
+      }
+      else if (b[1] == 0x58)
+      {
+        if (b[2] < 4)
+        {
+          System.out.println("Bad meta message");
+          assert(false);
+        }
+        beatspermeasure = b[3];
+      }
+      metaidx++;
+    }
+    
+    int melodytrack = 0;
+          
+    for (int i = melodytrack; i < melodytrack+1; i++) // go through tracks, limited to track 0 for now
+    {
+      //System.out.println("Track " + i);
+      for (int j = 0; j < tracks[i].size(); j++)
+      {
+        MidiEvent event = tracks[i].get(j);
+        MidiMessage message = event.getMessage(); // get message
+        if (message instanceof ShortMessage)
+        {
+          ShortMessage sm = (ShortMessage) message;
+          if (sm.getCommand() == NOTE_ON) // note on
+          {
+            if (sm.getData2() > 0)
+            {
+              // if ShortMessage that actually sends a note, 
+              int key = sm.getData1();
+              long tick = event.getTick();
+              //System.out.println("note " + j + " is " + key + " at timestamp " + newTick);
+              double pos = ((tick * mspertick) / msperbeat) + 10e-5; //Number of beats into the piece (plus a little so it doesn't truncate to one beat early but this shouldn't matter now that we're just returning the bucket number)
+              //System.out.format("current position %f\n", pos);
+              //System.out.format("milliseconds per beat %f\n", msperbeat);
+              //int measure = (int) (pos / beatspermeasure);
+              //double beat = pos % beatspermeasure;
+              int bucket = (int) Math.round((pos * bucketsPerMeasure) / beatspermeasure);
+              //System.out.println(buckets + "th bucket"); 
+              
+              while (notes.size() <= bucket)
+              {
+                notes.add(new ArrayList<Integer>());
+                //System.out.println("Add");
+              }
+              notes.get(bucket).add(key);
+
+              //System.out.format("At measure %d with beat %f; bucket %d\n", measure, beat, bucket);
+            }
+          }
+        }
+      }
+    }
+    while (notes.size() % bucketsPerMeasure != 0)
+    {
+      notes.add(new ArrayList<Integer>());
+    }
+    //System.out.println(notes);
+    //System.out.println("post pad buckets: " + notes.size());
+  }
+  catch (InvalidMidiDataException e)
+  {
+    System.out.println("Bad file input");
+    exit();
+  }
+  catch (IOException e)
+  {
+    println("Bad file input");
+    exit();
+  }
+}
 ArrayList<Integer> getNote(int measure, int bucket){
   int ind = (measure * bucketsPerRhythm + bucket)%notes.size();
   return notes.get(ind);
