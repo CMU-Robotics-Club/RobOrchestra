@@ -97,7 +97,7 @@ void setup()
     
     
     ticksperbeat = (long) (msperbeat / mspertick);
-    System.out.println("TICKS PER BEAT " + ticksperbeat);
+    Sypstem.out.println("TICKS PER BEAT " + ticksperbeat);
     System.out.println("min tick diff: " + minDiff);
     System.out.println("subdivisions: " + (ticksperbeat / minDiff));
     //bucketspermeasure = (beatspermeasure * (int) (ticksperbeat / minDiff));

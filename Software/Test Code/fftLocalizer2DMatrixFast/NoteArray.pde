@@ -31,9 +31,11 @@ class NoteArray
   private long minDiff; // minimum difference in notes, in ticks (may need to be converted)
 
   public int beatspermeasure;
-  public ArrayList<Integer> notes;
+  public double BPM;
+  public ArrayList<ArrayList<ArrayList<Integer>>> notes;
   public ArrayList<ArrayList<Integer>> notes2;
   public ArrayList<ArrayList<Integer>> pattern;
+  
   public int bucketspermeasure; // minDiff relative to length of a single beat in ticks
   
   private double matchconf = 10e-5;
@@ -42,7 +44,6 @@ class NoteArray
   public NoteArray(String fileName, int bucketspermeasure)
   {
     this.bucketspermeasure = bucketspermeasure;
-    notes = new ArrayList<Integer>();
     notes2 = new ArrayList<ArrayList<Integer>>();
     myBus = new MidiBus(this, 0, 1);
     myFile = new File(dataPath(fileName));
@@ -50,6 +51,7 @@ class NoteArray
     {
       Sequence sequence = MidiSystem.getSequence(myFile);
       tracks = sequence.getTracks();
+      notes = new ArrayList<ArrayList<ArrayList<Integer>>>();
       mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
       minDiff = sequence.getTickLength();
       int metaidx = 0;
@@ -74,7 +76,8 @@ class NoteArray
           int mid = (b[4] & 0xff);
           int bot = (b[5] & 0xff);
           msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
-          double a = 60000.0 / msperbeat; // convert to beats per minute
+          BPM = 60000.0 / msperbeat; // convert to beats per minute
+          
           
           //System.out.println("BPM: " + a);
         }
@@ -135,18 +138,12 @@ class NoteArray
                 //System.out.println(buckets + "th bucket"); 
                 
                 // pad the empty buckets in between
-                while (notes.size() < buckets)
-                {
-                  notes.add(0);
-                  
-                }
                 while (notes2.size() < buckets)
                 {
                   notes2.add(new ArrayList<Integer>());
                   notes2.get(notes2.size()-1).add(0);
                 }
   
-                notes.add(key);
                 if (notes2.size() == buckets)
                 {
                   
@@ -155,7 +152,6 @@ class NoteArray
                 }
                 else
                 {
-                  //notes.set(buckets, key);
                   notes2.get(buckets).add(key);
                 }
                 //System.out.format("At measure %d with beat %f\n", measure, beat);

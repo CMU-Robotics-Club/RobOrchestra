@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "GoC.mid";
+String fileName = "WWRY.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -25,8 +25,10 @@ int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray t
 int nTempoBuckets = 64; //Same idea
 
 //Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
-int minMsPerMeasure = 1000;
-int maxMsPerMeasure = 4000;
+int minBPM = 60;
+int maxBPM = 60;
+float minMsPerBucket;// = 500;
+float maxMsPerBucket;// = 8000;
 
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
@@ -74,20 +76,32 @@ void setup()
   notes = new ArrayList<ArrayList<Integer>>();
   noteArray();
   System.out.println(notes);
+  
 
   NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
   ArrayList<ArrayList<Integer>> presampleRhythmPattern = nArr.pattern;
   ArrayList<ArrayList<Integer>> rhythmPattern = resample(presampleRhythmPattern, bucketsPerRhythm);
+  float measuresPerRhythm = (float)presampleRhythmPattern.size() / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
   probs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
   beatProbs = new Matrix(bucketsPerRhythm, 1); //P(location | heard a beat)
   
+  beatSD = bucketsPerRhythm/320.0;
+  posSD = bucketsPerRhythm/64.0;
+  System.out.println();  
+  System.out.println(60000 / minBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm);
+  println(measuresPerRhythm);
+  println(bucketsPerRhythm);
   
-  int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
+  maxMsPerBucket = 60000 / minBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm;
+  System.out.println(60000 / nArr.BPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm);
+  System.out.println(60000 / maxBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm);
+  minMsPerBucket = 60000 / maxBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm;
+  float dMsPerBucket = (maxMsPerBucket - minMsPerBucket)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
-    msPerBucket.set(i, 0, (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerRhythm);
+    msPerBucket.set(i, 0, (minMsPerBucket + dMsPerBucket*i)/bucketsPerRhythm);
     assert(msPerBucket.get(i, 0) > 0);
   }
  
@@ -196,12 +210,12 @@ void draw()
     ArrayList<Integer> newpitch = getNote(measure, newprobmaxind);
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
-        myBus.sendNoteOff(new Note(0, ppitch.intValue(), 100));
+        myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
       }
       //Start new note
       pitch = newpitch; //Which we know is non-zero because of outer if statement
       for(Integer ppitch: pitch){
-        myBus.sendNoteOn(new Note(0, ppitch.intValue(), 100));
+        myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
       }
     }
   }
