@@ -132,7 +132,7 @@ class NoteArray
                 while (notes.get(i).size() < buckets)
                 {
                   notes.get(i).add(new ArrayList<Integer>());
-                  notes.get(i).get(notes.get(i).size()-1).add(0);
+                  //notes.get(i).get(notes.get(i).size()-1).add(0);
                 }
                 
                 if (notes.get(i).size() == buckets)
@@ -283,9 +283,16 @@ class NoteArray
     for (int i = 0; i < seq.size(); i++)
     {
       res.add(new ArrayList<Integer>());
-      for (int j = 0; j < seq.get(i).size(); j++)
+      if (seq.get(i).size() > 0)
       {
-        res.get(i).add(seq.get(i).get(j) - mean);
+        for (int j = 0; j < seq.get(i).size(); j++)
+        {
+          res.get(i).add(seq.get(i).get(j) - mean);
+        }
+      }
+      else
+      {
+        res.get(i).add(-mean);
       }
     }
     return res;
@@ -327,6 +334,7 @@ class NoteArray
   
   double meanIntAL(ArrayList<Integer> a)
   {
+    if (a.size() == 0) return 0.0;
     double m = 0;
     int len = a.size();
     for (int i = 0; i < len; i++)
