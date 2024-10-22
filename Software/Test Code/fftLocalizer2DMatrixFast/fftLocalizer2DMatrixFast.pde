@@ -227,12 +227,16 @@ void draw()
     ArrayList<Integer> newpitch = getNote(rhythmnum, newprobmaxind);
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
-        myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+        if(ppitch > 0){
+          myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+        }
       }
       //Start new note
       pitch = newpitch; //Which we know is non-zero because of outer if statement
       for(Integer ppitch: pitch){
-        myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+        if(ppitch > 0){
+          myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+        }
       }
     }
   }
