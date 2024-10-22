@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "WWRY.mid";
+String fileName = "GoC.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -20,20 +20,22 @@ double beatThresh = 0.5; //Amplitude threshold to be considered a beat; TODO tun
 //Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
 //Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 64; //Pick something reasonably large (but not so large that it makes computations slow)
 int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray to get a bucketed rhythm pattern, which we then resample to length bucketsPerRhythm
 int nTempoBuckets = 64; //Same idea
 
 //Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
 int minBPM = 60;
-int maxBPM = 60;
-float minMsPerBucket;// = 500;
-float maxMsPerBucket;// = 8000;
+int maxBPM = 110;
+
+//We'll compute these
+float minMsPerRhythm;
+float maxMsPerRhythm;
 
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double posSD = bucketsPerRhythm/64.0/2; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
@@ -43,14 +45,14 @@ Matrix probsonemat;
 Matrix probs2;
 Matrix beatProbs; //P(location | heard a beat)
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
-Matrix msPerBucket = new Matrix(nTempoBuckets, 1);
+Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
 
 
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
 ArrayList<Integer> pitch = new ArrayList<Integer>(); //All notes currently playing
 
 //Where we think we are in the song
-int measure = 0; //Again, this is actually counting instances of the rhythm pattern, which may not line up with actual measures as written
+int rhythmnum = 0; //Again, this is actually counting instances of the rhythm pattern, which may not line up with actual measures as written
 int bucket = 0;
 
 void setup()
@@ -82,6 +84,12 @@ void setup()
   ArrayList<ArrayList<Integer>> presampleRhythmPattern = nArr.pattern;
   ArrayList<ArrayList<Integer>> rhythmPattern = resample(presampleRhythmPattern, bucketsPerRhythm);
   float measuresPerRhythm = (float)presampleRhythmPattern.size() / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
+  
+  //Before resample, notes uses bucketsPerMeasure
+  //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
+  notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*bucketsPerRhythm);
+  
+  
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
@@ -95,14 +103,14 @@ void setup()
   println(measuresPerRhythm);
   println(bucketsPerRhythm);
   
-  maxMsPerBucket = 60000 / minBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm;
+  maxMsPerRhythm = 60000 / minBPM * nArr.beatspermeasure*measuresPerRhythm;
   System.out.println(60000 / nArr.BPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm);
   System.out.println(60000 / maxBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm);
-  minMsPerBucket = 60000 / maxBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm;
-  float dMsPerBucket = (maxMsPerBucket - minMsPerBucket)/(nTempoBuckets-1);
+  minMsPerRhythm = 60000 / maxBPM * nArr.beatspermeasure*measuresPerRhythm;
+  float dMsPerRhythm = (maxMsPerRhythm - minMsPerRhythm)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
-    msPerBucket.set(i, 0, (minMsPerBucket + dMsPerBucket*i)/bucketsPerRhythm);
-    assert(msPerBucket.get(i, 0) > 0);
+    msPerRhythm.set(i, 0, (minMsPerRhythm + dMsPerRhythm*i)/bucketsPerRhythm);
+    assert(msPerRhythm.get(i, 0) > 0);
   }
  
  for(int i = 0; i < bucketsPerRhythm; i++){
@@ -166,7 +174,7 @@ void draw()
   
   for(int i = 0; i < bucketsPerRhythm; i++){ //New pos
     for(int l = 0; l < nTempoBuckets; l++){ //Old tempo (okay, this gets weird because we're updating position with the old tempo now. Should be close though)
-      float tbuckets = (float)t / (float)msPerBucket.get(l, 0); //tbuckets is time in buckets and likely small
+      float tbuckets = (float)t / (float)msPerRhythm.get(l, 0); //tbuckets is time in buckets and likely small
       
       float tempil = 0;
       
@@ -207,7 +215,7 @@ void draw()
   dispProbArray(probs, isBeat);
   
   if(newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
-    ArrayList<Integer> newpitch = getNote(measure, newprobmaxind);
+    ArrayList<Integer> newpitch = getNote(rhythmnum, newprobmaxind);
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
         myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
@@ -225,7 +233,7 @@ void draw()
   }
   
   if(newprobmaxind + bucketsPerRhythm/2 <= bucket){ //If we've backed up by more than half a measure, that probably means we skipped across to the next measure
-    measure++;
+    rhythmnum++;
   }
   bucket = newprobmaxind;
   
@@ -289,6 +297,10 @@ double GaussPDF(double x, double mu, double sigma){
   float pi = 3.1415926; //But no one cares since it just shows up as a constant normalization factor anyway
   //mu = mean, sigma = st. dev.
   return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
+}
+
+ArrayList<ArrayList<Integer>> resampleBy(ArrayList<ArrayList<Integer>> rhythmSeq, float factor){
+  return resample(rhythmSeq, (int)(rhythmSeq.size()*factor));
 }
 
 ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, int newlen){
@@ -415,7 +427,7 @@ try
     exit();
   }
 }
-ArrayList<Integer> getNote(int measure, int bucket){
-  int ind = (measure * bucketsPerRhythm + bucket)%notes.size();
+ArrayList<Integer> getNote(int rhythmnum, int bucket){
+  int ind = (rhythmnum * bucketsPerRhythm + bucket)%notes.size();
   return notes.get(ind);
 }
