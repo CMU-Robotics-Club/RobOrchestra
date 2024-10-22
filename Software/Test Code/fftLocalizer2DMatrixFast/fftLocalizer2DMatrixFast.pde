@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "GoT2.mid";
+String fileName = "WWRY.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -15,18 +15,21 @@ MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
 double beatThresh = 0.5; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
 
-int bucketsPerMeasure = 96; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerMeasure = 64; //Pick something reasonably large (but not so large that it makes computations slow)
 int nTempoBuckets = 64; //Same idea
 int bucketsPerRhythm;
 
 //Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
 int minMsPerMeasure = 500;
-int maxMsPerMeasure = 4000;
+int maxMsPerMeasure = 8000;
+
+int minBPM = 50;
+int maxBPM = 192;
 
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
-double beatSD = bucketsPerMeasure/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerMeasure/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double beatSD; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
+double posSD; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
@@ -69,8 +72,10 @@ void setup()
   notes = new ArrayList<ArrayList<Integer>>();
   noteArray();
   System.out.println(notes);
+  
 
   NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
+  System.out.println(notes);
   ArrayList<ArrayList<Integer>> rhythmPattern = nArr.pattern;
   bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
@@ -78,12 +83,20 @@ void setup()
   probs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
   beatProbs = new Matrix(bucketsPerRhythm, 1); //P(location | heard a beat)
   
-  
+  beatSD = bucketsPerRhythm/320.0;
+  posSD = bucketsPerRhythm/64.0;
+  System.out.println();
+  System.out.println(60000 / minBPM * nArr.beatspermeasure);
+  maxMsPerMeasure = 60000 / minBPM * nArr.beatspermeasure;
+  System.out.println(60000 / nArr.BPM * nArr.beatspermeasure);
+  System.out.println(60000 / maxBPM * nArr.beatspermeasure);
+  minMsPerMeasure = 60000 / maxBPM * nArr.beatspermeasure;
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
     msPerBucket.set(i, 0, (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerMeasure);
     assert(msPerBucket.get(i, 0) > 0);
   }
+  System.out.println(msPerBucket);
  
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
@@ -208,12 +221,12 @@ void draw()
     ArrayList<Integer> newpitch = getNote(measure, newprobmaxind);
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
-        myBus.sendNoteOff(new Note(0, ppitch.intValue(), 100));
+        myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
       }
       //Start new note
       pitch = newpitch; //Which we know is non-zero because of outer if statement
       for(Integer ppitch: pitch){
-        myBus.sendNoteOn(new Note(0, ppitch.intValue(), 100));
+        myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
       }
     }
   }
