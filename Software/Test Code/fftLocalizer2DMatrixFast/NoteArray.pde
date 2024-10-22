@@ -176,6 +176,7 @@ class NoteArray
       //System.out.println(notes2);
       findPattern(notes2);
       
+      
     }
     catch (InvalidMidiDataException e)
     {
