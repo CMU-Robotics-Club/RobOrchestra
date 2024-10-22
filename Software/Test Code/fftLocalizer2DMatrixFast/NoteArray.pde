@@ -25,7 +25,7 @@ class NoteArray
   File myFile;
   private Track[] tracks;
   private double mspertick;
-  public double msperbeat = 0.0;
+  private double msperbeat = 0.0;
   private long ticksperbeat;
   private long newTick;
   private long minDiff; // minimum difference in notes, in ticks (may need to be converted)
@@ -59,6 +59,11 @@ class NoteArray
       {
         MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
         byte[] b = mm.getMessage();
+        //for (int k = 0; k < b.length; k++)
+        //{
+        //  System.out.format("%x ", b[k]);
+        //}
+        //System.out.println();
         /**
         * Interpreting MIDI messages:
         * https://www.recordingblogs.com/wiki/midi-meta-messages
@@ -72,6 +77,9 @@ class NoteArray
           int bot = (b[5] & 0xff);
           msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
           BPM = 60000.0 / msperbeat; // convert to beats per minute
+          
+          
+          //System.out.println("BPM: " + a);
         }
         else if (b[1] == 0x58) // 0x58 == time signature 
         {
@@ -95,9 +103,9 @@ class NoteArray
       
       
       int tracknum = 1;
-      for (int i = 0; i < tracks.length; i++)
+      for (int i = tracknum; i < tracknum+1; i++) // go through tracks, limited to track 1 for now
       {
-        notes.add(new ArrayList<ArrayList<Integer>>());
+        System.out.println("Track " + i);
         for (int j = 0; j < tracks[i].size(); j++)
         {
           MidiEvent event = tracks[i].get(j);
@@ -111,45 +119,64 @@ class NoteArray
               {
                 // if ShortMessage that actually sends a note, 
                 int key = sm.getData1();
+                int octave = (key / 12) - 1;
                 newTick = event.getTick();
+                int note = key % 12;
                 
+                //System.out.println("note " + j + " is " + key + " at timestamp " + newTick);
                 double pos = ((newTick * mspertick) / msperbeat) + 10e-8; // current beat (on scale of the entire piece)
                 //System.out.format("current position %f\n", pos);
                 //System.out.format("milliseconds per beat %f\n", msperbeat);
-                
                 /**
                 * calculate measure and beat
                 */
                 int measure = (int) (pos / beatspermeasure); 
                 double beat = pos % beatspermeasure;
                 //System.out.format("measure %d, beat %f\n", measure, beat);
-                
                 // approximate the bucket that this note belongs in
                 int buckets = (int) Math.round((pos * bucketspermeasure) / beatspermeasure);
                 //System.out.println(buckets + "th bucket"); 
                 
                 // pad the empty buckets in between
-                while (notes.get(i).size() < buckets)
+                while (notes2.size() < buckets)
                 {
-                  notes.get(i).add(new ArrayList<Integer>());
-                  notes.get(i).get(notes.get(i).size()-1).add(0);
+                  notes2.add(new ArrayList<Integer>());
+                  notes2.get(notes2.size()-1).add(0);
                 }
-                
-                if (notes.get(i).size() == buckets)
+  
+                if (notes2.size() == buckets)
                 {
-                  notes.get(i).add(new ArrayList<Integer>());
-                  notes.get(i).get(buckets).add(key);
+                  
+                  notes2.add(new ArrayList<Integer>());
+                  notes2.get(buckets).add(key);
                 }
                 else
                 {
-                  notes.get(i).get(buckets).add(key);
+                  notes2.get(buckets).add(key);
                 }
+                //System.out.format("At measure %d with beat %f\n", measure, beat);
+              }
+              
+              else
+              {
+                //System.out.println("Note off at timestamp " + event.getTick());
+                //oldTick = newTick;
+                //newTick = event.getTick();
+                //newTick2 = event.getTick();
+                
+                ////System.out.println("Ticks elapsed: " + (newTick - oldTick));
+                //if (newTick - oldTick < minDiff) minDiff = newTick - oldTick;
               }
             }
           }
         }
       }
+      
       // TODO: add end padding to notes2
+      //System.out.println(notes2);
+      findPattern(notes2);
+      
+      
     }
     catch (InvalidMidiDataException e)
     {
@@ -162,6 +189,34 @@ class NoteArray
       exit();
     }
   }
+  
+  //void findPatternOld(int[] notes)
+  //{
+  //  System.out.println("Finding best pattern in note sequence..."); 
+  //  double max = 0;
+  //  int besti = 0;
+    
+  //  for(int i = 1; i < notes.length; i++)
+  //  {
+  //    double[] sub = norm2(sublist(notes, 0, notes.length - i)); // use the first i buckets as a template to check the pattern
+  //    double[] sub2 = norm2(sublist(notes, i, notes.length));
+  //    double score = dot2(sub, sub2);
+  //    float div = 500;
+  //    rect((float) i * scale, (float)(250.0-score/div), 1.0 * scale, (float) (score/div));
+      
+  //    if (score > max)
+  //    {
+  //       max = score;
+  //       besti = i;
+  //    }
+  //  }
+    
+  //  int[] maxsub = sublist(notes, 0, besti);
+  //  System.out.print("Best fitting sublist is ");
+  //  print(maxsub);
+  //  System.out.print(" with score " + max + ".");
+  //}
+
   void findPattern(ArrayList<ArrayList<Integer>> notes)
   {
     System.out.println("Finding best pattern in note sequence..."); 
@@ -185,6 +240,7 @@ class NoteArray
     
     double max2 = -1e6;
     int besti2 = 0;
+    ArrayList<ArrayList<Integer>> maxsub = sublist(notes, 0, besti);
     for (int i = 0; i < notes.size() - besti; i += besti)
     {
       ArrayList<ArrayList<Integer>> rhythm = sublist(notes, i, i + besti);
@@ -366,6 +422,7 @@ class NoteArray
         
         System.out.println(b[4]);
         int denominator = 1 << (b[4]& 0xff);
+        int tick = b[5];
         System.out.format("Time signature: %d/%d\n", numerator, denominator);
         break;
       default:

@@ -1,7 +1,6 @@
 import processing.sound.*; //Input from computer mic
 import themidibus.*; //MIDI output to instruments/SimpleSynth
 import java.util.ArrayList;
-import java.text.*;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
@@ -76,11 +75,15 @@ void setup()
   pd.input(in);
   amp.input(in);
   background(255);
-  //System.out.println(notes);
+  notes = new ArrayList<ArrayList<Integer>>();
+  noteArray();
+  System.out.println(notes);
   
 
   NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
+  println(nArr.notes);
   notes = nArr.notes.get(0);
+
   ArrayList<ArrayList<Integer>> presampleRhythmPattern = nArr.pattern;
   println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   println(presampleRhythmPattern);
@@ -101,6 +104,7 @@ void setup()
   
   beatSD = bucketsPerRhythm/320.0;
   posSD = bucketsPerRhythm/64.0;
+
   System.out.println();  
   System.out.println(60000 / minBPM * nArr.beatspermeasure*measuresPerRhythm/bucketsPerRhythm);
   println(measuresPerRhythm);
@@ -116,6 +120,7 @@ void setup()
     msPerRhythm.set(i, 0, (minMsPerRhythm + dMsPerRhythm*i)/bucketsPerRhythm);
     assert(msPerRhythm.get(i, 0) > 0);
   }
+  System.out.println(msPerRhythm);
  
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
@@ -220,7 +225,7 @@ void draw()
   
   if(newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
     ArrayList<Integer> newpitch = getNote(rhythmnum, newprobmaxind);
-    if(newpitch.size() > 0 && newpitch.get(0) > 0){ //So we stop each note when the next note starts
+    if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
         myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
       }
