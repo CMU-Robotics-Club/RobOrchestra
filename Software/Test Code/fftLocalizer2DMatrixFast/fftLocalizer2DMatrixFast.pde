@@ -1,6 +1,7 @@
 import processing.sound.*; //Input from computer mic
 import themidibus.*; //MIDI output to instruments/SimpleSynth
 import java.util.ArrayList;
+import java.text.*;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
@@ -23,8 +24,8 @@ int bucketsPerRhythm;
 int minMsPerMeasure = 500;
 int maxMsPerMeasure = 8000;
 
-int minBPM = 50;
-int maxBPM = 192;
+int minBPM = 30;
+int maxBPM = 200;
 
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
@@ -69,13 +70,11 @@ void setup()
   pd.input(in);
   amp.input(in);
   background(255);
-  notes = new ArrayList<ArrayList<Integer>>();
-  noteArray();
-  System.out.println(notes);
+  //System.out.println(notes);
   
 
   NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
-  System.out.println(notes);
+  notes = nArr.notes.get(0);
   ArrayList<ArrayList<Integer>> rhythmPattern = nArr.pattern;
   bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
@@ -86,17 +85,15 @@ void setup()
   beatSD = bucketsPerRhythm/320.0;
   posSD = bucketsPerRhythm/64.0;
   System.out.println();
-  System.out.println(60000 / minBPM * nArr.beatspermeasure);
   maxMsPerMeasure = 60000 / minBPM * nArr.beatspermeasure;
-  System.out.println(60000 / nArr.BPM * nArr.beatspermeasure);
-  System.out.println(60000 / maxBPM * nArr.beatspermeasure);
+  System.out.println(maxMsPerMeasure); // beat/mes * ms/beat
   minMsPerMeasure = 60000 / maxBPM * nArr.beatspermeasure;
+  System.out.println(minMsPerMeasure);
   int dMsPerMeasure = (maxMsPerMeasure - minMsPerMeasure)/(nTempoBuckets-1);
   for(int i = 0; i < nTempoBuckets; i++){
     msPerBucket.set(i, 0, (minMsPerMeasure + dMsPerMeasure*i)/bucketsPerMeasure);
     assert(msPerBucket.get(i, 0) > 0);
   }
-  System.out.println(msPerBucket);
  
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
@@ -219,7 +216,7 @@ void draw()
   
   if(newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
     ArrayList<Integer> newpitch = getNote(measure, newprobmaxind);
-    if(newpitch.size() > 0){ //So we stop each note when the next note starts
+    if(newpitch.size() > 0 && newpitch.get(0) > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
         myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
       }
@@ -302,109 +299,6 @@ double GaussPDF(double x, double mu, double sigma){
   return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
 }
 
-//This function and getNote are just going to keep using ArrayLists, but should be self-contained so it should be fine
-void noteArray()
-{
-try
-  {
-    File myFile = new File(dataPath(fileName));
-    Sequence sequence = MidiSystem.getSequence(myFile);
-    Track[] tracks = sequence.getTracks();
-    double mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
-    int metaidx = 0;
-    int beatspermeasure = 4;
-    double msperbeat = 500;
-    
-    //Grab all the MetaMessage stuff from the start of the first track to get tempo and time signature information
-    //Assumes tempo and time signature won't change later, should be fine if we stick to simple songs for now
-    while (metaidx < tracks[0].size() && tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
-    {
-      MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
-      byte[] b = mm.getMessage();
-      if (b[1] == 0x51)
-      {
-        if (b[2] != 3)
-        {
-          System.out.println("Bad meta message");
-          assert(false);
-        }
-        //msperbeat = (b[3] << 16 | b[4] << 8 | b[5]) / 1000.0;
-        int top = (b[3] & 0xff);
-        int mid = (b[4] & 0xff);
-        int bot = (b[5] & 0xff);
-        msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
-      }
-      else if (b[1] == 0x58)
-      {
-        if (b[2] < 4)
-        {
-          System.out.println("Bad meta message");
-          assert(false);
-        }
-        beatspermeasure = b[3];
-      }
-      metaidx++;
-    }
-    
-    int melodytrack = 0;
-          
-    for (int i = melodytrack; i < melodytrack+1; i++) // go through tracks, limited to track 0 for now
-    {
-      //System.out.println("Track " + i);
-      for (int j = 0; j < tracks[i].size(); j++)
-      {
-        MidiEvent event = tracks[i].get(j);
-        MidiMessage message = event.getMessage(); // get message
-        if (message instanceof ShortMessage)
-        {
-          ShortMessage sm = (ShortMessage) message;
-          if (sm.getCommand() == NOTE_ON) // note on
-          {
-            if (sm.getData2() > 0)
-            {
-              // if ShortMessage that actually sends a note, 
-              int key = sm.getData1();
-              long tick = event.getTick();
-              //System.out.println("note " + j + " is " + key + " at timestamp " + newTick);
-              double pos = ((tick * mspertick) / msperbeat) + 10e-5; //Number of beats into the piece (plus a little so it doesn't truncate to one beat early but this shouldn't matter now that we're just returning the bucket number)
-              //System.out.format("current position %f\n", pos);
-              //System.out.format("milliseconds per beat %f\n", msperbeat);
-              //int measure = (int) (pos / beatspermeasure);
-              //double beat = pos % beatspermeasure;
-              int bucket = (int) Math.round((pos * bucketsPerMeasure) / beatspermeasure);
-              //System.out.println(buckets + "th bucket"); 
-              
-              while (notes.size() <= bucket)
-              {
-                notes.add(new ArrayList<Integer>());
-                //System.out.println("Add");
-              }
-              notes.get(bucket).add(key);
-
-              //System.out.format("At measure %d with beat %f; bucket %d\n", measure, beat, bucket);
-            }
-          }
-        }
-      }
-    }
-    while (notes.size() % bucketsPerMeasure != 0)
-    {
-      notes.add(new ArrayList<Integer>());
-    }
-    //System.out.println(notes);
-    //System.out.println("post pad buckets: " + notes.size());
-  }
-  catch (InvalidMidiDataException e)
-  {
-    System.out.println("Bad file input");
-    exit();
-  }
-  catch (IOException e)
-  {
-    println("Bad file input");
-    exit();
-  }
-}
 ArrayList<Integer> getNote(int measure, int bucket){
   int ind = (measure * bucketsPerRhythm + bucket)%notes.size();
   return notes.get(ind);
