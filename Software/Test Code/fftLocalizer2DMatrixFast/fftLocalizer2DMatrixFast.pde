@@ -13,7 +13,7 @@ PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but w
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
-double beatThresh = 0.5; //Amplitude threshold to be considered a beat; TODO tune (also adjust down SimpleSynth volume if necessary)
+double beatThresh = 0.5; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
 //Mean is maybe okay, probably want a little higher
@@ -24,9 +24,9 @@ int bucketsPerRhythm = 64; //Pick something reasonably large (but not so large t
 int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray to get a bucketed rhythm pattern, which we then resample to length bucketsPerRhythm
 int nTempoBuckets = 64; //Same idea
 
-//Upper and lower bounds on tempo. TODO: These probably change based on length of "measure" (AKA rhythm sequence)
+//Upper and lower bounds on tempo.
 int minBPM = 60;
-int maxBPM = 110;
+int maxBPM = 360;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -36,7 +36,7 @@ float maxMsPerRhythm;
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/64.0/2; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/16.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -76,9 +76,6 @@ void setup()
   pd.input(in);
   amp.input(in);
   notes = new ArrayList<ArrayList<Integer>>();
-  //noteArray();
-  //System.out.println(notes);
-  
 
   nArr = new NoteArray(fileName, bucketsPerMeasure);
   
@@ -93,10 +90,6 @@ void setup()
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
   
   notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*bucketsPerRhythm);
-  println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-  println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-  println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-  //println(nArr.notes);
   
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
@@ -167,7 +160,6 @@ void draw()
 {
   int newtime = millis();
   int t = newtime - oldtime;
-  //println(t);
   oldtime = newtime;
   
   boolean isBeat = (amp.analyze() > beatThresh) || keyPressed;
@@ -223,7 +215,8 @@ void draw()
   probs2 = newprobs2;
   dispProbArray(probs, isBeat);
   
-  if(bucket >= 0.9*bucketsPerRhythm && newprobmaxind <= 0.1*bucketsPerRhythm && newprobmaxind > -1){
+  if(newprobmaxind <= bucket - 0.5*bucketsPerRhythm){
+  //if(bucket >= 0.9*bucketsPerRhythm && newprobmaxind <= 0.1*bucketsPerRhythm && newprobmaxind > -1){
     rhythmnum++;
     //background(0, 255, 0); //Flashes screen on new measure
   }
