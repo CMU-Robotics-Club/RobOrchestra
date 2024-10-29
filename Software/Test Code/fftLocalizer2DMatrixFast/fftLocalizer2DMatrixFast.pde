@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "GoT6.mid";
+String fileName = "WWRY.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -51,6 +51,7 @@ Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
 ArrayList<Integer> pitch = new ArrayList<Integer>(); //All notes currently playing
 
+NoteArray nArr;
 //Where we think we are in the song
 int rhythmnum = 0; //Again, this is actually counting instances of the rhythm pattern, which may not line up with actual measures as written
 int bucket = 0;
@@ -79,7 +80,7 @@ void setup()
   //System.out.println(notes);
   
 
-  NoteArray nArr = new NoteArray(fileName, bucketsPerMeasure);
+  nArr = new NoteArray(fileName, bucketsPerMeasure);
   
   
   notes = nArr.notes.get(0);
@@ -95,7 +96,7 @@ void setup()
   println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-  println(nArr.notes);
+  //println(nArr.notes);
   
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
@@ -115,7 +116,12 @@ void setup()
     msPerRhythm.set(i, 0, (minMsPerRhythm + dMsPerRhythm*i)/bucketsPerRhythm);
     assert(msPerRhythm.get(i, 0) > 0);
   }
- 
+  
+  for (int i = 0; i < 4; i ++)
+  {
+    playRhythm(rhythmPattern, measuresPerRhythm);
+  }
+
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
    for(int j = 0; j < nTempoBuckets; j++){
@@ -336,4 +342,32 @@ ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, 
 ArrayList<Integer> getNote(int rhythmnum, int bucket){
   int ind = (rhythmnum * bucketsPerRhythm + bucket)%notes.size();
   return notes.get(ind);
+}
+
+void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRhythm)
+{
+  double playMsPerRhythm = 60000.0 / nArr.BPM * nArr.beatspermeasure*measuresPerRhythm;
+  double msPerBucket = playMsPerRhythm / bucketsPerRhythm;
+  int i = 0;
+  ArrayList<Integer> played = new ArrayList<Integer>();
+  while (i < rhythmPattern.size())
+  {
+ 
+    if(rhythmPattern.get(i).size() > 0){ //So we stop each note when the next note starts
+      for(Integer ppitch: played){
+        if(ppitch > 0){
+          myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+        }
+      }
+      //Start new note
+      played = rhythmPattern.get(i); //Which we know is non-zero because of outer if statement
+      for(Integer ppitch: rhythmPattern.get(i)){
+        if(ppitch > 0){
+          myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+        }
+      }
+    }
+    i++;
+    delay((int) msPerBucket);
+  }
 }
