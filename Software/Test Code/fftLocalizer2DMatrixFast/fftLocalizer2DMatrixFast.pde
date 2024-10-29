@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "WWRY.mid";
+String fileName = "GoT6.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -74,7 +74,6 @@ void setup()
   // patch the AudioIn
   pd.input(in);
   amp.input(in);
-  background(255);
   notes = new ArrayList<ArrayList<Integer>>();
   //noteArray();
   //System.out.println(notes);
@@ -201,7 +200,7 @@ void draw()
   newprobsum = new Matrix(1, bucketsPerRhythm, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
         
   //Normalize and get most likely
-  double newprobmax = -1;
+  double newprobmax = -1; //Set this to min probability we're comfortable playing on, or negative if we always want to play
   int newprobmaxind = -1;
   
   //We want to add across the rows of newprobs2 and dump that into probs. Can do that with matrix multiplication.
@@ -217,6 +216,12 @@ void draw()
 
   probs2 = newprobs2;
   dispProbArray(probs, isBeat);
+  
+  if(bucket >= 0.9*bucketsPerRhythm && newprobmaxind <= 0.1*bucketsPerRhythm && newprobmaxind > -1){
+    rhythmnum++;
+    //background(0, 255, 0); //Flashes screen on new measure
+  }
+  bucket = newprobmaxind;
   
   if(newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
     ArrayList<Integer> newpitch = getNote(rhythmnum, newprobmaxind);
@@ -239,11 +244,6 @@ void draw()
     System.out.println("Help I'm lost");
     //exit();
   }
-  
-  if(newprobmaxind + bucketsPerRhythm/2 <= bucket){ //If we've backed up by more than half a measure, that probably means we skipped across to the next measure
-    rhythmnum++;
-  }
-  bucket = newprobmaxind;
   
   //If things get weird, consider adding a small delay here. Seems fine for now though.
   //delay(25);
