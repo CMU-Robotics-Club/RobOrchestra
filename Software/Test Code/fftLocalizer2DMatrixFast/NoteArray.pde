@@ -33,7 +33,6 @@ class NoteArray
   public int beatspermeasure;
   public double BPM;
   public ArrayList<ArrayList<ArrayList<Integer>>> notes;
-  public ArrayList<ArrayList<Integer>> notes2;
   public ArrayList<ArrayList<Integer>> pattern;
   
   public int bucketspermeasure; // minDiff relative to length of a single beat in ticks
@@ -44,7 +43,6 @@ class NoteArray
   public NoteArray(String fileName, int bucketspermeasure)
   {
     this.bucketspermeasure = bucketspermeasure;
-    notes2 = new ArrayList<ArrayList<Integer>>();
     myBus = new MidiBus(this, 0, 1);
     myFile = new File(dataPath(fileName));
     try
@@ -145,11 +143,26 @@ class NoteArray
                   notes.get(i).get(buckets).add(key);
                 }
               }
+              else
+              {
+                //System.out.println("velocity 0");
+              }
             }
+            else if (sm.getCommand() == NOTE_OFF)
+            {
+              //System.out.println("note off");
+            }
+            
           }
         }
       }
-      // TODO: add end padding to notes2
+      for (int i = 0; i < notes.size(); i++)
+      {
+        while (notes.get(i).size() % bucketspermeasure != 0)
+        {
+          notes.get(i).add(new ArrayList<Integer>());
+        }
+      }
       findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)
@@ -163,33 +176,6 @@ class NoteArray
       exit();
     }
   }
-  
-  //void findPatternOld(int[] notes)
-  //{
-  //  System.out.println("Finding best pattern in note sequence..."); 
-  //  double max = 0;
-  //  int besti = 0;
-    
-  //  for(int i = 1; i < notes.length; i++)
-  //  {
-  //    double[] sub = norm2(sublist(notes, 0, notes.length - i)); // use the first i buckets as a template to check the pattern
-  //    double[] sub2 = norm2(sublist(notes, i, notes.length));
-  //    double score = dot2(sub, sub2);
-  //    float div = 500;
-  //    rect((float) i * scale, (float)(250.0-score/div), 1.0 * scale, (float) (score/div));
-      
-  //    if (score > max)
-  //    {
-  //       max = score;
-  //       besti = i;
-  //    }
-  //  }
-    
-  //  int[] maxsub = sublist(notes, 0, besti);
-  //  System.out.print("Best fitting sublist is ");
-  //  print(maxsub);
-  //  System.out.print(" with score " + max + ".");
-  //}
 
   void findPattern(ArrayList<ArrayList<Integer>> notes)
   {
@@ -202,8 +188,6 @@ class NoteArray
       ArrayList<ArrayList<Integer>> sub = normIntALAL(sublist(notes, 0, notes.size() - i)); // use the first i buckets as a template to check the pattern
       ArrayList<ArrayList<Integer>> sub2 = normIntALAL(sublist(notes, i, notes.size()));
       double score = dotIntALAL(sub, sub2);
-      float div = 500;
-      rect((float) i * scale, (float)(250.0-score/div), 1.0 * scale, (float) (score/div));
       
       if (score > max)
       {
@@ -214,7 +198,6 @@ class NoteArray
     
     double max2 = -1e6;
     int besti2 = 0;
-    ArrayList<ArrayList<Integer>> maxsub = sublist(notes, 0, besti);
     for (int i = 0; i < notes.size() - besti; i += besti)
     {
       ArrayList<ArrayList<Integer>> rhythm = sublist(notes, i, i + besti);
@@ -236,17 +219,6 @@ class NoteArray
     System.out.print(" with score " + max2 + ".");
     
   }
- 
-  int[] sublist(int[] list, int start, int end)
-  {
-    int[] res = new int[end - start];
-    for(int i = 0; i < end - start; i++)
-    {
-      res[i] = list[i + start];
-    }
-    return res;
-    
-  }
   
   ArrayList<ArrayList<Integer>> sublist(ArrayList<ArrayList<Integer>> list, int start, int end)
   {
@@ -258,19 +230,6 @@ class NoteArray
       {
         res.get(i).add(list.get(i + start).get(j));
       }
-    }
-    return res;
-  }
-  
-  // normalizes sequence values around a mean
-  double[] norm2(int[] sequence)
-  {
-    double[] res = new double[sequence.length];
-    
-    double mean = mean(sequence);
-    for (int i = 0; i < sequence.length; i++)
-    {
-      res[i] = sequence[i] - mean;
     }
     return res;
   }
@@ -298,17 +257,6 @@ class NoteArray
     return res;
   }
   
-  double dot2(double[] v1, double[] v2)
-  {
-    assert(v1.length == v2.length);
-    double product = 0;
-    for (int i = 0; i < v1.length; i++)
-    {
-      product += (v1[i] * v2[i]);
-    }
-    return product;
-  }
-  
   double dotIntALAL(ArrayList<ArrayList<Integer>> v1, ArrayList<ArrayList<Integer>> v2)
   {
     assert(v1.size() == v2.size());
@@ -318,18 +266,6 @@ class NoteArray
       product += meanIntAL(v1.get(i)) * meanIntAL(v2.get(i));
     }
     return product;
-  }
-  
-  double mean(int[] a)
-  {
-    double m = 0;
-    int len = a.length;
-    for (int i = 0; i < len; i++)
-    {
-      m += a[i];
-    }
-    m = m / (1.0 * len);
-    return m;
   }
   
   double meanIntAL(ArrayList<Integer> a)
@@ -357,17 +293,17 @@ class NoteArray
     return m;
   }
   
-  void print(int[] list)
-  {
-    if (list.length < 1) return;
-    System.out.print("[");
-    System.out.print(list[0]);
-    for(int i = 1; i < list.length; i++)
-    {
-      System.out.print(", " + list[i]);
-    }
-    System.out.print("]");
-  }
+  //void print(int[] list)
+  //{
+  //  if (list.length < 1) return;
+  //  System.out.print("[");
+  //  System.out.print(list[0]);
+  //  for(int i = 1; i < list.length; i++)
+  //  {
+  //    System.out.print(", " + list[i]);
+  //  }
+  //  System.out.print("]");
+  //}
   
   void printMetaMessage(byte[] b)
   {
