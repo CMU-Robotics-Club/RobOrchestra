@@ -44,27 +44,19 @@ long startTime;
 Track[] tracks;
 int[] eventIndices;
 
+String filename;
 String outfilename;
 File outFile;
 Sequence sequence;
 Sequence outsequence;
 
+//This is the channel in the original file that we want to map to track 1 in the new file
+int rhythmTrack;
+
 void setup(){
-  //Time-based or event-based? Try time-based first, shouldn't be hard to switch
-  //Get next message from all channels
-  //While true, check all next messages
-  //If any happen now or earlier, apply them, get next next message, check it immediately
-  //If out of messages, set next message to null
-  //Have a stopLoop variable, default true, set to false if we're not out of messages
-  
-  
-  
-  MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  //myBus = new MidiBus(this, 1, 2);  
-  
   
   try{
-    String filename = "WWRY.mid";
+    filename = "SWtheme.mid";
     File myFile = new File(dataPath(filename));
     outfilename = filename.split("\\.")[0] + "_auto.mid";
     outFile = new File(dataPath(outfilename));
@@ -100,7 +92,11 @@ void setup(){
     println("Bad file input");
     exit();
   }
-  startTime = System.currentTimeMillis();
+  
+  rhythmTrack = midiCompress.getRhythmTrack(dataPath(filename), 32);
+  //rhythmTrack = 0;
+  println(rhythmTrack);
+  //exit();
 }
 
 void draw(){
@@ -108,9 +104,6 @@ void draw(){
   long nextTick = -1;
   int nextChannel = -1;
   MidiEvent nextevent = null;
-  
-  //This is the channel in the original file that we want to map to track 1 in the new file
-  int rhythmTrack = 1; //TODO update this using clever Ryan code
   
   for(int i = 0; i < nChannels; i++)
   {
@@ -130,16 +123,37 @@ void draw(){
     //We're done; write the file and end
     try {
         MidiSystem.write(outsequence, MidiSystem.getMidiFileTypes(outsequence)[0], outFile);
+        print("Successfully wrote file " + outfilename);
+
     } catch (IOException e) {
         e.printStackTrace();
         System.exit(1);
     }
-    print("Successfully wrote file " + outfilename);
     System.exit(0);
   }
   
+  if(nextevent != null && nextevent.getMessage() instanceof ShortMessage){
+    ShortMessage sm = (ShortMessage)nextevent.getMessage();
+    if(sm.getCommand() == 0xC0){
+      //Get the new next event
+      int i = nextChannel;
+      eventIndices[i]++;
+      if (tracks[i].size() > eventIndices[i]) {
+        nextevents[i] = tracks[i].get(eventIndices[i]);
+      }
+      return;
+    }
+    int mychannel = 0;
+    if(nextChannel == rhythmTrack){
+      mychannel = 1;
+    }
+    try{
+    sm.setMessage(sm.getCommand(), mychannel, sm.getData1(), sm.getData2());
+    }
+    catch(InvalidMidiDataException e){print("oops");}
+  }
   //Given that we haven't ended, add the next event to the new file, then update next events
-  if(nextChannel == rhythmTrack){
+  if(nextevent != null && nextevent.getMessage() instanceof MetaMessage == false && nextChannel == rhythmTrack){
     outsequence.getTracks()[1].add(nextevent);
   }
   else{

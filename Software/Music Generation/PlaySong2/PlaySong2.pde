@@ -62,8 +62,8 @@ void setup(){
   //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("jingle_bells-2.mid")); //INPUT
-  File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
-  //File myFile = new File(dataPath("We-Will-Rock-You maybe??.mid")); //INPUT
+  //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  File myFile = new File(dataPath("WWRYtest_auto.mid")); //INPUT
   //File myFile = new File(dataPath("WWRY2.mid")); //INPUT
   
   
