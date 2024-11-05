@@ -15,7 +15,7 @@ import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 import javax.sound.midi.InvalidMidiDataException;
 
-class NoteArray
+class midiCompress
 {
   public static final int NOTE_ON = 0x90;
   public static final int NOTE_OFF = 0x80;
@@ -34,13 +34,14 @@ class NoteArray
   public double BPM;
   public ArrayList<ArrayList<ArrayList<Integer>>> notes;
   public ArrayList<ArrayList<Integer>> pattern;
+  // public ArrayList<ArrayList<int[]>>
   
   public int bucketspermeasure; // minDiff relative to length of a single beat in ticks
   
   private double matchconf = 10e-5;
   private float scale = 10;
 
-  public NoteArray(String fileName, int bucketspermeasure)
+  public midiCompress(String fileName, int bucketspermeasure)
   {
     this.bucketspermeasure = bucketspermeasure;
     myBus = new MidiBus(this, 0, 1);
@@ -77,7 +78,7 @@ class NoteArray
         }
         metaidx++;
       }
-      /*
+      
       for (int i = 0; i < tracks.length; i++)
       {
         System.out.format("Track %d\n", i);
@@ -89,7 +90,7 @@ class NoteArray
           printMetaMessage(b);
           midx++;
         }
-      }*/
+      }
       
       
       int tracknum = 1;
@@ -163,7 +164,12 @@ class NoteArray
           notes.get(i).add(new ArrayList<Integer>());
         }
       }
-      pattern = findPattern(notes.get(1));
+      //for (int i = 0; i < notes.size(); i++)
+      //{
+      //  println(notes.get(i));
+      //  println("--------------------------------------------------------------------------------------------------------------------------------");
+      //}
+      getBestPattern();
     }
     catch (InvalidMidiDataException e)
     {
@@ -177,16 +183,24 @@ class NoteArray
     }
   }
 
+  void getBestPattern()
+  {
+    for (int i = 0; i < notes.size(); i++)
+    {
+      System.out.format("Best sublist on track %d is \n", i);
+      println(findPattern(notes.get(i)));
+    }
+  }
   ArrayList<ArrayList<Integer>> findPattern(ArrayList<ArrayList<Integer>> notes)
   {
-    System.out.println("Finding best pattern in note sequence..."); 
+    //System.out.println("Finding best pattern in note sequence..."); 
     double max = 0;
     int besti = 0;
 
     for(int i = 1; i < notes.size(); i++)
     {
-      ArrayList<ArrayList<Integer>> sub = normIntALAL(sublist(notes, 0, notes.size() - i)); // use the first i buckets as a template to check the pattern
-      ArrayList<ArrayList<Integer>> sub2 = normIntALAL(sublist(notes, i, notes.size()));
+      ArrayList<ArrayList<Integer>> sub = sublist(notes, 0, notes.size() - i); // use the first i buckets as a template to check the pattern
+      ArrayList<ArrayList<Integer>> sub2 = sublist(notes, i, notes.size());
       double score = dotIntALAL(sub, sub2);
       
       if (score > max)
@@ -213,11 +227,12 @@ class NoteArray
         besti2 = i;
       }
     }
+    System.out.println("Score: " + max2 + ".");
     return sublist(notes, besti2, besti2 + besti);
     //pattern = sublist(notes, besti2, besti2 + besti);
     //System.out.print("Best fitting sublist is ");
     //System.out.println(pattern);
-    //System.out.print(" with score " + max2 + ".");
+
     
   }
   
@@ -260,11 +275,10 @@ class NoteArray
   
   double dotIntALAL(ArrayList<ArrayList<Integer>> v1, ArrayList<ArrayList<Integer>> v2)
   {
-    assert(v1.size() == v2.size());
     double product = 0;
     for (int i = 0; i < v1.size(); i++)
     {
-      product += meanIntAL(v1.get(i)) * meanIntAL(v2.get(i));
+      if (v1.get(i).equals(v2.get(i))) product++;
     }
     return product;
   }
