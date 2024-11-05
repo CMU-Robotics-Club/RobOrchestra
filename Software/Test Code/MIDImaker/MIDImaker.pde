@@ -56,7 +56,7 @@ int rhythmTrack;
 void setup(){
   
   try{
-    filename = "SWtheme.mid";
+    filename = "twinkle_twinkle.mid";
     File myFile = new File(dataPath(filename));
     outfilename = filename.split("\\.")[0] + "_auto.mid";
     outFile = new File(dataPath(outfilename));

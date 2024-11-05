@@ -50,6 +50,7 @@ class NoteArray
       Sequence sequence = MidiSystem.getSequence(myFile);
       tracks = sequence.getTracks();
       notes = new ArrayList<ArrayList<ArrayList<Integer>>>();
+      pattern = new ArrayList<ArrayList<Integer>>();
       mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
       minDiff = sequence.getTickLength();
       int metaidx = 0;

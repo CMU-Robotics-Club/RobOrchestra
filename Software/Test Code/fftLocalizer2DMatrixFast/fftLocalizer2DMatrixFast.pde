@@ -26,7 +26,7 @@ int nTempoBuckets = 64; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
-int maxBPM = 360;
+int maxBPM = 240;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -88,9 +88,10 @@ void setup()
   
   //Before resample, notes uses bucketsPerMeasure
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
-  
   notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*bucketsPerRhythm);
   
+
+
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
@@ -118,7 +119,7 @@ void setup()
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
    for(int j = 0; j < nTempoBuckets; j++){
-     probs2.set(i, j, 1.0/bucketsPerRhythm/nTempoBuckets);
+     probs2.set(i, j, Math.random());
    }
    beatProbs.set(i, 0, 0.01); //We'll normalize this later
  }
