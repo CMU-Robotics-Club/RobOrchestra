@@ -101,7 +101,6 @@ void setup(){
 }
 
 void draw(){
-  boolean endSong = true;
   
   long millisSinceStart = (long) ((System.currentTimeMillis() - startTime)/lenmult);
   int i = 0;
@@ -168,7 +167,6 @@ void draw(){
           eventIndices[i]++;
       if (tracks[i].size() > eventIndices[i]) {
             nextevents[i] = tracks[i].get(eventIndices[i]);
-            endSong = false;
           }
     }
     else
