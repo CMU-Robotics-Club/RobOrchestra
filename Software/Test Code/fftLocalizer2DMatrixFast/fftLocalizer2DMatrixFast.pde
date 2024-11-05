@@ -13,7 +13,7 @@ PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but w
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
-double beatThresh = 0.5; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
+double beatThresh = 0.1; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
 //Mean is maybe okay, probably want a little higher
@@ -110,10 +110,10 @@ void setup()
     assert(msPerRhythm.get(i, 0) > 0);
   }
   
-  for (int i = 0; i < 4; i ++)
-  {
-    playRhythm(rhythmPattern, measuresPerRhythm);
-  }
+  //for (int i = 0; i < 4; i ++)
+  //{
+  //  playRhythm(rhythmPattern, measuresPerRhythm);
+  //} 
 
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
