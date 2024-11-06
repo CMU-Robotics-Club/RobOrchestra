@@ -13,7 +13,7 @@ PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but w
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
-double beatThresh = 0.3; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
+double beatThresh = 0.1; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
 //Mean is maybe okay, probably want a little higher
@@ -55,6 +55,8 @@ NoteArray nArr;
 //Where we think we are in the song
 int rhythmnum = 0; //Again, this is actually counting instances of the rhythm pattern, which may not line up with actual measures as written
 int bucket = 0;
+boolean beatReady = true; //Keep track of repeated beat detections so we can filter those out
+
 
 void setup()
 {
@@ -163,8 +165,9 @@ void draw()
   int t = newtime - oldtime;
   oldtime = newtime;
   
-  boolean isBeat = (amp.analyze() > beatThresh) || keyPressed;
-  
+  boolean detectedBeat = (amp.analyze() > beatThresh) || keyPressed;
+  boolean isBeat = detectedBeat && beatReady;
+  beatReady = !detectedBeat;
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
   double newprobsum = 0;
