@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "WWRY.mid";
+String fileName = "WWRY3.mid";
+//String fileName = "GoT6.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -110,10 +111,10 @@ void setup()
     assert(msPerRhythm.get(i, 0) > 0);
   }
   
-  for (int i = 0; i < 4; i ++)
-  {
-    playRhythm(rhythmPattern, measuresPerRhythm);
-  }
+  //for (int i = 0; i < 4; i ++)
+  //{
+  //  playRhythm(rhythmPattern, measuresPerRhythm);
+  //}
 
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
