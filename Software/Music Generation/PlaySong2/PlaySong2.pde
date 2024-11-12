@@ -63,9 +63,7 @@ void setup(){
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("jingle_bells-2.mid")); //INPUT
   File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
-  //File myFile = new File(dataPath("We-Will-Rock-You maybe??.mid")); //INPUT
   //File myFile = new File(dataPath("WWRY3.mid")); //INPUT
-  
   
   try{
     Sequence sequence = MidiSystem.getSequence(myFile);      
@@ -101,7 +99,6 @@ void setup(){
 }
 
 void draw(){
-  boolean endSong = true;
   
   long millisSinceStart = (long) ((System.currentTimeMillis() - startTime)/lenmult);
   int i = 0;
@@ -168,7 +165,6 @@ void draw(){
           eventIndices[i]++;
       if (tracks[i].size() > eventIndices[i]) {
             nextevents[i] = tracks[i].get(eventIndices[i]);
-            endSong = false;
           }
     }
     else

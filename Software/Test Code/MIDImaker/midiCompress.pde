@@ -15,70 +15,70 @@ import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 import javax.sound.midi.InvalidMidiDataException;
 
-class NoteArray
+public static class midiCompress
 {
   public static final int NOTE_ON = 0x90;
   public static final int NOTE_OFF = 0x80;
   public final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
-  private MidiBus myBus;
-  File myFile;
-  private Track[] tracks;
-  private double mspertick;
-  private double msperbeat = 0.0;
-  private long ticksperbeat;
-  private long newTick;
-  private long minDiff; // minimum difference in notes, in ticks (may need to be converted)
+  static private MidiBus myBus;
+  static private Track[] tracks;
+  static private double mspertick;
+  static private double msperbeat = 0.0;
+  static private long ticksperbeat;
+  static private long newTick;
+  static private long minDiff; // minimum difference in notes, in ticks (may need to be converted)
 
-  public int beatspermeasure;
-  public double BPM;
-  public ArrayList<ArrayList<ArrayList<Integer>>> notes;
-  public ArrayList<ArrayList<Integer>> pattern;
+  static public int beatspermeasure;
+  static public double BPM;
+  static public ArrayList<ArrayList<ArrayList<Integer>>> notes;
+  static public ArrayList<ArrayList<Integer>> pattern;
+  // public ArrayList<ArrayList<int[]>>
   
-  public int bucketspermeasure; // minDiff relative to length of a single beat in ticks
+  static private int bucketspermeasure; // minDiff relative to length of a single beat in ticks
   
-  private double matchconf = 10e-5;
-  private float scale = 10;
+  static private double matchconf = 10e-5;
+  static private float scale = 10;
 
-  public NoteArray(String fileName, int bucketspermeasure)
+  static public int getRhythmTrack(String fileName, int bucketspermeasure2)
   {
-    this.bucketspermeasure = bucketspermeasure;
-    myBus = new MidiBus(this, 0, 1);
-    myFile = new File(dataPath(fileName));
+    bucketspermeasure = bucketspermeasure2;
+    File myFile = new File(fileName);
     try
     {
       Sequence sequence = MidiSystem.getSequence(myFile);
       tracks = sequence.getTracks();
       notes = new ArrayList<ArrayList<ArrayList<Integer>>>();
-      pattern = new ArrayList<ArrayList<Integer>>();
       mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
       minDiff = sequence.getTickLength();
-      int metaidx = 0;
-      while (metaidx < tracks[0].size() && tracks[0].get(metaidx).getMessage() instanceof MetaMessage)
-      {
-        MetaMessage mm = (MetaMessage) tracks[0].get(metaidx).getMessage();
-        byte[] b = mm.getMessage();
-        /**
-        * Interpreting MIDI messages:
-        * https://www.recordingblogs.com/wiki/midi-meta-messages
-        */
-        
-        if (b[1] == 0x51) // 0x51 == set tempo in microseconds per beat
+      for(int tracknum = 0; tracknum < tracks.length; tracknum++){
+        int metaidx = 0;
+
+        while (metaidx < tracks[tracknum].size() && tracks[tracknum].get(metaidx).getMessage() instanceof MetaMessage)
         {
-          assert(b[2] == 3); // if the meta message is set tempo, there should be 3 bytes of data
-          int top = (b[3] & 0xff);
-          int mid = (b[4] & 0xff);
-          int bot = (b[5] & 0xff);
-          msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
-          BPM = 60000.0 / msperbeat; // convert to beats per minute
+          MetaMessage mm = (MetaMessage) tracks[tracknum].get(metaidx).getMessage();
+          byte[] b = mm.getMessage();
+          /**
+          * Interpreting MIDI messages:
+          * https://www.recordingblogs.com/wiki/midi-meta-messages
+          */
+          
+          if (b[1] == 0x51) // 0x51 == set tempo in microseconds per beat
+          {
+            assert(b[2] == 3); // if the meta message is set tempo, there should be 3 bytes of data
+            int top = (b[3] & 0xff);
+            int mid = (b[4] & 0xff);
+            int bot = (b[5] & 0xff);
+            msperbeat = ((top << 16) + (mid << 8) + bot) / 1000.0;
+            BPM = 60000.0 / msperbeat; // convert to beats per minute
+          }
+          else if (b[1] == 0x58) // 0x58 == time signature 
+          {
+            beatspermeasure = b[3]; // 4th byte is the numerator of the time signature
+          }
+          metaidx++;
         }
-        else if (b[1] == 0x58) // 0x58 == time signature 
-        {
-          beatspermeasure = b[3]; // 4th byte is the numerator of the time signature
-        }
-        metaidx++;
       }
-      /*
       for (int i = 0; i < tracks.length; i++)
       {
         System.out.format("Track %d\n", i);
@@ -90,7 +90,7 @@ class NoteArray
           printMetaMessage(b);
           midx++;
         }
-      }*/
+      }
       
       
       int tracknum = 1;
@@ -141,6 +141,13 @@ class NoteArray
                 }
                 else
                 {
+                  println("AAAAAAAAAAAAAAAAAA");
+                  println(i);
+                  println(buckets);
+                  println(bucketspermeasure);
+                  println(pos);
+                  println(mspertick);
+                  println(msperbeat);
                   notes.get(i).get(buckets).add(key);
                 }
               }
@@ -164,30 +171,52 @@ class NoteArray
           notes.get(i).add(new ArrayList<Integer>());
         }
       }
-      pattern = findPattern(notes.get(1));
+      //for (int i = 0; i < notes.size(); i++)
+      //{
+      //  println(notes.get(i));
+      //  println("--------------------------------------------------------------------------------------------------------------------------------");
+      //}
+      return getBestPattern();
     }
     catch (InvalidMidiDataException e)
     {
       System.out.println("Bad file input");
-      exit();
+      return -1;
     }
     catch (IOException e)
     {
       println("Bad file input");
-      exit();
+      return -1;
     }
   }
 
-  ArrayList<ArrayList<Integer>> findPattern(ArrayList<ArrayList<Integer>> notes)
+  static int getBestPattern()
   {
-    System.out.println("Finding best pattern in note sequence..."); 
-    double max = 0;
+    int besttrack = -1;
+    double bestscore = -1;
+    for (int i = 0; i < notes.size(); i++)
+    {
+      System.out.format("Best sublist on track %d is \n", i);
+      double score = (double) findPattern(notes.get(i)).get(1);
+      if(score > bestscore){
+        bestscore = score;
+        besttrack = i;
+      }
+      println(findPattern(notes.get(i)).get(0));
+    }
+    return besttrack;
+  }
+  
+  static ArrayList findPattern(ArrayList<ArrayList<Integer>> notes)
+  {
+    //System.out.println("Finding best pattern in note sequence..."); 
+    double max = -1;
     int besti = 0;
 
     for(int i = 1; i < notes.size(); i++)
     {
-      ArrayList<ArrayList<Integer>> sub = normIntALAL(sublist(notes, 0, notes.size() - i)); // use the first i buckets as a template to check the pattern
-      ArrayList<ArrayList<Integer>> sub2 = normIntALAL(sublist(notes, i, notes.size()));
+      ArrayList<ArrayList<Integer>> sub = sublist(notes, 0, notes.size() - i); // use the first i buckets as a template to check the pattern
+      ArrayList<ArrayList<Integer>> sub2 = sublist(notes, i, notes.size());
       double score = dotIntALAL(sub, sub2);
       
       if (score > max)
@@ -214,15 +243,19 @@ class NoteArray
         besti2 = i;
       }
     }
-    return sublist(notes, besti2, besti2 + besti);
+    System.out.println("Score: " + max2 + ".");
+    ArrayList out = new ArrayList();
+    out.add(sublist(notes, besti2, besti2 + besti));
+    out.add(max2);
+    return out;
     //pattern = sublist(notes, besti2, besti2 + besti);
     //System.out.print("Best fitting sublist is ");
     //System.out.println(pattern);
-    //System.out.print(" with score " + max2 + ".");
+
     
   }
   
-  ArrayList<ArrayList<Integer>> sublist(ArrayList<ArrayList<Integer>> list, int start, int end)
+  static ArrayList<ArrayList<Integer>> sublist(ArrayList<ArrayList<Integer>> list, int start, int end)
   {
     ArrayList<ArrayList<Integer>> res = new ArrayList<ArrayList<Integer>>();
     for (int i = 0; i < end - start; i++)
@@ -236,7 +269,7 @@ class NoteArray
     return res;
   }
   
-  ArrayList<ArrayList<Integer>> normIntALAL(ArrayList<ArrayList<Integer>> seq)
+  static ArrayList<ArrayList<Integer>> normIntALAL(ArrayList<ArrayList<Integer>> seq)
   {
     ArrayList<ArrayList<Integer>> res = new ArrayList<ArrayList<Integer>>();
     int mean = (int) meanIntALAL(seq);
@@ -259,18 +292,17 @@ class NoteArray
     return res;
   }
   
-  double dotIntALAL(ArrayList<ArrayList<Integer>> v1, ArrayList<ArrayList<Integer>> v2)
+  static double dotIntALAL(ArrayList<ArrayList<Integer>> v1, ArrayList<ArrayList<Integer>> v2)
   {
-    assert(v1.size() == v2.size());
     double product = 0;
     for (int i = 0; i < v1.size(); i++)
     {
-      product += meanIntAL(v1.get(i)) * meanIntAL(v2.get(i));
+      if (v1.get(i).equals(v2.get(i)) && v1.get(i).size() > 0) product++;
     }
     return product;
   }
   
-  double meanIntAL(ArrayList<Integer> a)
+  static double meanIntAL(ArrayList<Integer> a)
   {
     if (a.size() == 0) return 0.0;
     double m = 0;
@@ -283,7 +315,7 @@ class NoteArray
     return m;
   }
   
-  double meanIntALAL(ArrayList<ArrayList<Integer>> a)
+  static double meanIntALAL(ArrayList<ArrayList<Integer>> a)
   {
     double m = 0;
     int len = a.size();
@@ -295,7 +327,7 @@ class NoteArray
     return m;
   }
   
-  void printMetaMessage(byte[] b)
+  static void printMetaMessage(byte[] b)
   {
     switch(b[1])
     {

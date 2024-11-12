@@ -14,14 +14,14 @@ PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but w
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
-double beatThresh = 0.5; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
+double beatThresh = 0.1; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
 //Mean is maybe okay, probably want a little higher
 //Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
 //Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-int bucketsPerRhythm = 64; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
 int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray to get a bucketed rhythm pattern, which we then resample to length bucketsPerRhythm
 int nTempoBuckets = 64; //Same idea
 
@@ -56,6 +56,8 @@ NoteArray nArr;
 //Where we think we are in the song
 int rhythmnum = 0; //Again, this is actually counting instances of the rhythm pattern, which may not line up with actual measures as written
 int bucket = 0;
+boolean beatReady = true; //Keep track of repeated beat detections so we can filter those out
+
 
 void setup()
 {
@@ -89,9 +91,10 @@ void setup()
   
   //Before resample, notes uses bucketsPerMeasure
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
-  
   notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*bucketsPerRhythm);
   
+
+
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm, 1);
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
@@ -114,12 +117,12 @@ void setup()
   //for (int i = 0; i < 4; i ++)
   //{
   //  playRhythm(rhythmPattern, measuresPerRhythm);
-  //}
+  //} 
 
  for(int i = 0; i < bucketsPerRhythm; i++){
    probs.set(i, 0, 1.0/bucketsPerRhythm);
    for(int j = 0; j < nTempoBuckets; j++){
-     probs2.set(i, j, 1.0/bucketsPerRhythm/nTempoBuckets);
+     probs2.set(i, j, Math.random());
    }
    beatProbs.set(i, 0, 0.01); //We'll normalize this later
  }
@@ -163,8 +166,9 @@ void draw()
   int t = newtime - oldtime;
   oldtime = newtime;
   
-  boolean isBeat = (amp.analyze() > beatThresh) || keyPressed;
-  
+  boolean detectedBeat = (amp.analyze() > beatThresh) || keyPressed;
+  boolean isBeat = detectedBeat && beatReady;
+  beatReady = !detectedBeat;
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
   double newprobsum = 0;
@@ -215,6 +219,11 @@ void draw()
 
   probs2 = newprobs2;
   dispProbArray(probs, isBeat);
+  
+  if(newprobmaxind == bucket){
+    //We haven't gotten to the next bucket yet, don't repeat the note
+    return;
+  }
   
   if(newprobmaxind <= bucket - 0.5*bucketsPerRhythm){
   //if(bucket >= 0.9*bucketsPerRhythm && newprobmaxind <= 0.1*bucketsPerRhythm && newprobmaxind > -1){
