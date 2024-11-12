@@ -93,7 +93,7 @@ public static class midiCompress
       }
       
       
-      int tracknum = 1;
+      int tracknum = 12;
       for (int i = 0; i < tracks.length; i++)
       {
         notes.add(new ArrayList<ArrayList<Integer>>());
@@ -111,6 +111,7 @@ public static class midiCompress
                 // if ShortMessage that actually sends a note, 
                 int key = sm.getData1();
                 newTick = event.getTick();
+                //System.out.format("%d 0x%x %d %d\n", sm.getChannel(), sm.getCommand(), sm.getData1(), sm.getData2());
                 
                 double pos = ((newTick * mspertick) / msperbeat) + 10e-8; // current beat (on scale of the entire piece)
                 //System.out.format("current position %f\n", pos);
@@ -141,6 +142,7 @@ public static class midiCompress
                 }
                 else
                 {
+                  /*
                   println("AAAAAAAAAAAAAAAAAA");
                   println(i);
                   println(buckets);
@@ -149,6 +151,7 @@ public static class midiCompress
                   println(mspertick);
                   println(msperbeat);
                   notes.get(i).get(buckets).add(key);
+                  */
                 }
               }
               else
@@ -171,11 +174,12 @@ public static class midiCompress
           notes.get(i).add(new ArrayList<Integer>());
         }
       }
-      //for (int i = 0; i < notes.size(); i++)
-      //{
-      //  println(notes.get(i));
-      //  println("--------------------------------------------------------------------------------------------------------------------------------");
-      //}
+      for (int i = 0; i < notes.size(); i++)
+      {
+        print(i + ": ");
+        println(notes.get(i));
+        println("--------------------------------------------------------------------------------------------------------------------------------");
+      }
       return getBestPattern();
     }
     catch (InvalidMidiDataException e)
@@ -192,17 +196,21 @@ public static class midiCompress
 
   static int getBestPattern()
   {
+    ArrayList pat;
     int besttrack = -1;
     double bestscore = -1;
     for (int i = 0; i < notes.size(); i++)
     {
       System.out.format("Best sublist on track %d is \n", i);
-      double score = (double) findPattern(notes.get(i)).get(1);
+      pat = findPattern(notes.get(i));
+      double score = (double) pat.get(1); //findPattern(notes.get(i)).get(1);
       if(score > bestscore){
         bestscore = score;
         besttrack = i;
       }
       println(findPattern(notes.get(i)).get(0));
+      println(pat.get(0));
+      println("Score : " + score);
     }
     return besttrack;
   }
@@ -243,7 +251,7 @@ public static class midiCompress
         besti2 = i;
       }
     }
-    System.out.println("Score: " + max2 + ".");
+    //System.out.println("Score: " + max2);
     ArrayList out = new ArrayList();
     out.add(sublist(notes, besti2, besti2 + besti));
     out.add(max2);
@@ -345,7 +353,8 @@ public static class midiCompress
         {
           System.out.format("%c", b[i]);
         }
-        System.out.println();
+        println("  end");
+        //System.out.println();
         break;
       case 0x51:
         int top = (b[3] & 0xff);
@@ -360,12 +369,13 @@ public static class midiCompress
       case 0x58:
         int numerator = (b[3] & 0xff);
         
-        System.out.println(b[4]);
+        //System.out.println(b[4]);
         int denominator = 1 << (b[4]& 0xff);
         int tick = b[5];
         System.out.format("Time signature: %d/%d\n", numerator, denominator);
         break;
       default:
+        println("message type: " + b[1]);
         break;
     }
   }

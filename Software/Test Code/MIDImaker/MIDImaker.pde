@@ -50,13 +50,16 @@ File outFile;
 Sequence sequence;
 Sequence outsequence;
 
+int[][] rhythmTracks = {{}, {2}, {3, 1, 14}};
+boolean write = false;
+
 //This is the channel in the original file that we want to map to track 1 in the new file
 int rhythmTrack;
 
 void setup(){
   
   try{
-    filename = "twinkle_twinkle.mid";
+    filename = "SWtheme_short_auto.mid";
     File myFile = new File(dataPath(filename));
     outfilename = filename.split("\\.")[0] + "_auto.mid";
     outFile = new File(dataPath(outfilename));
@@ -66,8 +69,11 @@ void setup(){
     tracks = sequence.getTracks();
 
     outsequence = new Sequence(sequence.getDivisionType(), sequence.getResolution()); //TODO fix this so tempo's correct
-    outsequence.createTrack();
-    outsequence.createTrack();
+    for (int i = 0; i < rhythmTracks.length; i++)
+    {
+      outsequence.createTrack();
+    }
+   
     
     nChannels = tracks.length;
     
@@ -96,7 +102,8 @@ void setup(){
   rhythmTrack = midiCompress.getRhythmTrack(dataPath(filename), 32);
   //rhythmTrack = 0;
   println(rhythmTrack);
-  //exit();
+  
+  if (!write) exit();
 }
 
 void draw(){
@@ -143,20 +150,56 @@ void draw(){
       }
       return;
     }
-    int mychannel = 0;
-    if(nextChannel == rhythmTrack){
-      mychannel = 1;
+    int mychannel = -1;
+    for (int i = 0; i < rhythmTracks.length; i++)
+    {
+      for (int j = 0; j < rhythmTracks[i].length; j++)
+      {
+        if (rhythmTracks[i][j] == nextChannel){
+          mychannel = i;
+        }
+      }
     }
     try{
-    sm.setMessage(sm.getCommand(), mychannel, sm.getData1(), sm.getData2());
-    }
-    catch(InvalidMidiDataException e){print("oops");}
+          sm.setMessage(sm.getCommand(), mychannel, sm.getData1(), sm.getData2());
+          if (mychannel != -1)
+          {
+            outsequence.getTracks()[mychannel].add(nextevent);
+          }
+        } catch(InvalidMidiDataException e){print("oops");}
+    
   }
   //Given that we haven't ended, add the next event to the new file, then update next events
-  if(nextevent != null && nextevent.getMessage() instanceof MetaMessage == false && nextChannel == rhythmTrack){
+  else if(nextevent != null && nextevent.getMessage() instanceof MetaMessage == false && nextChannel == rhythmTrack){
     outsequence.getTracks()[1].add(nextevent);
   }
   else{
+    if (nextevent != null && nextevent.getMessage() instanceof MetaMessage){
+      byte[] b = ((MetaMessage) nextevent.getMessage()).getMessage();
+      if (b[1] == 0x4)
+      {
+        for (int i = 3; i < 2 + b[2]; i++)
+        {
+          b[i] = 65;
+        }
+      
+        try
+        {
+          byte[] b2 = new byte[b[2]];
+          for (int i = 0; i < b2.length; i++)
+          {
+            b2[i] = b[i + 3];
+          }
+          ((MetaMessage) nextevent.getMessage()).setMessage(4, b2, b[2]);
+          outsequence.getTracks()[0].add(nextevent);
+        }
+        catch (InvalidMidiDataException e)
+        {
+          println(e);
+        }
+      }
+      
+    }
     outsequence.getTracks()[0].add(nextevent);
   }
   
