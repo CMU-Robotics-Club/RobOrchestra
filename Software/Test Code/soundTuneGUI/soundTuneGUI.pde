@@ -27,6 +27,11 @@ int mspernote = 500;
 Slider mspernoteslider;
 
 Textlabel amplitudeLabel;
+Textlabel amplitudeMaxLabel;
+
+
+ArrayList<Float> recentAmps = new ArrayList<Float>();
+ArrayList<Integer> recentTimes = new ArrayList <Integer>();
 
 void setup(){
   size(10000, 10000); //Doesn't take variables, changes window size and controlP5 responsive area
@@ -87,6 +92,9 @@ void setup(){
   amplitudeLabel = cp5.addTextlabel("amplitude")
     .setPosition(10 * scale, 100 * scale)  
   ;
+  amplitudeMaxLabel = cp5.addTextlabel("RecentMaxAmplitude")
+    .setPosition(10 * scale, 125 * scale)  
+  ;
   
   updateButtons();
 }
@@ -96,6 +104,21 @@ void draw(){
   updateButtons();
   
   amplitudeLabel.setText("Amplitude: " + amp.analyze());
+  recentAmps.add(amp.analyze());
+  recentTimes.add(millis());
+  while(recentTimes.get(0) < millis() - mspernote){
+    recentTimes.remove(0);
+    recentAmps.remove(0);
+  }
+  
+  int namps = recentAmps.size();
+  float ampmax = -1;
+  for(int i = 0; i < namps; i++){
+    if(ampmax < recentAmps.get(i)) ampmax = recentAmps.get(i);
+  }
+  amplitudeMaxLabel.setText("Recent Max Amplitude: " + ampmax);
+
+  
   if(millis() > playedLastTime + mspernote){
     playedLastTime = millis();
     //Stop old notes
