@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "WWRY3.mid";
+String fileName = "GoC.mid";
 //String fileName = "GoT6.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
@@ -14,21 +14,24 @@ PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but w
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
-double minBeatThresh = 0.1;
+double beatThreshScale = 0.7;
+double minBeatThresh = 0.1 / beatThreshScale;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
+
+double measureRange = 0.25;
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
 //Mean is maybe okay, probably want a little higher
 //Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
 //Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
-int bucketsPerMeasure = 96; //Same idea. This should only be used in NoteArray to get a bucketed rhythm pattern, which we then resample to length bucketsPerRhythm
+int bucketsPerRhythm = 24; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 int nTempoBuckets = 64; //Same idea
 
 //Upper and lower bounds on tempo.
-int minBPM = 60;
-int maxBPM = 120;
+int minBPM = 119;
+int maxBPM = 121;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -60,9 +63,11 @@ int bucket = 0;
 boolean beatReady = true; //Keep track of repeated beat detections so we can filter those out
 long lastReady;
 
-
+ArrayList<ArrayList<Integer>> rhythmPattern;
+int bucketShift = 0;
 void setup()
 {
+  println("start");
   size(1000, 800);
   background(255);
   
@@ -85,23 +90,24 @@ void setup()
   nArr = new NoteArray(fileName, bucketsPerMeasure);
   
   
-  notes = nArr.notes.get(0);
+  notes = nArr.notes.get(1);
+  println(notes.size());
 
-  ArrayList<ArrayList<Integer>> presampleRhythmPattern = nArr.pattern;
-  ArrayList<ArrayList<Integer>> rhythmPattern = resample(presampleRhythmPattern, bucketsPerRhythm);
-  float measuresPerRhythm = (float)presampleRhythmPattern.size() / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
+  rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
+  
+  float measuresPerRhythm = (1.0 * (bucketsPerRhythm+1)) / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
   
   //Before resample, notes uses bucketsPerMeasure
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
-  notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*bucketsPerRhythm);
+  //notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*(bucketsPerRhythm+1));
   
 
 
   //bucketsPerRhythm = rhythmPattern.size();
-  probs = new Matrix(bucketsPerRhythm, 1);
+  probs = new Matrix(bucketsPerRhythm+1, 1, 1.0/(bucketsPerRhythm+1));
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
-  probs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
-  beatProbs = new Matrix(bucketsPerRhythm, 1); //P(location | heard a beat)
+  probs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
+  beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
   
   beatSD = bucketsPerRhythm/320.0;
   posSD = bucketsPerRhythm/64.0;
@@ -112,7 +118,7 @@ void setup()
   float dMsPerRhythm = (maxMsPerRhythm - minMsPerRhythm)/(nTempoBuckets-1);
 
   for(int i = 0; i < nTempoBuckets; i++){
-    msPerRhythm.set(i, 0, (minMsPerRhythm + dMsPerRhythm*i)/bucketsPerRhythm);
+    msPerRhythm.set(i, 0, (minMsPerRhythm + dMsPerRhythm*i)/(bucketsPerRhythm+1));
     assert(msPerRhythm.get(i, 0) > 0);
   }
   
@@ -121,23 +127,27 @@ void setup()
   //  playRhythm(rhythmPattern, measuresPerRhythm);
   //} 
 
- for(int i = 0; i < bucketsPerRhythm; i++){
-   probs.set(i, 0, 1.0/bucketsPerRhythm);
+ for(int i = 0; i < bucketsPerRhythm+1; i++){
    for(int j = 0; j < nTempoBuckets; j++){
-     probs2.set(i, j, Math.random());
+     if (i == bucketsPerRhythm/2 + 1)
+     {
+       probs2.set(i, j, 1);
+     }
+     else
+     {
+       probs2.set(i, j, 0);
+     }
    }
-   beatProbs.set(i, 0, 0.01); //We'll normalize this later
  }
  
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
- for(int i = 0; i < bucketsPerRhythm; i++){
+ for(int i = 0; i < bucketsPerRhythm+1; i++){
    if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
      beatpositions.add(i);
    }
  }
- 
  for(int i:beatpositions){
-   for(int j = 0; j < bucketsPerRhythm; j++){
+   for(int j = 0; j < bucketsPerRhythm+1; j++){
      int disp = min(abs( (i-j)%bucketsPerRhythm), abs( (j-i)%bucketsPerRhythm));
      //disp = #buckets off from i that we are
      beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
@@ -145,10 +155,10 @@ void setup()
  }
  //Normalize beatProbs
  double beatProbSum = 0;
- for(int i = 0; i < bucketsPerRhythm; i++){
+ for(int i = 0; i < bucketsPerRhythm+1; i++){
    beatProbSum += beatProbs.get(i, 0);
  }
- for(int i = 0; i < bucketsPerRhythm; i++){
+ for(int i = 0; i < bucketsPerRhythm+1; i++){
    beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
  }
  
@@ -164,10 +174,36 @@ void setup()
 
 void draw()
 {
+  rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
+  beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
+ 
+ 
+ ArrayList<Integer> beatpositions = new ArrayList<Integer>();
+ for(int i = 0; i < bucketsPerRhythm+1; i++){
+   if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
+     beatpositions.add(i+12);
+   }
+ }
+ 
+ for(int i:beatpositions){
+   for(int j = 0; j < (bucketsPerRhythm+1); j++){
+     int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+     //disp = #buckets off from i that we are
+     beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+   }
+ }
+ //Normalize beatProbs
+ double beatProbSum = 0;
+ for(int i = 0; i < (bucketsPerRhythm+1); i++){
+   beatProbSum += beatProbs.get(i, 0);
+ }
+ for(int i = 0; i < (bucketsPerRhythm+1); i++){
+   beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
+ }
+ 
   background(255);
   int newtime = millis();
   int t = newtime - oldtime;
-  println(t);
   oldtime = newtime;
   
   boolean detectedBeat = (amp.analyze() > 0.7 * beatThresh) || keyPressed;
@@ -180,30 +216,26 @@ void draw()
   }
   boolean isBeat = detectedBeat && beatReady;
   beatReady = !detectedBeat;
-  //if (beatReady) lastReady = millis();
-  //if (lastReady <= millis() - 50)
-  //{
-  //  beatThresh += 0.001;
-  //  println(beatThresh);
-  //}
-  //beatThresh -= 10e-5;
+  
   //Compute new probs
-  Matrix newprobs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
+  Matrix newprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   double newprobsum = 0;
   
 
   //Get new position probabilities, based on time since last read and whether we heard a beat
   //Going to bucket i from bucket j in time t 
-  Matrix prenewprobs2 = new Matrix(bucketsPerRhythm, nTempoBuckets);
+  Matrix prenewprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   
-  for(int i = 0; i < bucketsPerRhythm; i++){ //New pos
+  for(int i = 0; i < bucketsPerRhythm+1; i++){ //New pos
+    if (i-bucketShift < 0 || i-bucketShift >= bucketsPerRhythm+1) continue;
     for(int l = 0; l < nTempoBuckets; l++){ //Old tempo (okay, this gets weird because we're updating position with the old tempo now. Should be close though)
       float tbuckets = (float)t / (float)msPerRhythm.get(l, 0); //tbuckets is time in buckets and likely small
       
       float tempil = 0;
       
-      for(int j = 0; j < bucketsPerRhythm; j++){ //Old pos
-        float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerRhythm)%bucketsPerRhythm)), abs( (float)(((j+tbuckets)-i+bucketsPerRhythm)%bucketsPerRhythm)), abs( (float)((i-(j+tbuckets)-bucketsPerRhythm)%bucketsPerRhythm)), abs( (float)(((j+tbuckets)-i-bucketsPerRhythm)%bucketsPerRhythm))};
+      for(int j = 0; j < (bucketsPerRhythm+1); j++){ //Old pos
+        //float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)((i-(j+tbuckets)-(bucketsPerRhythm+1))%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i-(bucketsPerRhythm+1))%(bucketsPerRhythm+1)))};
+         float[] stuffToTry = {i-(j+tbuckets)};
          float disp = min(stuffToTry); //nBuckets you're off in the time direction
          double tempoPDF = GaussPDF(disp, 0, posSD);
          tempil += probs2.get(j, l)*tempoPDF;
@@ -214,11 +246,12 @@ void draw()
       else{
         tempil *= (1-beatProbs.get(i, 0));
       }
-      prenewprobs2.set(i, l, tempil);
+      
+      prenewprobs2.set(i-bucketShift, l, tempil);
     }
   }
   newprobs2 = prenewprobs2.times(tempoGaussMat);
-  newprobsum = new Matrix(1, bucketsPerRhythm, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
+  newprobsum = new Matrix(1, bucketsPerRhythm+1, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
         
   //Normalize and get most likely
   double newprobmax = -1; //Set this to min probability we're comfortable playing on, or negative if we always want to play
@@ -228,7 +261,7 @@ void draw()
   newprobs2 = newprobs2.times(1/newprobsum);
   probs = newprobs2.times(probsonemat);
   
-  for(int i = 0; i < bucketsPerRhythm; i++){
+  for(int i = 0; i < (bucketsPerRhythm+1); i++){
     if(probs.get(i, 0) > newprobmax){
       newprobmax = probs.get(i, 0);
       newprobmaxind = i;
@@ -237,21 +270,19 @@ void draw()
 
   probs2 = newprobs2;
   dispProbArray(probs, isBeat);
+  dispProbArray(beatProbs, isBeat);
   
-  if(newprobmaxind == bucket){
+  bucketShift = newprobmaxind - (bucketsPerRhythm/2 + 1);
+  //println(bucketShift);
+  if(bucketShift == 0){
     //We haven't gotten to the next bucket yet, don't repeat the note
     return;
   }
   
-  if(newprobmaxind <= bucket - 0.5*bucketsPerRhythm){
-  //if(bucket >= 0.9*bucketsPerRhythm && newprobmaxind <= 0.1*bucketsPerRhythm && newprobmaxind > -1){
-    rhythmnum++;
-    //background(0, 255, 0); //Flashes screen on new measure
-  }
-  bucket = newprobmaxind;
+  bucket += bucketShift;
   
   if(newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
-    ArrayList<Integer> newpitch = getNote(rhythmnum, newprobmaxind);
+    ArrayList<Integer> newpitch = notes.get((bucket + notes.size()) % notes.size());
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
         if(ppitch > 0){
@@ -271,6 +302,7 @@ void draw()
     System.out.println("Help I'm lost");
     //exit();
   }
+
   
   //If things get weird, consider adding a small delay here. Seems fine for now though.
   //delay(25);
@@ -360,15 +392,11 @@ ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, 
   }
   return out;
 }
-ArrayList<Integer> getNote(int rhythmnum, int bucket){
-  int ind = (rhythmnum * bucketsPerRhythm + bucket)%notes.size();
-  return notes.get(ind);
-}
 
 void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRhythm)
 {
   double playMsPerRhythm = 60000.0 / nArr.BPM * nArr.beatspermeasure*measuresPerRhythm;
-  double msPerBucket = playMsPerRhythm / bucketsPerRhythm;
+  double msPerBucket = playMsPerRhythm / (bucketsPerRhythm+1);
   int i = 0;
   ArrayList<Integer> played = new ArrayList<Integer>();
   while (i < rhythmPattern.size())
@@ -392,3 +420,17 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     delay((int) msPerBucket);
   }
 }
+
+  ArrayList<ArrayList<Integer>> sublist(ArrayList<ArrayList<Integer>> list, int start, int end)
+  {
+    ArrayList<ArrayList<Integer>> res = new ArrayList<ArrayList<Integer>>();
+    for (int i = 0; i <= end - start; i++)
+    {
+      res.add(new ArrayList<Integer>());
+      for (int j = 0; j < list.get((i + start + list.size()) % list.size()).size(); j++)
+      {
+        res.get(i).add(list.get((i + start + list.size()) % list.size()).get(j));
+      }
+    }
+    return res;
+  }
