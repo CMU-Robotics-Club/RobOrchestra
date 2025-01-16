@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "GoC.mid";
-//String fileName = "GoT6.mid";
+String fileName = "twinkle_twinkle2.mid";
+//String fileName = "GoC.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -15,23 +15,27 @@ Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.1 / beatThreshScale;
+double minBeatThresh = 0.2;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
-
-double measureRange = 0.25;
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
 //Mean is maybe okay, probably want a little higher
 //Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
 //Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-int bucketsPerRhythm = 24; //Pick something reasonably large (but not so large that it makes computations slow)
+double measureRange = 0.5;
+// how many measures we see on each side of current bucket
+
+int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+// total # of buckets for window (+1?)
+// rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
-int nTempoBuckets = 64; //Same idea
+// 
+int nTempoBuckets = 16; //Same idea
 
 //Upper and lower bounds on tempo.
-int minBPM = 119;
-int maxBPM = 121;
+int minBPM = 59;
+int maxBPM = 61;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -67,6 +71,7 @@ ArrayList<ArrayList<Integer>> rhythmPattern;
 int bucketShift = 0;
 void setup()
 {
+  //println(bucketsPerMeasure);
   println("start");
   size(1000, 800);
   background(255);
@@ -89,18 +94,17 @@ void setup()
 
   nArr = new NoteArray(fileName, bucketsPerMeasure);
   
-  
   notes = nArr.notes.get(1);
-  println(notes.size());
+  //println(notes.size());
 
-  rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
+  //rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
   
   float measuresPerRhythm = (1.0 * (bucketsPerRhythm+1)) / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
-  
+  //println("measures per rhythm " + measuresPerRhythm);
   //Before resample, notes uses bucketsPerMeasure
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
   //notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*(bucketsPerRhythm+1));
-  
+  //notes = resampleBy(notes, 1.0/bucketsPerMeasure*(bucketsPerRhythm+1));
 
 
   //bucketsPerRhythm = rhythmPattern.size();
@@ -113,8 +117,8 @@ void setup()
   posSD = bucketsPerRhythm/64.0;
   
   
-  maxMsPerRhythm = 60000 / minBPM * nArr.beatspermeasure*measuresPerRhythm;
-  minMsPerRhythm = 60000 / maxBPM * nArr.beatspermeasure*measuresPerRhythm;
+  maxMsPerRhythm = 60000 / minBPM * nArr.quarternotespermeasure*measuresPerRhythm;
+  minMsPerRhythm = 60000 / maxBPM * nArr.quarternotespermeasure*measuresPerRhythm;
   float dMsPerRhythm = (maxMsPerRhythm - minMsPerRhythm)/(nTempoBuckets-1);
 
   for(int i = 0; i < nTempoBuckets; i++){
@@ -140,27 +144,27 @@ void setup()
    }
  }
  
- ArrayList<Integer> beatpositions = new ArrayList<Integer>();
- for(int i = 0; i < bucketsPerRhythm+1; i++){
-   if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
-     beatpositions.add(i);
-   }
- }
- for(int i:beatpositions){
-   for(int j = 0; j < bucketsPerRhythm+1; j++){
-     int disp = min(abs( (i-j)%bucketsPerRhythm), abs( (j-i)%bucketsPerRhythm));
-     //disp = #buckets off from i that we are
-     beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
-   }
- }
+ //ArrayList<Integer> beatpositions = new ArrayList<Integer>();
+ //for(int i = 0; i < bucketsPerRhythm+1; i++){
+ //  if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
+ //    beatpositions.add(i);
+ //  }
+ //}
+ //for(int i:beatpositions){
+ //  for(int j = 0; j < bucketsPerRhythm+1; j++){
+ //    int disp = min(abs( (i-j)%bucketsPerRhythm), abs( (j-i)%bucketsPerRhythm));
+ //    //disp = #buckets off from i that we are
+ //    beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+ //  }
+ //}
  //Normalize beatProbs
- double beatProbSum = 0;
- for(int i = 0; i < bucketsPerRhythm+1; i++){
-   beatProbSum += beatProbs.get(i, 0);
- }
- for(int i = 0; i < bucketsPerRhythm+1; i++){
-   beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
- }
+ //double beatProbSum = 0;
+ //for(int i = 0; i < bucketsPerRhythm+1; i++){
+ //  beatProbSum += beatProbs.get(i, 0);
+ //}
+ //for(int i = 0; i < bucketsPerRhythm+1; i++){
+ //  beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
+ //}
  
  //Set up tempoGaussMat
   for(int k = 0; k < nTempoBuckets; k++){
@@ -175,6 +179,7 @@ void setup()
 void draw()
 {
   rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
+  //println(rhythmPattern);
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
  
  
@@ -225,7 +230,6 @@ void draw()
   //Get new position probabilities, based on time since last read and whether we heard a beat
   //Going to bucket i from bucket j in time t 
   Matrix prenewprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
-  
   for(int i = 0; i < bucketsPerRhythm+1; i++){ //New pos
     if (i-bucketShift < 0 || i-bucketShift >= bucketsPerRhythm+1) continue;
     for(int l = 0; l < nTempoBuckets; l++){ //Old tempo (okay, this gets weird because we're updating position with the old tempo now. Should be close though)
@@ -248,9 +252,12 @@ void draw()
       }
       
       prenewprobs2.set(i-bucketShift, l, tempil);
+      
     }
   }
+
   newprobs2 = prenewprobs2.times(tempoGaussMat);
+  
   newprobsum = new Matrix(1, bucketsPerRhythm+1, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
         
   //Normalize and get most likely
@@ -261,6 +268,7 @@ void draw()
   newprobs2 = newprobs2.times(1/newprobsum);
   probs = newprobs2.times(probsonemat);
   
+  //printMatrix(probs.getArray());
   for(int i = 0; i < (bucketsPerRhythm+1); i++){
     if(probs.get(i, 0) > newprobmax){
       newprobmax = probs.get(i, 0);
@@ -272,8 +280,8 @@ void draw()
   dispProbArray(probs, isBeat);
   dispProbArray(beatProbs, isBeat);
   
-  bucketShift = newprobmaxind - (bucketsPerRhythm/2 + 1);
-  //println(bucketShift);
+  bucketShift = newprobmaxind - (bucketsPerRhythm/2);
+  println(bucketShift);
   if(bucketShift == 0){
     //We haven't gotten to the next bucket yet, don't repeat the note
     return;
@@ -363,7 +371,13 @@ void dispProbArray(Matrix A, boolean isBeat){
 double GaussPDF(double x, double mu, double sigma){
   float pi = 3.1415926; //But no one cares since it just shows up as a constant normalization factor anyway
   //mu = mean, sigma = st. dev.
-  return 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
+  
+  double res = 1.0/(sigma*sqrt(pi*2))*exp( (float) (-0.5*((x-mu)/sigma)*((x-mu)/sigma)));
+  //if (Double.isNaN(res)) println("NaN at " + x + " " + mu + " " + sigma);
+  //if (res < 10e-5)
+  //  res = 10e-5;
+   
+  return res;
 }
 
 ArrayList<ArrayList<Integer>> resampleBy(ArrayList<ArrayList<Integer>> rhythmSeq, float factor){
@@ -395,7 +409,7 @@ ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, 
 
 void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRhythm)
 {
-  double playMsPerRhythm = 60000.0 / nArr.BPM * nArr.beatspermeasure*measuresPerRhythm;
+  double playMsPerRhythm = 60000.0 / nArr.BPM * nArr.quarternotespermeasure*measuresPerRhythm;
   double msPerBucket = playMsPerRhythm / (bucketsPerRhythm+1);
   int i = 0;
   ArrayList<Integer> played = new ArrayList<Integer>();
@@ -433,4 +447,16 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
       }
     }
     return res;
+  }
+  
+  void printMatrix(double[][] arr)
+  {
+    for (int i = 0; i < arr.length; i++)
+    {
+      for (int j = 0; j < arr[0].length; j++)
+      {
+        System.out.format("%2f ", arr[i][j]);
+      }
+      println();
+    }
   }

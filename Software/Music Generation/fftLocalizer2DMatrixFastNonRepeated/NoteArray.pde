@@ -30,7 +30,7 @@ class NoteArray
   private long newTick;
   private long minDiff; // minimum difference in notes, in ticks (may need to be converted)
 
-  public int beatspermeasure;
+  public float quarternotespermeasure;
   public double BPM;
   public ArrayList<ArrayList<ArrayList<Integer>>> notes;
   public ArrayList<ArrayList<Integer>> pattern;
@@ -74,7 +74,8 @@ class NoteArray
         }
         else if (b[1] == 0x58) // 0x58 == time signature 
         {
-          beatspermeasure = b[3]; // 4th byte is the numerator of the time signature
+          quarternotespermeasure = b[3] * 4.0/(1 << b[4]); // 4th byte is the numerator of the time signature
+          println("quarter notes per measure " + quarternotespermeasure);
         }
         metaidx++;
       }
@@ -120,12 +121,12 @@ class NoteArray
                 /**
                 * calculate measure and beat
                 */
-                int measure = (int) (pos / beatspermeasure); 
-                double beat = pos % beatspermeasure;
+                int measure = (int) (pos / quarternotespermeasure); 
+                double beat = pos % quarternotespermeasure;
                 //System.out.format("measure %d, beat %f\n", measure, beat);
                 
                 // approximate the bucket that this note belongs in
-                int buckets = (int) Math.round((pos * bucketspermeasure) / beatspermeasure);
+                int buckets = (int) Math.round((pos * bucketspermeasure) / quarternotespermeasure);
                 //System.out.println(buckets + "th bucket"); 
                 
                 // pad the empty buckets in between
@@ -165,7 +166,7 @@ class NoteArray
           notes.get(i).add(new ArrayList<Integer>());
         }
       }
-      pattern = findPattern(notes.get(1));
+      //pattern = findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)
     {
