@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "twinkle_twinkle2.mid";
+String fileName = "twinkle_twinkle_eflat.mid";
 //String fileName = "GoC.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
@@ -15,7 +15,7 @@ Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.2;
+double minBeatThresh = 0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -26,16 +26,16 @@ double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO
 double measureRange = 0.5;
 // how many measures we see on each side of current bucket
 
-int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large that it makes computations slow)
 // total # of buckets for window (+1?)
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 // 
-int nTempoBuckets = 16; //Same idea
+int nTempoBuckets = 48; //Same idea
 
 //Upper and lower bounds on tempo.
-int minBPM = 59;
-int maxBPM = 61;
+int minBPM = 60;
+int maxBPM = 180;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -44,7 +44,7 @@ float maxMsPerRhythm;
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/64.0/2; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double posSD = bucketsPerRhythm/256.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double tempoSD = nTempoBuckets/16.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
@@ -94,7 +94,10 @@ void setup()
 
   nArr = new NoteArray(fileName, bucketsPerMeasure);
   
+  
   notes = nArr.notes.get(1);
+  println("melody size: " + nArr.notes.get(0).size());
+  println("harmony size: " + notes.size());
   //println(notes.size());
 
   //rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
@@ -113,9 +116,6 @@ void setup()
   probs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
   
-  beatSD = bucketsPerRhythm/320.0;
-  posSD = bucketsPerRhythm/64.0;
-  
   
   maxMsPerRhythm = 60000 / minBPM * nArr.quarternotespermeasure*measuresPerRhythm;
   minMsPerRhythm = 60000 / maxBPM * nArr.quarternotespermeasure*measuresPerRhythm;
@@ -133,7 +133,7 @@ void setup()
 
  for(int i = 0; i < bucketsPerRhythm+1; i++){
    for(int j = 0; j < nTempoBuckets; j++){
-     if (i == bucketsPerRhythm/2 + 1)
+     if (i == bucketsPerRhythm/2)
      {
        probs2.set(i, j, 1);
      }
@@ -174,6 +174,7 @@ void setup()
      tempoGaussMat.set(l, k, GaussPDF(k-l, 0, tempoSD));
    }
   }
+  oldtime = millis();
 }      
 
 void draw()
@@ -186,7 +187,7 @@ void draw()
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
  for(int i = 0; i < bucketsPerRhythm+1; i++){
    if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
-     beatpositions.add(i+12);
+     beatpositions.add(i);
    }
  }
  
@@ -241,8 +242,8 @@ void draw()
         //float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)((i-(j+tbuckets)-(bucketsPerRhythm+1))%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i-(bucketsPerRhythm+1))%(bucketsPerRhythm+1)))};
          float[] stuffToTry = {i-(j+tbuckets)};
          float disp = min(stuffToTry); //nBuckets you're off in the time direction
-         double tempoPDF = GaussPDF(disp, 0, posSD);
-         tempil += probs2.get(j, l)*tempoPDF;
+         double posPDF = GaussPDF(disp, 0, posSD);
+         tempil += probs2.get(j, l)*posPDF;
       }
       if(isBeat){
         tempil *= beatProbs.get(i, 0);
@@ -264,6 +265,7 @@ void draw()
   double newprobmax = -1; //Set this to min probability we're comfortable playing on, or negative if we always want to play
   int newprobmaxind = -1;
   
+  
   //We want to add across the rows of newprobs2 and dump that into probs. Can do that with matrix multiplication.
   newprobs2 = newprobs2.times(1/newprobsum);
   probs = newprobs2.times(probsonemat);
@@ -281,11 +283,10 @@ void draw()
   dispProbArray(beatProbs, isBeat);
   
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
-  println(bucketShift);
-  if(bucketShift == 0){
-    //We haven't gotten to the next bucket yet, don't repeat the note
-    return;
-  }
+  //if(bucketShift == 0){
+  //  //We haven't gotten to the next bucket yet, don't repeat the note
+  //  return;
+  //}
   
   bucket += bucketShift;
   
