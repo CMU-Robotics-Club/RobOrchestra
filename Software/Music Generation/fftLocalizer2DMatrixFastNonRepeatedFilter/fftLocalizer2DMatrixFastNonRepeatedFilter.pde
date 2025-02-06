@@ -17,11 +17,13 @@ MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 FFT fft;
 int num_bands = 512;
 int sampleRate = 44100;
-float[] ref_freqs;
+ArrayList<float[]> ref_freqs;
+ArrayList<Integer> ref_freq_times;
+long lastPlayedTime;
 
 int playHarmony = 0;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.08; //0.08;
+double minBeatThresh = 0.12; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -186,12 +188,23 @@ void setup()
   }
   oldtime = millis();
   
-  ref_freqs = new float[num_bands];
+  ref_freqs = new ArrayList<float[]>();
+  ref_freq_times = new ArrayList<Integer>();
   myBus.sendNoteOn(new Note(0, MIDIfromPitch(440), 25));
   delay(500);
-  fft.analyze(ref_freqs);
+  lastPlayedTime = millis();
+  while (millis()-lastPlayedTime < 500)
+  {
+    
+    float[] temp = new float[num_bands];
+    fft.analyze(temp);
+    ref_freqs.add(temp);
+    ref_freq_times.add((int) (millis()-lastPlayedTime));
+
+  }
   myBus.sendNoteOff(new Note(0, MIDIfromPitch(440), 25));
-  rectMode(CORNERS);
+  //rectMode(CORNERS);
+  
 }      
 
 void draw()
@@ -231,29 +244,59 @@ void draw()
   
   
   float[] freqs = new float[num_bands];
+  long timeDisp = millis() - lastPlayedTime;
   fft.analyze(freqs);
   
   int bucket440 = (int) (440 * (2 * num_bands) / sampleRate);
   //ArrayList<Integer> pitch = new ArrayList<Integer>();
   int clear_num = 1;
   //pitch.add(MIDIfromPitch(440));
-  for(int i = 0; i < num_bands; i++){
-  // The result of the FFT is normalized
-  // draw the line for frequency band i scaling it up by 5 to get more amplitude.
-    rect( i*5, height, (i+1)*5-1, height - freqs[i]*height*5 );
-    fill(0);
+  //for(int i = 0; i < num_bands; i++){
+  //// The result of the FFT is normalized
+  //// draw the line for frequency band i scaling it up by 5 to get more amplitude.
+  //  rect( i*5, height, (i+1)*5-1, height - freqs[i]*height*5 );
+  //  fill(0);
+  //}
+  float[] ref_freqs_arr = ref_freqs.get(ref_freqs.size()-1);
+  for (int i = 1; i < ref_freq_times.size(); i++)
+  {
+    if (timeDisp <= ref_freq_times.get(i))
+    {
+      int prevTime = ref_freq_times.get(i-1);
+      if (Math.abs(timeDisp - prevTime) < Math.abs(timeDisp - ref_freq_times.get(i)))
+      {
+        ref_freqs_arr = ref_freqs.get(i-1);
+      }
+      else
+      {
+        ref_freqs_arr = ref_freqs.get(i);
+      }
+      break;
+    }
   }
   for (int ppitch : pitch)
   {
     int bucket = (int) (pitchFromMIDI(ppitch) * (2 * num_bands) / sampleRate);
     for (int i = 0; i < num_bands; i++)
     {
-      int i_new = (int) (i * (1.0*bucket/bucket440));
+      float tempinew = i / (1.0*bucket/bucket440);
+      int i_new = (int) tempinew;
       if (i_new > num_bands) break;
+      float round_freq;
+      if (Math.round(tempinew) >= num_bands)
+      {
+        round_freq = ref_freqs_arr[num_bands-1];
+      }
+      else
+      {
+        round_freq = ref_freqs_arr[(int) Math.round(tempinew)];
+      }
       //print(i, i_new);
       //println(freqs);
       //println(ref_freqs);
-      freqs[i_new] =  freqs[i_new] - ref_freqs[i]; //(float) Math.log(max(1, (int)(1 + Math.exp(freqs[i_new]) - Math.exp(ref_freqs[i]))));
+      freqs[i] -= round_freq;
+      //freqs[i] -= (tempinew - Math.floor(tempinew)) * ceil_freq + (Math.floor(tempinew) + 1 - tempinew) * floor_freq; //(float) Math.log(max(1, (int)(1 + Math.exp(freqs[i_new]) - Math.exp(ref_freqs[i]))));
+      //freqs[(int) Math.floor(tempinew)] -= (Math.ceil(tempinew) - tempinew) * floor_freq;
     }
     //for (int j = bucket; j <= num_bands - clear_num/2 - 1; j += bucket)
     //{
@@ -270,16 +313,15 @@ void draw()
     //  }
     //}
   }
-  for(int i = 0; i < num_bands; i++){
-  // The result of the FFT is normalized
-  // draw the line for frequency band i scaling it up by 5 to get more amplitude.
-    rect( i*5, height, (i+1)*5-1, height - freqs[i]*height*5 );
-    fill(255,0,0);
-  }
+  //for(int i = 0; i < num_bands; i++){
+  //// The result of the FFT is normalized
+  //// draw the line for frequency band i scaling it up by 5 to get more amplitude.
+  //  rect( i*5, height, (i+1)*5-1, height - freqs[i]*height*5 );
+  //  fill(255,0,0);
+  //}
   float max_vol = 0;
   int max_idx = 0;
   float sum = 0;
-  float max_ref_vol = 0;
   
   for (int i = 0; i < num_bands; i++)
   {
@@ -289,22 +331,17 @@ void draw()
         max_idx = i;
     
       }
-      if (ref_freqs[i] > max_ref_vol)
-      {
-        max_ref_vol = ref_freqs[i];
-      }
       sum += freqs[i];
   }
-  float frequency = max_idx * sampleRate / (2*num_bands);
-  println(max_idx + " " + max_vol + " " + sum + " " + frequency);
-  //println(max_ref_vol);
+  //float frequency = max_idx * sampleRate / (2*num_bands);
+  //println(max_idx + " " + max_vol + " " + sum + " " + frequency);
   boolean detectedBeat = (max_vol > 0.7 * beatThresh) || keyPressed;
   if (max_vol > beatThresh) beatThresh += 0.005;
   else beatThresh = beatThresh - 0.001;
   if (beatThresh < minBeatThresh)
   {
     beatThresh = minBeatThresh;
-    //background(127);
+    background(127);
   }
   
   boolean isBeat = detectedBeat && beatReady;
@@ -366,8 +403,8 @@ void draw()
   }
 
   probs2 = newprobs2;
-  //dispProbArray(probs, isBeat);
-  //dispProbArray(beatProbs, isBeat);
+  dispProbArray(probs, isBeat);
+  dispProbArray(beatProbs, isBeat);
   
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
   //if(bucketShift == 0){
@@ -385,6 +422,7 @@ void draw()
           myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
         }
       }
+
       //Start new note
       pitch = newpitch; //Which we know is non-zero because of outer if statement
       for(Integer ppitch: pitch){
@@ -392,6 +430,7 @@ void draw()
           myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
         }
       }
+      lastPlayedTime = millis();
     }
   }
   else{
