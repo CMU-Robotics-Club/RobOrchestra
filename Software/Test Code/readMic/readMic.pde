@@ -33,6 +33,7 @@ void setup() {
   
   // patch the AudioIn
   fft.input(in);
+  rectMode(CORNERS);
 }      
 
 void draw() { 
@@ -42,7 +43,8 @@ void draw() {
   for(int i = 0; i < bands; i++){
   // The result of the FFT is normalized
   // draw the line for frequency band i scaling it up by 5 to get more amplitude.
-  line( i, height, i, height - spectrum[i]*height*5 );
+  rect( i*5, height, (i+1)*5-1, height - spectrum[i]*height*5 );
+  fill(0);
   amp += spectrum[i];
   }
   oldoldamp = oldamp;
