@@ -16,13 +16,14 @@ public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f
                                     415.3f, 440.0f, 466.2f, 493.9f, 523.3f, 554.4f, 587.3f, 622.3f, 659.3f, 698.5f, 
                                     740.0f, 784.0f, 830.6f, 880.0f, 932.3f, 987.8f, 1046.5f, 1108.7f, 1174.7f, 1244.5f, 
                                     1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f };
+SpecWhitener sw;
 AudioIn in; //Raw sound input
 PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but we might use this eventually to grab pitch info from a human
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
 FFT fft;
 int num_bands = 512;
-int timeSize = num_bands;
+int timeSize = num_bands * 2;
 int sampleRate = 44100;
 ArrayList<float[]> ref_freqs;
 ArrayList<Integer> ref_freq_times;
@@ -112,7 +113,7 @@ void setup()
   notes = new ArrayList<ArrayList<Integer>>();
 
   nArr = new NoteArray(fileName, bucketsPerMeasure);
-  
+  sw = new SpecWhitener(timeSize, sampleRate);
   
   notes = nArr.notes.get(playHarmony);
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
@@ -656,8 +657,9 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
         for (int i = 0; i < spec.length; i++) spec[i] *= 1000;
 
         // spectrum pre-processing
-        //sw.whiten(spec);
-        //spec = sw.wSpec;
+        sw.whiten(spec);
+        spec = sw.wSpec;
+        
 
         // iteratively find all presented pitches
         float test = 0, lasttest = 0;
@@ -673,7 +675,7 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
 
             // subtract the information of the found pitch from the current spectrum
             for (int i = 1; i * fzeroInfo[0] < num_bands; ++i) {
-                int partialInd = floor(i * fzeroInfo[0] * timeSize * 2 / sampleRate);
+                int partialInd = floor(i * fzeroInfo[0] * timeSize  / sampleRate);
                 if (partialInd < 1) continue;
                 if (partialInd > num_bands) continue;
                 float weighting = (fzeroInfo[0] + 52) / (i * fzeroInfo[0] + 320);
@@ -690,12 +692,12 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     // utility function for detecting a single pitch
     private void detectfzero(float[] spec, float[] fzeroInfo)
     {
-        float maxSalience = -10000000.0f;
+        float maxSalience = 0.0f;
         for (int j = 0; j < PITCHES.length; ++j) {
             float cSalience = 0; // salience of the candidate pitch
             float val = 0;
             for (int i = 1; i * PITCHES[j] < num_bands; ++i) {
-                int bin = round(i * PITCHES[j] * timeSize * 2 / sampleRate);
+                int bin = round(i * PITCHES[j] * timeSize  / sampleRate);
                 if (bin < 3) continue;
                 if (bin > 510) continue;
                 // use the largest value of bins in vicinity
