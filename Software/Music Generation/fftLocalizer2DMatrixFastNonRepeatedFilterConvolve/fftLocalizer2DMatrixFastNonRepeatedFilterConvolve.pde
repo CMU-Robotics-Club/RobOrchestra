@@ -672,11 +672,11 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
             loopcount++;
 
             // subtract the information of the found pitch from the current spectrum
-            for (int i = 1; i < num_bands; i *= 2) {
+            for (int i = 1; i * fzeroInfo[0] < num_bands; ++i) {
                 int partialInd = floor(i * fzeroInfo[0] * timeSize * 2 / sampleRate);
                 if (partialInd < 1) continue;
                 if (partialInd > num_bands) continue;
-                float weighting = (fzeroInfo[0] + 52) / ((float) (Math.log(i)/Math.log(2.0) + 1) * fzeroInfo[0] + 320);
+                float weighting = (fzeroInfo[0] + 52) / (i * fzeroInfo[0] + 320);
                 spec[partialInd] *= (1 - 0.89f * weighting);
                 spec[partialInd-1] *= (1 - 0.89f * weighting);
             }
@@ -694,7 +694,7 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
         for (int j = 0; j < PITCHES.length; ++j) {
             float cSalience = 0; // salience of the candidate pitch
             float val = 0;
-            for (int i = 1; i < num_bands; i *= 2) {
+            for (int i = 1; i * PITCHES[j] < num_bands; ++i) {
                 int bin = round(i * PITCHES[j] * timeSize * 2 / sampleRate);
                 if (bin < 3) continue;
                 if (bin > 510) continue;
@@ -704,7 +704,7 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
                 //else if (bin == timeSize/2-1) val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin]);
                 //else val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin], spec[bin+1]);
                 // calculate the salience of the current candidate
-                float weighting = (PITCHES[j] + 52) / ((float) (Math.log(i)/Math.log(2.0) + 1) * PITCHES[j] + 320);
+                float weighting = (PITCHES[j] + 52) / (i * PITCHES[j] + 320);
                 cSalience += val * weighting;
                 
             }
