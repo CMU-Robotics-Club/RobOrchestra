@@ -13,9 +13,10 @@ import ddf.minim.signals.*;
 import ddf.minim.spi.*;
 import ddf.minim.ugens.*;
 
-//String fileName = "twinkle_twinkle2.mid";
+String fileName = "twinkle_twinkle_up.mid";
 //String fileName = "GoC.mid";
-String fileName = "ae_test3.mid";
+//String fileName = "ae_test3.mid";
+//String fileName = "alt_test.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f, 61.7f, 65.4f, 69.3f, 
@@ -25,9 +26,10 @@ public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f
                                     415.3f, 440.0f, 466.2f, 493.9f, 523.3f, 554.4f, 587.3f, 622.3f, 659.3f, 698.5f, 
                                     740.0f, 784.0f, 830.6f, 880.0f, 932.3f, 987.8f, 1046.5f, 1108.7f, 1174.7f, 1244.5f, 
                                     1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f };
+public final int[] pitch_offsets = {0, 12, 19, 24, 28, 31, 33, 36};
 SpecWhitener sw;
-Minim minim;
-AudioInput in2;
+//Minim minim;
+//AudioInput in2;
 PitchDetect pd2;
 
 AudioIn in; //Raw sound input
@@ -42,9 +44,9 @@ ArrayList<float[]> ref_freqs;
 ArrayList<Integer> ref_freq_times;
 long lastPlayedTime;
 
-int playHarmony = 0;
+int playHarmony = 1;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.12; //0.08;
+double minBeatThresh = 0.25; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -63,8 +65,8 @@ int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, 
 int nTempoBuckets = 24; //Same idea
 
 //Upper and lower bounds on tempo.
-int minBPM = 59;
-int maxBPM = 61;
+int minBPM = 60;
+int maxBPM = 120;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -74,7 +76,7 @@ float maxMsPerRhythm;
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/256.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/16.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -82,6 +84,7 @@ Matrix probs;
 Matrix probsonemat;
 Matrix probs2;
 Matrix beatProbs; //P(location | heard a beat)
+Matrix[] beatProbsArr;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
 
@@ -115,12 +118,12 @@ void setup()
   fft = new FFT(this, num_bands);
   //fft = new FFT(timeSize, sampleRate);
   pd2 = new PitchDetect(timeSize*2, sampleRate);
-  minim = new Minim(this);
+  //minim = new Minim(this);
   
-  // use the getLineIn method of the Minim object to get an AudioInput
+  //// use the getLineIn method of the Minim object to get an AudioInput
 
-  in2 = minim.getLineIn();
-  in2.enableMonitoring();
+  //in2 = minim.getLineIn();
+  //in2.enableMonitoring();
 
 
   myBus = new MidiBus(this, 0, 2);
@@ -163,6 +166,11 @@ void setup()
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
   probs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
+  beatProbsArr = new Matrix[PITCHES.length];
+  for (int i = 0; i < beatProbsArr.length; i++)
+  {
+    beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+  }
   
   
   maxMsPerRhythm = 60000 / minBPM * nArr.quarternotespermeasure*measuresPerRhythm;
@@ -263,17 +271,26 @@ void draw()
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
  for(int i = 0; i < bucketsPerRhythm+1; i++){
    if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
-     beatpositions.add(i);
-   }
- }
- 
- for(int i:beatpositions){
-   for(int j = 0; j < (bucketsPerRhythm+1); j++){
+     //beatpositions.add(i);
+     for(int j = 0; j < (bucketsPerRhythm+1); j++){
      int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
      //disp = #buckets off from i that we are
      beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+     for (int k = 0; k < rhythmPattern.get(i).size(); k++)
+     {
+       beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+     }
+   }
    }
  }
+ 
+ //for(int i:beatpositions){
+ //  for(int j = 0; j < (bucketsPerRhythm+1); j++){
+ //    int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+ //    //disp = #buckets off from i that we are
+ //    beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+ //  }
+ //}
  //Normalize beatProbs
  double beatProbSum = 0;
  for(int i = 0; i < (bucketsPerRhythm+1); i++){
@@ -282,6 +299,17 @@ void draw()
  for(int i = 0; i < (bucketsPerRhythm+1); i++){
    beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
  }
+ for (int h = 0; h < beatProbsArr.length; h++)
+ {
+   beatProbSum = 0;
+   for(int i = 0; i < (bucketsPerRhythm+1); i++){
+     beatProbSum += beatProbsArr[h].get(i, 0);
+   }
+   for(int i = 0; i < (bucketsPerRhythm+1); i++){
+     beatProbsArr[h].set(i, 0, beatProbs.get(i, 0) / beatProbSum);
+   }
+ }
+ 
  
   background(255);
   int newtime = millis();
@@ -402,16 +430,37 @@ void draw()
   float[] pd2out = pd2.detect(buffer);
   int[] fzeros = pd2.fzeros;
   //printArray(fzeros);
-  for (int i = 0; i < PITCHES.length; i++)
+  
+  //for (Integer ppitch : pitch)
+  //{
+    
+  //  for (int i = 0; i < pitch_offsets.length; i++)
+  //  {
+  //    println("removing " + PITCHES[ppitch.intValue() - 27 + pitch_offsets[i]]);
+  //    println("removing " + PITCHES[ppitch.intValue() - 28 + pitch_offsets[i]]);
+  //    if (ppitch.intValue() - 27 + pitch_offsets[i] < fzeros.length && ppitch.intValue() - 27 + pitch_offsets[i] >= 0)
+  //      fzeros[ppitch.intValue() - 27 + pitch_offsets[i]] = 0;
+  //    if (ppitch.intValue() - 28 + pitch_offsets[i] < fzeros.length && ppitch.intValue() - 28 + pitch_offsets[i] >= 0)
+  //      fzeros[ppitch.intValue() - 28 + pitch_offsets[i]] = 0;
+  //  }
+  //}
+  
+  boolean hasPitch = false;
+  for (int i = 20; i < PITCHES.length; i++)
   {
     if (fzeros[i] == 1)
-    println(PITCHES[i]);
+    {
+      hasPitch = true;
+      println(PITCHES[i]);
+    }
   }
   
   //if (pitch.size() > 0) exit();
   //while (true) {};
-  boolean detectedBeat = (max_vol > 0.7 * beatThresh) || keyPressed;
-  if (max_vol > beatThresh) beatThresh += 0.005;
+  boolean keyPressedBeat = keyPressed;
+  boolean detectedBeat = (amp.analyze() > 0.7 * beatThresh && hasPitch) || keyPressedBeat;
+  
+  if (amp.analyze() > beatThresh) beatThresh += 0.005;
   else beatThresh = beatThresh - 0.001;
   if (beatThresh < minBeatThresh)
   {
@@ -421,7 +470,7 @@ void draw()
   
   boolean isBeat = detectedBeat && beatReady;
   beatReady = !detectedBeat;
-  
+  if (isBeat) println("beat");
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   double newprobsum = 0;
@@ -445,7 +494,18 @@ void draw()
          tempil += probs2.get(j, l)*posPDF;
       }
       if(isBeat){
-        tempil *= beatProbs.get(i, 0);
+        if (keyPressedBeat)
+          tempil *= beatProbs.get(i, 0);
+        else
+        {
+          for (int h = 0; h < fzeros.length; h++)
+          {
+            if (fzeros[h] == 1)
+            {
+              tempil *= beatProbsArr[h].get(i, 0);
+            }
+          }
+        }
       }
       else{
         tempil *= (1-beatProbs.get(i, 0));
@@ -478,21 +538,21 @@ void draw()
   }
 
   probs2 = newprobs2;
-  //dispProbArray(probs, isBeat);
-  //dispProbArray(beatProbs, isBeat);
+  dispProbArray(probs, isBeat);
+  dispProbArray(beatProbs, isBeat);
   //dispProbArray(new Matrix(test, cap), false);
   double[] dbuffer = new double[buffer.length];
   for (int i = 0; i < buffer.length; i++)
   {
     dbuffer[i] = (double) buffer[i] * 10;
   }
-  dispProbArray(new Matrix(dbuffer, buffer.length), false);
+  //dispProbArray(new Matrix(dbuffer, buffer.length), false);
   
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
-  //if(bucketShift == 0){
-  //  //We haven't gotten to the next bucket yet, don't repeat the note
-  //  return;
-  //}
+  if(bucketShift == 0){
+    //We haven't gotten to the next bucket yet, don't repeat the note
+    return;
+  }
   
   bucket += bucketShift;
   
@@ -501,12 +561,14 @@ void draw()
     if(newpitch.size() > 0){ //So we stop each note when the next note starts
       for(Integer ppitch: pitch){
         if(ppitch > 0){
+          
           myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
         }
       }
 
       //Start new note
       pitch = newpitch; //Which we know is non-zero because of outer if statement
+      //println(pitch);
       for(Integer ppitch: pitch){
         if(ppitch > 0){
           myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));

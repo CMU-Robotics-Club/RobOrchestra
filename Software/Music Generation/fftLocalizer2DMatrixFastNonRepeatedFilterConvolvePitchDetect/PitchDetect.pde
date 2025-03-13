@@ -63,15 +63,15 @@ public class PitchDetect extends PApplet
         //}
         
         // spectrum pre-processing
-        //sw.whiten(spec2);
-        //spec = sw.wSpec;
+        sw.whiten(spec2);
+        spec = sw.wSpec;
         spec = spec2;
 
         // iteratively find all presented pitches
         float test = 0, lasttest = 0;
         int loopcount = 1;
         float[] fzeroInfo = new float[3]; // ind 0 is the pitch, ind 1 its salience, ind 2 its ind in PITCHES
-        println("start loop");
+        //println("start loop");
         while (true) {
             
             detectfzeronew(spec2, fzeroInfo);
@@ -88,8 +88,7 @@ public class PitchDetect extends PApplet
                 if (partialInd > 510) continue;
                 float weighting = (fzeroInfo[0] + 52) / (i * fzeroInfo[0] + 320);
                 spec[partialInd] *= (1 - 0.89f * weighting);
-                spec[partialInd-1] *= (1 - 0.89f * weighting);
-             
+                spec[partialInd-1] *= (1 - 0.89f * weighting);    
             }
 
             // update fzeros
@@ -98,7 +97,7 @@ public class PitchDetect extends PApplet
             //else fzeros[(int) fzeroInfo[2]] = 0;
             
         }
-        println("end loop");
+        //println("end loop");
         return spec2;
     }
   
@@ -147,7 +146,7 @@ public class PitchDetect extends PApplet
         }
       }
       fzeroInfo[0] = max(1, maxind * sampleRate / (2*spec3.length));
-      println("calculated frequency: " + fzeroInfo[0]);
+      //println("calculated frequency: " + fzeroInfo[0]);
       
       fzeroInfo[1] = max;
       for (int i = 1; i < PITCHES.length; i++)
@@ -157,13 +156,13 @@ public class PitchDetect extends PApplet
           if (fzeroInfo[0] - PITCHES[i-1] < PITCHES[i] - fzeroInfo[0])
           {
             fzeroInfo[2] = i-1;
-            println("found " + PITCHES[i-1]);
+            //println("found " + PITCHES[i-1]);
             break;
           }
           else
           {
              fzeroInfo[2] = i;
-            println("found " + PITCHES[i]);
+            //println("found " + PITCHES[i]);
             break;
           }
         }
