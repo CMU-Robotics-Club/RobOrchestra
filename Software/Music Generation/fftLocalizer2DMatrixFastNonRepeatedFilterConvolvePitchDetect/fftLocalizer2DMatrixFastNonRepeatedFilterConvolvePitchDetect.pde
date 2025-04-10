@@ -150,12 +150,11 @@ void setup()
   notes = nArr.notes.get(playHarmony);
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
   println("harmony size: " + notes.size());
-  //println(notes.size());
 
   //rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
   
   float measuresPerRhythm = (1.0 * (bucketsPerRhythm+1)) / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
-  //println("measures per rhythm " + measuresPerRhythm);
+  
   //Before resample, notes uses bucketsPerMeasure
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
   //notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*(bucketsPerRhythm+1));
@@ -182,11 +181,6 @@ void setup()
     msPerRhythm.set(i, 0, (minMsPerRhythm + dMsPerRhythm*i)/(bucketsPerRhythm+1));
     assert(msPerRhythm.get(i, 0) > 0);
   }
-  
-  //for (int i = 0; i < 4; i ++)
-  //{
-  //  playRhythm(rhythmPattern, measuresPerRhythm);
-  //} 
 
  for(int i = 0; i < bucketsPerRhythm+1; i++){
    for(int j = 0; j < nTempoBuckets; j++){
@@ -201,28 +195,6 @@ void setup()
    }
  }
  
- //ArrayList<Integer> beatpositions = new ArrayList<Integer>();
- //for(int i = 0; i < bucketsPerRhythm+1; i++){
- //  if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
- //    beatpositions.add(i);
- //  }
- //}
- //for(int i:beatpositions){
- //  for(int j = 0; j < bucketsPerRhythm+1; j++){
- //    int disp = min(abs( (i-j)%bucketsPerRhythm), abs( (j-i)%bucketsPerRhythm));
- //    //disp = #buckets off from i that we are
- //    beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
- //  }
- //}
- //Normalize beatProbs
- //double beatProbSum = 0;
- //for(int i = 0; i < bucketsPerRhythm+1; i++){
- //  beatProbSum += beatProbs.get(i, 0);
- //}
- //for(int i = 0; i < bucketsPerRhythm+1; i++){
- //  beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
- //}
- 
  //Set up tempoGaussMat
   for(int k = 0; k < nTempoBuckets; k++){
    for(int l = 0; l < nTempoBuckets; l++){
@@ -233,30 +205,29 @@ void setup()
   }
   oldtime = millis();
   
-  ref_freqs = new ArrayList<float[]>();
-  ref_freq_times = new ArrayList<Integer>();
-  myBus.sendNoteOn(new Note(0, MIDIfromPitch(110), 25));
-  delay(500);
-  lastPlayedTime = millis();
-  while (millis()-lastPlayedTime < 500)
-  {
+  //ref_freqs = new ArrayList<float[]>();
+  //ref_freq_times = new ArrayList<Integer>();
+  //myBus.sendNoteOn(new Note(0, MIDIfromPitch(110), 25));
+  //delay(500);
+  //lastPlayedTime = millis();
+  //while (millis()-lastPlayedTime < 500)
+  //{
     
-    float[] temp = new float[num_bands];
-    //fft.analyze(temp);
-    ref_freqs.add(temp);
-    ref_freq_times.add((int) (millis()-lastPlayedTime));
+  //  float[] temp = new float[num_bands];
+  //  ref_freqs.add(temp);
+  //  ref_freq_times.add((int) (millis()-lastPlayedTime));
 
-  }
-  float avg = 0.0;
-  for (int i = 0; i < ref_freqs.get(0).length; i++)
-  {
-    avg += ref_freqs.get(0)[i] / ref_freqs.get(0).length;
-  }
-  for (int i = 0; i < ref_freqs.get(0).length; i++)
-  {
-    ref_freqs.get(0)[i] -= avg;
-  }
-  myBus.sendNoteOff(new Note(0, MIDIfromPitch(440), 25));
+  //}
+  //float avg = 0.0;
+  //for (int i = 0; i < ref_freqs.get(0).length; i++)
+  //{
+  //  avg += ref_freqs.get(0)[i] / ref_freqs.get(0).length;
+  //}
+  //for (int i = 0; i < ref_freqs.get(0).length; i++)
+  //{
+  //  ref_freqs.get(0)[i] -= avg;
+  //}
+  //myBus.sendNoteOff(new Note(0, MIDIfromPitch(440), 25));
   //rectMode(CORNERS);
   
 }      
@@ -327,132 +298,13 @@ void draw()
   
   
   float[] freqs = new float[num_bands];
-  long timeDisp = millis() - lastPlayedTime;
-  //fft.analyze(freqs);
-  
-  int bucket440 = (int) (110 * (2 * num_bands) / sampleRate);
-  //ArrayList<Integer> pitch = new ArrayList<Integer>();
-  int clear_num = 1;
-  //pitch.add(MIDIfromPitch(440));
-  //for(int i = 0; i < num_bands; i++){
-  //// The result of the FFT is normalized
-  //// draw the line for frequency band i scaling it up by 5 to get more amplitude.
-  //  rect( i*5, height, (i+1)*5-1, height - freqs[i]*height*5 );
-  //  fill(0);
-  //}
-  float[] ref_freqs_arr = ref_freqs.get(0);
-  //for (int i = 1; i < ref_freq_times.size(); i++)
-  //{
-  //  if (timeDisp <= ref_freq_times.get(i))
-  //  {
-  //    int prevTime = ref_freq_times.get(i-1);
-  //    if (Math.abs(timeDisp - prevTime) < Math.abs(timeDisp - ref_freq_times.get(i)))
-  //    {
-  //      ref_freqs_arr = ref_freqs.get(i-1);
-  //    }
-  //    else
-  //    {
-  //      ref_freqs_arr = ref_freqs.get(i);
-  //    }
-  //    break;
-  //  }
-  //}
-  float detectedPitch = pd.analyze(0.5);
-  //println(detectedPitch);
-  int cap = 90;
-  double[] test = new double[cap];
-  for (int ppitch : pitch)
-  {
-    int actualPitchBucket = (int) (pitchFromMIDI(ppitch) * (2 * num_bands) / sampleRate);
-    //print(actualPitchBucket + " ");
-  }
-  println();
 
-    for (int j = 0; j < cap; j++)
-    {
-      int bucket = j;
-      for (int i = 0; i < cap; i++)
-      {
-        float tempinew = i / (1.0*bucket/bucket440);
-        int i_new = (int) tempinew;
-        if (i_new > num_bands) break;
-        float round_freq;
-        if (Math.round(tempinew) >= num_bands)
-        {
-          round_freq = ref_freqs_arr[num_bands-1];
-        }
-        else
-        {
-          round_freq = ref_freqs_arr[(int) Math.round(tempinew)];
-        }
-        //print(i, i_new);
-        //println(freqs);
-        //println(ref_freqs);
-        test[j] += freqs[i] * round_freq * 10;
-        //freqs[i] -= (tempinew - Math.floor(tempinew)) * ceil_freq + (Math.floor(tempinew) + 1 - tempinew) * floor_freq; //(float) Math.log(max(1, (int)(1 + Math.exp(freqs[i_new]) - Math.exp(ref_freqs[i]))));
-        //freqs[(int) Math.floor(tempinew)] -= (Math.ceil(tempinew) - tempinew) * floor_freq;
-      }
-    }
-    
-    //for (int j = bucket; j <= num_bands - clear_num/2 - 1; j += bucket)
-    //{
-    //  for (int i = j - clear_num/2; i <= j + clear_num/2; i++)
-    //  {
-    //    freqs[i] = 0;
-    //  }
-    //}
-    //for (int j = bucket; j > 1; j /= 2)
-    //{
-    //  for (int i = j - clear_num/2; i <= j + clear_num/2; i++)
-    //  {
-    //    freqs[i] = 0;
-    //  }
-    //}
-  //}
-  //for(int i = 0; i < num_bands; i++){
-  //// The result of the FFT is normalized
-  //// draw the line for frequency band i scaling it up by 5 to get more amplitude.
-  //  rect( i*5, height, (i+1)*5-1, height - freqs[i]*height*5 );
-  //  fill(255,0,0);
-  //}
-  double max_vol = 0;
-  int max_idx = 0;
-  float sum = 0;
-  
-  for (int i = 0; i < cap; i++)
-  {
-      if (test[i] > max_vol)
-      {
-        max_vol = test[i];
-        max_idx = i;
-    
-      }
-      sum += freqs[i];
-  }
-  //float frequency = max_idx * sampleRate / (2*num_bands);
-  //println(max_idx + " " + max_vol + " " + sum + " " + frequency);
-  //println(max_idx + " " + max_vol);
-  //printArray(test);
   float[] buffer = new float[num_bands];
   fft.analyze(buffer);
-  //println(pd.analyze(buffer));
+
   float[] pd2out = pd2.detect(buffer);
   int[] fzeros = pd2.fzeros;
-  //printArray(fzeros);
   
-  //for (Integer ppitch : pitch)
-  //{
-    
-  //  for (int i = 0; i < pitch_offsets.length; i++)
-  //  {
-  //    println("removing " + PITCHES[ppitch.intValue() - 27 + pitch_offsets[i]]);
-  //    println("removing " + PITCHES[ppitch.intValue() - 28 + pitch_offsets[i]]);
-  //    if (ppitch.intValue() - 27 + pitch_offsets[i] < fzeros.length && ppitch.intValue() - 27 + pitch_offsets[i] >= 0)
-  //      fzeros[ppitch.intValue() - 27 + pitch_offsets[i]] = 0;
-  //    if (ppitch.intValue() - 28 + pitch_offsets[i] < fzeros.length && ppitch.intValue() - 28 + pitch_offsets[i] >= 0)
-  //      fzeros[ppitch.intValue() - 28 + pitch_offsets[i]] = 0;
-  //  }
-  //}
   for (int i = 0; i < fzeros.length; i++)
   {
     if (fzeros[i] == 1)
@@ -474,9 +326,6 @@ void draw()
   }
   println("first pitch = " + PITCHES[firstPitchIdx]);
   
-  
-  //if (pitch.size() > 0) exit();
-  //while (true) {};
   boolean keyPressedBeat = keyPressed;
   boolean detectedBeat = (amp.analyze() > 0.7 * beatThresh && hasPitch) || keyPressedBeat;
   
@@ -569,12 +418,6 @@ void draw()
   }
   else dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
   //dispProbArray(new Matrix(test, cap), false);
-  double[] dbuffer = new double[buffer.length];
-  for (int i = 0; i < buffer.length; i++)
-  {
-    dbuffer[i] = (double) buffer[i] * 10;
-  }
-  //dispProbArray(new Matrix(dbuffer, buffer.length), false);
   
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
   if(bucketShift == 0){
