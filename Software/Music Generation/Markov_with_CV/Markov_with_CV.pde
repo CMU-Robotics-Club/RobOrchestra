@@ -31,8 +31,9 @@ int[] p1 = {0, 0};
 int[] p2 = {0, 0};
 int time1 = 0;
 int time2 = 0;
-double prevV = 0;
-double currV = 0;
+double[] prevV;
+double[] currV;
+
 int beat_count = 0;
 int beat_buffer = 0;
 double last_beat = 0;
@@ -116,7 +117,7 @@ void draw(){
   
   // Tell OpenCV to use color information
   opencv.useColor();
-  opencv.blur(50);
+  opencv.blur(40);
   //opencv.blur(10);
   src = opencv.getSnapshot();
   
@@ -168,12 +169,16 @@ void draw(){
   //println(currV);
   //  println();
   //if (currV > 0.5/*.20*/){
-  if (currV > 1/*.20*/ && !play_trigger && millis() > beat_buffer + 300){
-    println(currV);
+  prevV = currV;
+  currV = velocityVector();
+  int iv = interpretVector(currV, 3);
+  if (iv > 0/*.20*/ && !play_trigger && millis() > beat_buffer + 300){
+    println("currV : ("  + currV[0] + "," + currV[1] + ")");
+    println("interpreted currV : " + iv);
     play_trigger = true;
   }
-  prevV = currV;
-  currV = velocity();
+
+  
   if (play_trigger /*&& (prevV > currV*2 && millis() > beat_buffer + 250)*/){
     last_beat = curr_beat;
     curr_beat = millis();
@@ -185,12 +190,12 @@ void draw(){
     beat_count++;
     beat_buffer = millis();
     play_trigger = false;
-  }
+  //}
   lenmult = 60/tempo;
   
-  current_time = millis();
-  if (current_time > previous_time + buff)
-  {
+  //current_time = millis();
+  //if (current_time > previous_time + buff)
+  //{
     mystate = mc.getNext(mystate);
     int pitch = mystate.pitches[mystate.pitches.length-1];
     pitch = pitch%12 + 60;
@@ -293,4 +298,27 @@ double velocity() {
   int time = time1 - time2;
   double velocity = v1Length/time;
   return velocity;
+}
+
+double[] velocityVector() {
+  //System.out.println(p2[0] + " " +  p3[0] + " " + p2[1] + " " + p3[1]);
+  int time = time1 - time2;
+  if (time == 0)
+  {
+    double[] zero = {0.0, 0.0};
+    return zero;
+  }
+  double[] v1 = {(p1[0] - p2[0])/time, (p1[1] - p2[1])/time};
+  double v1Length = Math.sqrt(Math.pow(v1[0], 2) + Math.pow(v1[1], 2));
+  double velocity = v1Length;
+  return v1;
+}
+
+int interpretVector(double[] v, int threshold)
+{
+  if (v[1] > threshold) return 1;
+  else if (v[1] < -threshold) return 4;
+  else if (v[0] > threshold) return 2;
+  else if (v[0] < -threshold) return 3;
+  else return 0;
 }
