@@ -205,38 +205,13 @@ void setup()
   }
   oldtime = millis();
   
-  //ref_freqs = new ArrayList<float[]>();
-  //ref_freq_times = new ArrayList<Integer>();
-  //myBus.sendNoteOn(new Note(0, MIDIfromPitch(110), 25));
-  //delay(500);
-  //lastPlayedTime = millis();
-  //while (millis()-lastPlayedTime < 500)
-  //{
-    
-  //  float[] temp = new float[num_bands];
-  //  ref_freqs.add(temp);
-  //  ref_freq_times.add((int) (millis()-lastPlayedTime));
-
-  //}
-  //float avg = 0.0;
-  //for (int i = 0; i < ref_freqs.get(0).length; i++)
-  //{
-  //  avg += ref_freqs.get(0)[i] / ref_freqs.get(0).length;
-  //}
-  //for (int i = 0; i < ref_freqs.get(0).length; i++)
-  //{
-  //  ref_freqs.get(0)[i] -= avg;
-  //}
-  //myBus.sendNoteOff(new Note(0, MIDIfromPitch(440), 25));
-  //rectMode(CORNERS);
-  
 }      
 
 void draw()
 {
-  //delay(100);
+
   rhythmPattern = sublist(nArr.notes.get(1-playHarmony), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
-  //println(rhythmPattern);
+
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
   for (int i = 0; i < beatProbsArr.length; i++)
   {
@@ -262,15 +237,6 @@ void draw()
  }
 
 
- 
- 
- //for(int i:beatpositions){
- //  for(int j = 0; j < (bucketsPerRhythm+1); j++){
- //    int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
- //    //disp = #buckets off from i that we are
- //    beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
- //  }
- //}
  //Normalize beatProbs
  double beatProbSum = 0;
  for(int i = 0; i < (bucketsPerRhythm+1); i++){

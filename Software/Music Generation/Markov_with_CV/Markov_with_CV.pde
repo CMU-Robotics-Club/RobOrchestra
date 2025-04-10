@@ -108,6 +108,7 @@ void draw(){
     video.read();
    
   }
+  image(video, 0, 0);
 
   // <2> Load the new frame of our movie in to OpenCV
   opencv.loadImage(video);
