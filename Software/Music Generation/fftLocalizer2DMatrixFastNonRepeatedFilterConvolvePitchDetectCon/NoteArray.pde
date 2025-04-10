@@ -93,6 +93,7 @@ class NoteArray
       }*/
       
       
+      
       int tracknum = 1;
       //for (int i = 1; i >= 0; i--)
       for (int i = 0; i < tracks.length; i++)
@@ -158,6 +159,9 @@ class NoteArray
           }
         }
       }
+      
+
+
       for (int i = 0; i < notes.size(); i++)
       {
         while (notes.get(i).size() % bucketspermeasure != 0)
@@ -175,7 +179,24 @@ class NoteArray
             notes.get(i).add(new ArrayList<Integer>());
           }
         }
+      
       }
+      int max_size = notes.get(0).size();
+      float bucketsperquarternote = this.bucketspermeasure / quarternotespermeasure; // buckets/measure * measure/quarternote = buckets/quarternote
+      int counter = 1;
+      notes.add(new ArrayList<ArrayList<Integer>>());
+      for (int i = 0; i < max_size; i++)
+      {
+        notes.get(notes.size()-1).add(new ArrayList<Integer>());
+        if (i % bucketsperquarternote == 0)
+        {
+          notes.get(notes.size()-1).get(i).add(counter);
+          //if (notes.get(0).get(i).size() > 0)
+          //  notes.get(notes.size()-1).get(i).add(notes.get(0).get(i).get(0));
+          counter = (counter%(int)quarternotespermeasure)+1;
+        }
+      }
+      printTrack(notes.get(notes.size()-1));
       //pattern = findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)
@@ -348,5 +369,21 @@ class NoteArray
       default:
         break;
     }
+  }
+  
+  void printTrack(ArrayList<ArrayList<Integer>> track)
+  {
+    print("[");
+    for (int i = 0; i < track.size() / this.bucketspermeasure; i++)
+    {
+      for (int j = i * bucketspermeasure; j < (i+1)*bucketspermeasure; j++)
+      {
+        if (j > (i * bucketspermeasure)) print(", ");
+        print(track.get(j));
+      }
+      if (i < (track.size() / this.bucketspermeasure) -1)
+        println();
+    }
+    println("]");
   }
 }
