@@ -196,7 +196,7 @@ class NoteArray
           counter = (counter%(int)quarternotespermeasure)+1;
         }
       }
-      printTrack(notes.get(notes.size()-1));
+      //printTrack(notes.get(notes.size()-1));
       //pattern = findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)
