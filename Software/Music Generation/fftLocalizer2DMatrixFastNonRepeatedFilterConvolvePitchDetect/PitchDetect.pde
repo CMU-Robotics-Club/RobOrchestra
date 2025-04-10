@@ -65,7 +65,7 @@ public class PitchDetect extends PApplet
         // spectrum pre-processing
         sw.whiten(spec2);
         spec = sw.wSpec;
-        spec = spec2;
+        //spec = spec2;
 
         // iteratively find all presented pitches
         float test = 0, lasttest = 0;
@@ -74,10 +74,11 @@ public class PitchDetect extends PApplet
         //println("start loop");
         while (true) {
             
-            detectfzeronew(spec2, fzeroInfo);
+            //detectfzeronew(spec, fzeroInfo);
+            detectfzero(spec, fzeroInfo);
             lasttest = test;
             test = (test + fzeroInfo[1]) / pow(loopcount, .7f);
-            if (test <= lasttest) break;
+            //if (test <= lasttest) break;
             loopcount++;
             if (loopcount > 5) break;
 
@@ -93,8 +94,13 @@ public class PitchDetect extends PApplet
 
             // update fzeros
             if ((int) fzeroInfo[2] >= PITCHES.length) break;
+            
+            //if ((fzeroInfo[2] >= 12 && fzeros[(int) fzeroInfo[2] - 12] == 1) || (fzeroInfo[2] >= 24 && fzeros[(int) fzeroInfo[2] - 24] == 1)) continue;
+            //if (fzeroInfo[2] < PITCHES.length-12 && fzeros[(int) fzeroInfo[2] + 12] == 1) fzeros[(int) fzeroInfo[2] + 12] = 0;
+            //if (fzeroInfo[2] < PITCHES.length-19 && fzeros[(int) fzeroInfo[2] + 19] == 1) fzeros[(int) fzeroInfo[2] + 19] = 0;
+            //if (fzeroInfo[2] < PITCHES.length-24 && fzeros[(int) fzeroInfo[2] + 24] == 1) fzeros[(int) fzeroInfo[2] + 24] = 0;
+            
             if (fzeros[(int) fzeroInfo[2]] == 0) fzeros[(int) fzeroInfo[2]] = 1;
-            //else fzeros[(int) fzeroInfo[2]] = 0;
             
         }
         //println("end loop");
@@ -104,14 +110,16 @@ public class PitchDetect extends PApplet
     // utility function for detecting a single pitch
     private void detectfzero(float[] spec, float[] fzeroInfo)
     {
+        //println("detectfzero");
         float maxSalience = -1000000.0f;
-        for (int j = 0; j < PITCHES.length; ++j) {
+        for (int j = 10; j < PITCHES.length; ++j) {
             float cSalience = 0; // salience of the candidate pitch
             float val = 0;
-            for (int i = 1; i * PITCHES[j] < sampleRate / 2; ++i) {
+            for (int i = 0; i * PITCHES[j] < sampleRate / 2; ++i) {
                 int bin = round(i * PITCHES[j] * timeSize / sampleRate);
+                //fzeroInfo[0] = max(1, maxind * sampleRate / (2*spec3.length));
                 // use the largest value of bins in vicinity
-                if (bin < 3) continue;
+                if (bin < 5) continue;
                 if (bin > 510) continue;
                 if (bin == timeSize/2) val = max(spec[bin-3], spec[bin-2], spec[bin-1]);
                 else if (bin == timeSize/2-1) val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin]);
@@ -126,6 +134,7 @@ public class PitchDetect extends PApplet
             //println(cSalience);
             if (cSalience > maxSalience) {
                 maxSalience = cSalience;
+                //println("max salience = " + maxSalience + ", pitches = " + PITCHES[j]);
                 fzeroInfo[0] = PITCHES[j];
                 fzeroInfo[1] = cSalience;
                 fzeroInfo[2] = j;
@@ -135,6 +144,7 @@ public class PitchDetect extends PApplet
     
     private void detectfzeronew(float[] spec3, float[] fzeroInfo)
     {
+      
       float max = 0;
       int maxind = 0;
       for (int i = 0; i < spec3.length; i++)

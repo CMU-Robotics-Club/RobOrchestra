@@ -62,7 +62,7 @@ void setup()
   osc.freq(440);
   osc.play();
   
-  myBus = new MidiBus(this, 0, 2);
+  //myBus = new MidiBus(this, 0, 2);
   File myFile = new File(dataPath("auldlangsyne.mid"));
   try
   {
@@ -105,6 +105,7 @@ void setup()
 
 void draw()
 { 
+  print("test");
   //fft.analyze(spectrum);
   float freq = pd.analyze();
   float amplitude = amp.analyze();
@@ -125,7 +126,7 @@ void draw()
     line(x-1, height - ampOld * ampScale, x, height - amplitude * ampScale);
     ampOld = amplitude;
     //System.out.println(freq);
-  
+  /*
   midi = MIDIfromPitch(y);
   
   if (midi > 0 && amplitude > ampThreshold)
@@ -156,6 +157,7 @@ void draw()
   else{
     osc.stop();
   }
+  */
 
 
   delay(10);

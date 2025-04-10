@@ -5,8 +5,8 @@ import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
 //String fileName = "twinkle_twinkle2.mid";
-//String fileName = "GoC.mid";
-String fileName = "ae_test.mid";
+String fileName = "GoT7.mid";
+//String fileName = "ae_test.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 

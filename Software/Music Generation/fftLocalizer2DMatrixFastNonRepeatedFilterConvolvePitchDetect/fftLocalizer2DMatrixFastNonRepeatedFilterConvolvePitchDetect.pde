@@ -13,8 +13,9 @@ import ddf.minim.signals.*;
 import ddf.minim.spi.*;
 import ddf.minim.ugens.*;
 
-String fileName = "twinkle_twinkle_up.mid";
+String fileName = "twinkle_twinkle2_d.mid";
 //String fileName = "GoC.mid";
+//String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
 //String fileName = "alt_test.mid";
 public static final int NOTE_ON = 0x90;
@@ -46,7 +47,7 @@ long lastPlayedTime;
 
 int playHarmony = 1;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.25; //0.08;
+double minBeatThresh = 0.08; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -66,7 +67,7 @@ int nTempoBuckets = 24; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
-int maxBPM = 120;
+int maxBPM = 180;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -75,7 +76,7 @@ float maxMsPerRhythm;
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/256.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
 double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
@@ -266,7 +267,11 @@ void draw()
   rhythmPattern = sublist(nArr.notes.get(1-playHarmony), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
   //println(rhythmPattern);
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
- 
+  for (int i = 0; i < beatProbsArr.length; i++)
+  {
+    beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+  }
+
  
  ArrayList<Integer> beatpositions = new ArrayList<Integer>();
  for(int i = 0; i < bucketsPerRhythm+1; i++){
@@ -278,11 +283,15 @@ void draw()
      beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
      for (int k = 0; k < rhythmPattern.get(i).size(); k++)
      {
+       //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
        beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
      }
    }
    }
  }
+
+
+ 
  
  //for(int i:beatpositions){
  //  for(int j = 0; j < (bucketsPerRhythm+1); j++){
@@ -306,7 +315,7 @@ void draw()
      beatProbSum += beatProbsArr[h].get(i, 0);
    }
    for(int i = 0; i < (bucketsPerRhythm+1); i++){
-     beatProbsArr[h].set(i, 0, beatProbs.get(i, 0) / beatProbSum);
+     beatProbsArr[h].set(i, 0, beatProbsArr[h].get(i, 0) / beatProbSum);
    }
  }
  
@@ -444,16 +453,27 @@ void draw()
   //      fzeros[ppitch.intValue() - 28 + pitch_offsets[i]] = 0;
   //  }
   //}
-  
+  for (int i = 0; i < fzeros.length; i++)
+  {
+    if (fzeros[i] == 1)
+    {
+      println(PITCHES[i]);
+    }
+  }
   boolean hasPitch = false;
+  int firstPitchIdx = 0;
   for (int i = 20; i < PITCHES.length; i++)
   {
     if (fzeros[i] == 1)
     {
       hasPitch = true;
-      println(PITCHES[i]);
+      firstPitchIdx = i;
+      //println(PITCHES[i]);
+      break;
     }
   }
+  println("first pitch = " + PITCHES[firstPitchIdx]);
+  
   
   //if (pitch.size() > 0) exit();
   //while (true) {};
@@ -504,6 +524,8 @@ void draw()
             {
               tempil *= beatProbsArr[h].get(i, 0);
             }
+            else
+              tempil *= 1-beatProbsArr[h].get(i,0);
           }
         }
       }
@@ -538,8 +560,14 @@ void draw()
   }
 
   probs2 = newprobs2;
-  dispProbArray(probs, isBeat);
-  dispProbArray(beatProbs, isBeat);
+  //dispProbArray(probs, detectedBeat);
+
+  if (!(hasPitch && !keyPressedBeat))
+  {
+    background(0,0,255);
+    dispProbArray(beatProbs, detectedBeat);
+  }
+  else dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
   //dispProbArray(new Matrix(test, cap), false);
   double[] dbuffer = new double[buffer.length];
   for (int i = 0; i < buffer.length; i++)

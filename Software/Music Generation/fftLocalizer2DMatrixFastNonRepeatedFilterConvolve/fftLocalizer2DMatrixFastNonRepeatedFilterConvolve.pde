@@ -5,8 +5,8 @@ import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
 //String fileName = "twinkle_twinkle2.mid";
-//String fileName = "GoC.mid";
-String fileName = "ae_test3.mid";
+String fileName = "GoC.mid";
+//String fileName = "ae_test3.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f, 61.7f, 65.4f, 69.3f, 
@@ -29,7 +29,7 @@ ArrayList<float[]> ref_freqs;
 ArrayList<Integer> ref_freq_times;
 long lastPlayedTime;
 
-int playHarmony = 0;
+int playHarmony = 1;
 double beatThreshScale = 0.7;
 double minBeatThresh = 0.12; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
