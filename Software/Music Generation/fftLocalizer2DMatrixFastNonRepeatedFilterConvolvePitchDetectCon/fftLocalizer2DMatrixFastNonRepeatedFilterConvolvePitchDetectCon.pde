@@ -6,12 +6,33 @@ import themidibus.*; //MIDI output to instruments/SimpleSynth
 import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
-import ddf.minim.*;
-//import ddf.minim.analysis.*;
-import ddf.minim.effects.*;
-import ddf.minim.signals.*;
-import ddf.minim.spi.*;
-import ddf.minim.ugens.*;
+
+import themidibus.*; //Import midi library
+import gab.opencv.*;
+import processing.video.*;
+import java.awt.Rectangle;
+
+//CV conductor = new CV();
+static Capture video;
+static OpenCV opencv;
+
+PImage src, colorFilteredImage;
+int previous_time = 0;
+int current_time = 0;
+boolean play_trigger = true;
+ArrayList<Contour> contours;
+
+// <1> Set the range of Hue values for our filter
+int rangeLow = 20;
+int rangeHigh = 35;
+
+int[] p1 = {0, 0};
+int[] p2 = {0, 0};
+int time1 = 0;
+int time2 = 0;
+double[] prevV;
+double[] currV;
+
 
 String fileName = "twinkle_twinkle2_d.mid";
 //String fileName = "GoC.mid";
@@ -86,6 +107,7 @@ Matrix probsonemat;
 Matrix probs2;
 Matrix beatProbs; //P(location | heard a beat)
 Matrix[] beatProbsArr;
+Matrix[] beatProbsArrVis;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
 
@@ -101,6 +123,9 @@ boolean beatReady = true; //Keep track of repeated beat detections so we can fil
 long lastReady;
 
 ArrayList<ArrayList<Integer>> rhythmPattern;
+ArrayList<ArrayList<Integer>> conductPattern;
+final int nconductpatterns = 5; //There's 4 patterns, but +1 because zero-indexing
+final int conductChannel = 2; //TODO autoset this maybe?
 int bucketShift = 0;
 void setup()
 {
@@ -108,9 +133,17 @@ void setup()
   //println(bucketsPerMeasure);
   println("start");
 
-  size(1000, 800);
-  background(255);
+  video = new Capture(this, 640, 480, 30);
   
+  opencv = new OpenCV(this, video.width, video.height);
+  
+  video.start();
+
+  contours = new ArrayList<Contour>();
+  
+  size(1280, 480, P2D);
+  previous_time = millis();
+
   // Create an Input stream which is routed into the Amplitude analyzer
   pd = new PitchDetector(this, 0.55); //Last arg is confidence - increase to filter out more garbage
   in = new AudioIn(this, 0);
@@ -167,6 +200,7 @@ void setup()
   probs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
   beatProbsArr = new Matrix[PITCHES.length];
+  beatProbsArrVis = new Matrix[nconductpatterns];
   for (int i = 0; i < beatProbsArr.length; i++)
   {
     beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
@@ -209,30 +243,124 @@ void setup()
 
 void draw()
 {
+    background(255);
 
+// Read last captured frame
+  if (video.available()) {
+    video.read();
+   
+  }
+  image(video, 0, 0);
+
+  // <2> Load the new frame of our movie in to OpenCV
+  opencv.loadImage(video);
+  //opencv.blur(300);
+  
+  // Tell OpenCV to use color information
+  opencv.useColor();
+  opencv.blur(40);
+  //opencv.blur(10);
+  src = opencv.getSnapshot();
+  
+  // <3> Tell OpenCV to work in HSV color space.
+  opencv.useColor(HSB);
+  
+  // <4> Copy the Hue channel of our image into 
+  //     the gray channel, which we process.
+  opencv.setGray(opencv.getH().clone());
+  
+  // <5> Filter the image based on the range of 
+  //     hue values that match the object we want to track.
+  opencv.inRange(rangeLow, rangeHigh);
+  
+  // <6> Get the processed image for reference.
+  
+  colorFilteredImage = opencv.getSnapshot();
+  
+  // <7> Find contours in our range image.
+  //     Passing 'true' sorts them by descending area.
+  contours = opencv.findContours(true, true);
+  
+  // <8> Display background images
+  image(src, 0, 0);
+  image(colorFilteredImage, src.width, 0);
+  
+  // <9> Check to make sure we've found any contours
+  if (contours.size() > 0) {
+    // <9> Get the first contour, which will be the largest one
+    Contour biggestContour = contours.get(0);
+    
+    // <10> Find the bounding box of the largest contour,
+    //      and hence our object.
+    Rectangle r = biggestContour.getBoundingBox();
+    
+    // <11> Draw the bounding box of our object
+    noFill(); 
+    strokeWeight(2); 
+    stroke(255, 0, 0);
+    rect(r.x, r.y, r.width, r.height);
+    
+    p2[0] = p1[0];
+    p2[1] = p1[1];
+    time2 = time1;
+    p1[0] = r.x + r.width/2;
+    p1[1] = r.y + r.height/2;
+    time1 = millis();
+  }
+  //println(currV);
+  //  println();
+  //if (currV > 0.5/*.20*/){
+  prevV = currV;
+  currV = velocityVector();
+  int iv = interpretVector(currV, 3);
+  println(iv);
+  
   rhythmPattern = sublist(nArr.notes.get(1-playHarmony), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
+  
+  conductPattern = sublist(nArr.notes.get(conductChannel), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
 
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
   for (int i = 0; i < beatProbsArr.length; i++)
   {
     beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
   }
+  for (int i = 0; i < nconductpatterns; i++){
+    beatProbsArrVis[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+  }
 
  
- ArrayList<Integer> beatpositions = new ArrayList<Integer>();
+ //ArrayList<Integer> beatpositions = new ArrayList<Integer>();
  for(int i = 0; i < bucketsPerRhythm+1; i++){
    if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
      //beatpositions.add(i);
      for(int j = 0; j < (bucketsPerRhythm+1); j++){
-     int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
-     //disp = #buckets off from i that we are
-     beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
-     for (int k = 0; k < rhythmPattern.get(i).size(); k++)
-     {
-       //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
-       beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+       int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+       //disp = #buckets off from i that we are
+       beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+       for (int k = 0; k < rhythmPattern.get(i).size(); k++)
+       {
+         //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
+         beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+       }
      }
    }
+   if(conductPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
+     //beatpositions.add(i);
+     for(int j = 0; j < (bucketsPerRhythm+1); j++){
+       int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+       //disp = #buckets off from i that we are
+       int conductpattern = rhythmPattern.get(i).get(0);
+       if (conductpattern >= nconductpatterns){
+         println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
+         conductpattern = nconductpatterns-1;
+       }
+       if(conductpattern > 0){
+         beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+       }
+       else{
+         println("conductpattern == 0, I wasn't expecting this but I'm ignoring so it should be fine");
+       }
+     }
    }
  }
 
@@ -255,9 +383,18 @@ void draw()
      beatProbsArr[h].set(i, 0, beatProbsArr[h].get(i, 0) / beatProbSum);
    }
  }
+ for (int h = 0; h < nconductpatterns; h++)
+ {
+   beatProbSum = 0;
+   for(int i = 0; i < (bucketsPerRhythm+1); i++){
+     beatProbSum += beatProbsArrVis[h].get(i, 0);
+   }
+   for(int i = 0; i < (bucketsPerRhythm+1); i++){
+     beatProbsArrVis[h].set(i, 0, beatProbsArrVis[h].get(i, 0) / beatProbSum);
+   }
+ }
  
  
-  background(255);
   int newtime = millis();
   int t = newtime - oldtime;
   oldtime = newtime;
@@ -293,18 +430,20 @@ void draw()
   println("first pitch = " + PITCHES[firstPitchIdx]);
   
   boolean keyPressedBeat = keyPressed;
-  boolean detectedBeat = (amp.analyze() > 0.7 * beatThresh && hasPitch) || keyPressedBeat;
+  boolean heardBeat = (amp.analyze() > 0.7 * beatThresh && hasPitch);
+  boolean sawBeat = iv > 0;
+  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat;
   
+  //Update beat-hearing threshold
   if (amp.analyze() > beatThresh) beatThresh += 0.005;
   else beatThresh = beatThresh - 0.001;
   if (beatThresh < minBeatThresh)
   {
     beatThresh = minBeatThresh;
-    background(127);
   }
   
   boolean isBeat = detectedBeat && beatReady;
-  beatReady = !detectedBeat;
+  beatReady = !detectedBeat; //Avoid repeated beats
   if (isBeat) println("beat");
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
@@ -329,18 +468,24 @@ void draw()
          tempil += probs2.get(j, l)*posPDF;
       }
       if(isBeat){
-        if (keyPressedBeat)
+        if (keyPressedBeat) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
           tempil *= beatProbs.get(i, 0);
         else
         {
-          for (int h = 0; h < fzeros.length; h++)
-          {
-            if (fzeros[h] == 1)
+          if (heardBeat){
+            for (int h = 0; h < fzeros.length; h++)
             {
-              tempil *= beatProbsArr[h].get(i, 0);
+              if (fzeros[h] == 1)
+              {
+                tempil *= beatProbsArr[h].get(i, 0);
+              }
+              else
+                tempil *= 1-beatProbsArr[h].get(i,0);
             }
-            else
-              tempil *= 1-beatProbsArr[h].get(i,0);
+          }
+          
+          if (sawBeat){
+            tempil *= beatProbsArrVis[iv].get(i, 0);
           }
         }
       }
@@ -377,13 +522,29 @@ void draw()
   probs2 = newprobs2;
   //dispProbArray(probs, detectedBeat);
 
-  if (!(hasPitch && !keyPressedBeat))
-  {
-    background(0,0,255);
+  ////if (!(hasPitch && !keyPressedBeat))
+  //if(keyPressedBeat || !isBeat)
+  //{
+  //  //Disp default beat array
+  //  background(0,0,255);
+  //  dispProbArray(beatProbs, detectedBeat);
+  //}
+  //else dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
+  ////dispProbArray(new Matrix(test, cap), false);
+  
+  //Display default beatProbArray
+  dispProbArray(beatProbs, detectedBeat);
+  //Override if saw or heard a beat
+  if(sawBeat){
+    dispProbArray(beatProbsArrVis[iv], detectedBeat);
+  }
+  if(hasPitch){
+    dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
+  }
+  //Override the override if keyboard input
+  if(keyPressedBeat){
     dispProbArray(beatProbs, detectedBeat);
   }
-  else dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
-  //dispProbArray(new Matrix(test, cap), false);
   
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
   if(bucketShift == 0){
@@ -588,65 +749,37 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     }
     println();
   }
+
+double[] velocityVector() {
+  //System.out.println(p2[0] + " " +  p3[0] + " " + p2[1] + " " + p3[1]);
+  int time = time1 - time2;
+  if (time == 0)
+  {
+    double[] zero = {0.0, 0.0};
+    return zero;
+  }
+  double[] v1 = {(p1[0] - p2[0])/time, (p1[1] - p2[1])/time};
+  double v1Length = Math.sqrt(Math.pow(v1[0], 2) + Math.pow(v1[1], 2));
+  double velocity = v1Length;
+  return v1;
+}
+
+int interpretVector(double[] v, int threshold)
+{
+  if (v[1] > threshold) return 1;
+  else if (v[1] < -threshold) return 4;
+  else if (v[0] > threshold) return 2;
+  else if (v[0] < -threshold) return 3;
+  else return 0;
+}
+
+void mousePressed() {
+  color c = get(mouseX, mouseY);
+  println("r: " + red(c) + " g: " + green(c) + " b: " + blue(c));
+   
+  int hue = int(map(hue(c), 0, 255, 0, 180));
+  println("hue to detect: " + hue);
   
-//public void detect(AudioBuffer buffer)
-//    {
-//        float[] spec = new float[timeSize/2+1];
-//        int[] fzeros = new int[PITCHES.length];
-//        // perform fft on the buffer
-//        fft.forward(buffer);
-//        for (int i = 0; i < spec.length; i++) spec[i] = 1000 * fft.getBand(i);
-
-//        // spectrum pre-processing
-//        sw.whiten(spec);
-//        spec = sw.wSpec;
-
-//        // iteratively find all presented pitches
-//        float test = 0, lasttest = 0;
-//        int loopcount = 1;
-//        float[] fzeroInfo = new float[3]; // ind 0 is the pitch, ind 1 its salience, ind 2 its ind in PITCHES
-//        while (true) {
-//            detectfzero(spec, fzeroInfo);
-//            lasttest = test;
-//            test = (test + fzeroInfo[1]) / pow(loopcount, .7f);
-//            if (test <= lasttest) break;
-//            loopcount++;
-
-//            // subtract the information of the found pitch from the current spectrum
-//            for (int i = 1; i * fzeroInfo[0] < sampleRate / 2; ++i) {
-//                int partialInd = floor(i * fzeroInfo[0] * timeSize / sampleRate);
-//                float weighting = (fzeroInfo[0] + 52) / (i * fzeroInfo[0] + 320);
-//                spec[partialInd] *= (1 - 0.89f * weighting);
-//                spec[partialInd-1] *= (1 - 0.89f * weighting);
-//            }
-
-//            // update fzeros
-//            if (fzeros[(int) fzeroInfo[2]] == 0) fzeros[(int) fzeroInfo[2]] = 1;
-//        }
-//    }
-  
-//    // utility function for detecting a single pitch
-//    private void detectfzero(float[] spec, float[] fzeroInfo)
-//    {
-//        float maxSalience = 0;
-//        for (int j = 0; j < PITCHES.length; ++j) {
-//            float cSalience = 0; // salience of the candidate pitch
-//            float val = 0;
-//            for (int i = 1; i * PITCHES[j] < sampleRate / 2; ++i) {
-//                int bin = round(i * PITCHES[j] * timeSize / sampleRate);
-//                // use the largest value of bins in vicinity
-//                if (bin == timeSize/2) val = max(spec[bin-3], spec[bin-2], spec[bin-1]);
-//                else if (bin == timeSize/2-1) val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin]);
-//                else val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin], spec[bin+1]);
-//                // calculate the salience of the current candidate
-//                float weighting = (PITCHES[j] + 52) / (i * PITCHES[j] + 320);
-//                cSalience += val * weighting;
-//            }
-//            if (cSalience > maxSalience) {
-//                maxSalience = cSalience;
-//                fzeroInfo[0] = PITCHES[j];
-//                fzeroInfo[1] = cSalience;
-//                fzeroInfo[2] = j;
-//            }
-//        }
-//    }
+  rangeLow = hue - 4;
+  rangeHigh = hue + 4;
+}

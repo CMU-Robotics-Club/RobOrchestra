@@ -2,9 +2,6 @@ import processing.core.*;
 import processing.sound.PitchDetector; //Input from computer mic
 import Jama.*; //Matrix math
 
-import ddf.minim.*;
-import ddf.minim.analysis.*;
-
 public class PitchDetect extends PApplet
 {
     /** size of the buffer */
