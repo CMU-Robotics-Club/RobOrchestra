@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "twinkle_twinkle_eflat.mid";
+//String fileName = "twinkle_twinkle_eflat.mid";
+String fileName = "RowRow.mid"; //TODO melody holds last note for two measures, parser only keeps one. Harmony is longer, then loops and gets off by an increasing amount
 //String fileName = "GoC.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
@@ -23,7 +24,7 @@ double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO
 //Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
 //Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
 
-double measureRange = 0.5;
+double measureRange = 1;
 // how many measures we see on each side of current bucket
 
 int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large that it makes computations slow)
@@ -31,11 +32,11 @@ int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large t
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 // 
-int nTempoBuckets = 48; //Same idea
+int nTempoBuckets = 96; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
-int maxBPM = 180;
+int maxBPM = 80;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -96,6 +97,10 @@ void setup()
   
   
   notes = nArr.notes.get(1);
+  
+  print(nArr.notes.get(0));
+  print(notes);
+  
   println("melody size: " + nArr.notes.get(0).size());
   println("harmony size: " + notes.size());
   //println(notes.size());
@@ -381,32 +386,32 @@ double GaussPDF(double x, double mu, double sigma){
   return res;
 }
 
-ArrayList<ArrayList<Integer>> resampleBy(ArrayList<ArrayList<Integer>> rhythmSeq, float factor){
-  return resample(rhythmSeq, (int)(rhythmSeq.size()*factor));
-}
+//ArrayList<ArrayList<Integer>> resampleBy(ArrayList<ArrayList<Integer>> rhythmSeq, float factor){
+//  return resample(rhythmSeq, (int)(rhythmSeq.size()*factor));
+//}
 
-ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, int newlen){
-  int oldlen = rhythmSeq.size();
-  ArrayList<ArrayList<Integer>> out = new ArrayList<ArrayList<Integer>>();
-  for(int x = 0; x < newlen; x++){
-    float startbucket = ((float)x/newlen * oldlen);
-    float endbucket = ((float)(x+1)/newlen * oldlen);
-    out.add(new ArrayList<Integer>());
-    if(ceil(startbucket) >= endbucket){
-      //Do nothing
-    }
-    else{
-      for(int y = (int)ceil(startbucket); y < endbucket; y++){
-        for(Integer pitch: rhythmSeq.get(y)){
-          if(pitch > 0){
-            out.get(x).add(pitch);
-          }
-        }
-      }
-    }
-  }
-  return out;
-}
+//ArrayList<ArrayList<Integer>> resample(ArrayList<ArrayList<Integer>> rhythmSeq, int newlen){
+//  int oldlen = rhythmSeq.size();
+//  ArrayList<ArrayList<Integer>> out = new ArrayList<ArrayList<Integer>>();
+//  for(int x = 0; x < newlen; x++){
+//    float startbucket = ((float)x/newlen * oldlen);
+//    float endbucket = ((float)(x+1)/newlen * oldlen);
+//    out.add(new ArrayList<Integer>());
+//    if(ceil(startbucket) >= endbucket){
+//      //Do nothing
+//    }
+//    else{
+//      for(int y = (int)ceil(startbucket); y < endbucket; y++){
+//        for(Integer pitch: rhythmSeq.get(y)){
+//          if(pitch > 0){
+//            out.get(x).add(pitch);
+//          }
+//        }
+//      }
+//    }
+//  }
+//  return out;
+//}
 
 void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRhythm)
 {
