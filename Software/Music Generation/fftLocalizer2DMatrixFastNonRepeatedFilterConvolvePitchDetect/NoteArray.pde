@@ -165,6 +165,17 @@ class NoteArray
           notes.get(i).add(new ArrayList<Integer>());
         }
       }
+      
+      //And force them all to be the same length
+      for (int i = 0; i < notes.size(); i++)
+      {
+        for (int j = 0; j < notes.size(); j++){
+          while (notes.get(i).size() < notes.get(j).size())
+          {
+            notes.get(i).add(new ArrayList<Integer>());
+          }
+        }
+      }
       //pattern = findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)
