@@ -168,6 +168,7 @@ void setup()
   for(int k = 0; k < nTempoBuckets; k++){
     tempoGaussMat.set(k, k, tempoGaussMat.get(k, k) + 1-tempoGaussMatSums.get(k, 0));
   }
+  oldtime = millis();
 }      
 
 void draw()
