@@ -95,10 +95,10 @@ float minMsPerRhythm;
 float maxMsPerRhythm;
 
 //Gaussian parameters. Hopefully don't need changing anymore
-double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.)
+double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/80.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -109,7 +109,7 @@ Matrix beatProbs; //P(location | heard a beat)
 Matrix[] beatProbsArr;
 Matrix[] beatProbsArrVis;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
-Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
+Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
 
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
@@ -168,7 +168,7 @@ void setup()
   in.amp(1);
   // start the Audio Input
   in.start();
-
+  
   // patch the AudioIn
   pd.input(in);
   amp.input(in);
@@ -178,8 +178,8 @@ void setup()
   notes = new ArrayList<ArrayList<Integer>>();
 
   nArr = new NoteArray(fileName, bucketsPerMeasure);
-
-
+  
+  
   notes = nArr.notes.get(playHarmony);
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
   println("harmony size: " + notes.size());
@@ -216,25 +216,34 @@ void setup()
     assert(msPerRhythm.get(i, 0) > 0);
   }
 
-  for (int i = 0; i < bucketsPerRhythm+1; i++) {
-    for (int j = 0; j < nTempoBuckets; j++) {
-      if (i == bucketsPerRhythm/2)
-      {
-        probs2.set(i, j, 1);
-      } else
-      {
-        probs2.set(i, j, 0);
-      }
-    }
+ for(int i = 0; i < bucketsPerRhythm+1; i++){
+   for(int j = 0; j < nTempoBuckets; j++){
+     if (i == bucketsPerRhythm/2)
+     {
+       probs2.set(i, j, 1);
+     }
+     else
+     {
+       probs2.set(i, j, 0);
+     }
+   }
+ }
+ 
+ //Set up tempoGaussMat
+  for(int k = 0; k < nTempoBuckets; k++){
+   for(int l = 0; l < nTempoBuckets; l++){
+     //Overall plan is newprobs2[i][k] = adhocPosGaussMat[i][j] * probs2[j][l] * tempoGaussMat[l][k], summed over j and l, and then this is just matrix multiplication
+     //But note that tempoGaussMat is symmetric so this won't end up mattering
+     tempoGaussMat.set(l, k, GaussPDF(k-l, 0, tempoSD));
+   }
   }
-
-  //Set up tempoGaussMat
-  for (int k = 0; k < nTempoBuckets; k++) {
-    for (int l = 0; l < nTempoBuckets; l++) {
-      //Overall plan is newprobs2[i][k] = adhocPosGaussMat[i][j] * probs2[j][l] * tempoGaussMat[l][k], summed over j and l, and then this is just matrix multiplication
-      //But note that tempoGaussMat is symmetric so this won't end up mattering
-      tempoGaussMat.set(l, k, GaussPDF(k-l, 0, tempoSD));
-    }
+  //Want to stop tempo reverting to the middle, so we need to take the weight we're blurring out of bounds and add it back to the end elements
+  //Note: We might start having the opposite problem (bias toward extreme tempos) if we have too few tempo buckets since I'm dumping all the overflow on the closest edge rather than splitting it properly
+  //But hopefully this is fine - SD scales with number of buckets, and the far edge is at least 4 SDs out with default settings
+  //UPDATE: Pretty sure correct answer is always add to diagonal element instead
+  Matrix tempoGaussMatSums = tempoGaussMat.times(probsonemat);
+  for(int k = 0; k < nTempoBuckets; k++){
+    tempoGaussMat.set(k, k, tempoGaussMat.get(k, k) + 1-tempoGaussMatSums.get(k, 0));
   }
   oldtime = millis();
 }

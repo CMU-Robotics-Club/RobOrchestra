@@ -47,7 +47,7 @@ Matrix probsonemat;
 Matrix probs2;
 Matrix beatProbs; //P(location | heard a beat)
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
-Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
+Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
 
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
@@ -159,6 +159,14 @@ void setup()
      //But note that tempoGaussMat is symmetric so this won't end up mattering
      tempoGaussMat.set(l, k, GaussPDF(k-l, 0, tempoSD));
    }
+  }
+  //Want to stop tempo reverting to the middle, so we need to take the weight we're blurring out of bounds and add it back to the end elements
+  //Note: We might start having the opposite problem (bias toward extreme tempos) if we have too few tempo buckets since I'm dumping all the overflow on the closest edge rather than splitting it properly
+  //But hopefully this is fine - SD scales with number of buckets, and the far edge is at least 4 SDs out with default settings
+  //UPDATE: Pretty sure correct answer is always add to diagonal element instead
+  Matrix tempoGaussMatSums = tempoGaussMat.times(probsonemat);
+  for(int k = 0; k < nTempoBuckets; k++){
+    tempoGaussMat.set(k, k, tempoGaussMat.get(k, k) + 1-tempoGaussMatSums.get(k, 0));
   }
 }      
 
