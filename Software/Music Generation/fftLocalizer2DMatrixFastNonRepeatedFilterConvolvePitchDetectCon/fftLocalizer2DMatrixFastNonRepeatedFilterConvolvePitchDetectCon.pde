@@ -8,8 +8,8 @@ import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
 import themidibus.*; //Import midi library
-import gab.opencv.*;
-import processing.video.*;
+import gab.opencv.*; //OpenCV for Processing
+import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
 //CV conductor = new CV();
