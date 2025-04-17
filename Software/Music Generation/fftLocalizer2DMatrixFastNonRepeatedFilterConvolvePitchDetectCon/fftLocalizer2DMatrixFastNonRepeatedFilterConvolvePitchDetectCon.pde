@@ -377,21 +377,23 @@ void draw()
       }
     }
     if (watchConductor){
-      if (conductPattern.get(i).size() > 0/* && rhythmPattern.get(i).get(0) > 0*/) {
+      if (conductPattern.get(i).size() > 0) {
         //beatpositions.add(i);
         for (int j = 0; j < (bucketsPerRhythm+1); j++) {
           int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
           //disp = #buckets off from i that we are
-          int conductpattern = conductPattern.get(i).get(0);
-          //println(conductpattern);
-          if (conductpattern >= nconductpatterns) {
-            println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
-            conductpattern = nconductpatterns-1;
-          }
-          if (conductpattern > 0) {
-            beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * 0.01 * GaussPDF(disp, 0, beatSD));
-          } else {
-            println("conductpattern == 0, I wasn't expecting this but I'm ignoring so it should be fine");
+          for (int k = 0; k < conductPattern.get(i).size(); k++){
+            int conductpattern = conductPattern.get(i).get(k);
+            //println(conductpattern);
+            if (conductpattern >= nconductpatterns) {
+              println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
+              conductpattern = nconductpatterns-1;
+            }
+            if (conductpattern > 0) {
+              beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * 0.01 * GaussPDF(disp, 0, beatSD));
+            } else {
+              println("conductpattern == 0, I wasn't expecting this but I'm ignoring so it should be fine");
+            }
           }
         }
       }
