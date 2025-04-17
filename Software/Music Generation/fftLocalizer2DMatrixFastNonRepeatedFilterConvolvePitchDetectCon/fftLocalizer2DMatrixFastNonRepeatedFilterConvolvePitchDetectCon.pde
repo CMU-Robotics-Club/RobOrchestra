@@ -12,7 +12,7 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = false;
+boolean hearNotes = true;
 boolean watchConductor = false;
 boolean ignorePitch = true;
 
@@ -21,13 +21,15 @@ boolean ignorePitch = true;
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
 //String fileName = "alt_test.mid";
-String fileName = "six_eighths_test.mid";
+//String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
+//String fileName = "WWRY3.mid";
+String fileName = "callresponsetest3.mid";
 
-int playHarmony = 0;
+int playHarmony = 1;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.08; //0.08;
+double minBeatThresh = 0.18; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -46,8 +48,8 @@ int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, 
 int nTempoBuckets = 36; //Same idea
 
 //Upper and lower bounds on tempo.
-int minBPM = 60;
-int maxBPM = 180;
+int minBPM = 120;
+int maxBPM = 360;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -56,8 +58,8 @@ float maxMsPerRhythm;
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/80.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double posSD = bucketsPerRhythm/256.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double tempoSD = nTempoBuckets/120.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -111,7 +113,7 @@ ArrayList<Contour> contours;
 
 // <1> Set the range of Hue values for our filter
 int rangeLow = 20;
-int rangeHigh = 35;
+int rangeHigh = 25;
 
 int[] p1 = {0, 0};
 int[] p2 = {0, 0};
@@ -152,7 +154,7 @@ void setup()
     contours = new ArrayList<Contour>();
   }
 
-  size(1280, 480, P2D);
+  size(1600, 480, P2D);
   previous_time = millis();
 
   // Create an Input stream which is routed into the Amplitude analyzer
@@ -335,8 +337,8 @@ void draw()
     //if (currV > 0.5/*.20*/){
     prevV = currV;
     currV = velocityVector();
-    iv = interpretVector(currV, 1.0);
-    println(iv);
+    iv = interpretVector(currV, 0.9);
+    //println(iv);
   }
 
   rhythmPattern = sublist(nArr.notes.get(1-playHarmony), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
@@ -429,10 +431,12 @@ void draw()
       for (int i = 0; i < (bucketsPerRhythm+1); i++) {
         beatProbSum += beatProbsArrVis[h].get(i, 0);
       }
+      //println(beatProbSum);
       for (int i = 0; i < (bucketsPerRhythm+1); i++) {
         beatProbsArrVis[h].set(i, 0, beatProbsArrVis[h].get(i, 0) / beatProbSum);
       }
     }
+    //println();
   }
 
 
@@ -454,13 +458,13 @@ void draw()
   
     float[] pd2out = pd2.detect(buffer);
   
-    //for (int i = 0; i < fzeros.length; i++)
-    //{
-    //  if (fzeros[i] == 1)
-    //  {
-    //    println(PITCHES[i]);
-    //  }
-    //}
+    for (int i = 20; i < fzeros.length; i++)
+    {
+      if (fzeros[i] == 1)
+      {
+        println(PITCHES[i]);
+      }
+    }
     
     for (int i = 20; i < PITCHES.length; i++)
     {
@@ -608,7 +612,10 @@ void draw()
     dispProbArray(beatProbs, detectedBeat);
   }
   //In all cases, display our position estimate
+  //background(255);
+  //dispProbArray(beatProbsArrVis[4], detectedBeat);
   dispProbArray(probs, isBeat);
+  
 
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
   if (bucketShift == 0) {
@@ -840,6 +847,6 @@ void mousePressed() {
   int hue = int(map(hue(c), 0, 255, 0, 180));
   println("hue to detect: " + hue);
 
-  rangeLow = hue - 4;
-  rangeHigh = hue + 4;
+  rangeLow = hue - 8;
+  rangeHigh = hue + 8;
 }
