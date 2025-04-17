@@ -206,7 +206,6 @@ class NoteArray
       float epsilon = 1e-5;
       while (i < max_size)
       {
-          println(i % bucketspermeasure);
           
           if ((i % bucketspermeasure) == 0)
             notes.get(notes.size()-1).get(round(i)).add(1);
@@ -225,7 +224,6 @@ class NoteArray
         i = 0;
         while (i < max_size)
         {
-            println(i % bucketspermeasure);
             
             //if ((i % bucketspermeasure) == 0)
             //  notes.get(notes.size()-1).get(round(i)).add(1);
@@ -259,7 +257,7 @@ class NoteArray
       //    counter = (counter%(int)notespermeasure)+1;
       //  }
       //}
-      printTrack(notes.get(notes.size()-1));
+      //printTrack(notes.get(notes.size()-1));
       //pattern = findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)

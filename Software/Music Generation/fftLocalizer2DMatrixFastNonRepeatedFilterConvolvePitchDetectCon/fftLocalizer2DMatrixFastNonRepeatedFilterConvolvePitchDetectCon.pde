@@ -108,37 +108,6 @@ int current_time = 0;
 boolean play_trigger = true;
 ArrayList<Contour> contours;
 
-int bucketsPerRhythm = 12; //Pick something reasonably large (but not so large that it makes computations slow)
-// total # of buckets for window (+1?)
-// rhythmPattern.size() = bucketsPerRhythm + 1
-int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
-//
-int nTempoBuckets = 12; //Same idea
-
-//Upper and lower bounds on tempo.
-int minBPM = 60;
-int maxBPM = 180;
-
-//We'll compute these
-float minMsPerRhythm;
-float maxMsPerRhythm;
-
-//Gaussian parameters. Hopefully don't need changing anymore
-double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.)
-double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
-
-//These get filled in later
-ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
-Matrix probs;
-Matrix probsonemat;
-Matrix probs2;
-Matrix beatProbs; //P(location | heard a beat)
-Matrix[] beatProbsArr;
-Matrix[] beatProbsArrVis;
-Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
-Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
 // <1> Set the range of Hue values for our filter
 int rangeLow = 20;
 int rangeHigh = 35;
