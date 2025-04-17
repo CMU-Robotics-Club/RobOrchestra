@@ -6,15 +6,9 @@ import themidibus.*; //MIDI output to instruments/SimpleSynth
 import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
-import ddf.minim.*;
-//import ddf.minim.analysis.*;
-import ddf.minim.effects.*;
-import ddf.minim.signals.*;
-import ddf.minim.spi.*;
-import ddf.minim.ugens.*;
 
-String fileName = "twinkle_twinkle2_d.mid";
-//String fileName = "GoC.mid";
+String fileName = "WorseApple.mid";
+//String fileName = "WWRY3.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
 //String fileName = "alt_test.mid";
@@ -45,7 +39,7 @@ ArrayList<float[]> ref_freqs;
 ArrayList<Integer> ref_freq_times;
 long lastPlayedTime;
 
-int playHarmony = 1;
+int playHarmony = 0;
 double beatThreshScale = 0.7;
 double minBeatThresh = 0.08; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
@@ -63,7 +57,7 @@ int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large t
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 // 
-int nTempoBuckets = 24; //Same idea
+int nTempoBuckets = 36; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
@@ -77,7 +71,7 @@ float maxMsPerRhythm;
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/80.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -87,7 +81,7 @@ Matrix probs2;
 Matrix beatProbs; //P(location | heard a beat)
 Matrix[] beatProbsArr;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
-Matrix msPerRhythm = new Matrix(nTempoBuckets, 1);
+Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
 
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
@@ -102,6 +96,7 @@ long lastReady;
 
 ArrayList<ArrayList<Integer>> rhythmPattern;
 int bucketShift = 0;
+float measuresPerRhythm;
 void setup()
 {
   
@@ -153,7 +148,7 @@ void setup()
 
   //rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
   
-  float measuresPerRhythm = (1.0 * (bucketsPerRhythm+1)) / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
+  measuresPerRhythm = (1.0 * (bucketsPerRhythm+1)) / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
   
   //Before resample, notes uses bucketsPerMeasure
   //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
@@ -203,8 +198,18 @@ void setup()
      tempoGaussMat.set(l, k, GaussPDF(k-l, 0, tempoSD));
    }
   }
+  //Want to stop tempo reverting to the middle, so we need to take the weight we're blurring out of bounds and add it back to the end elements
+  //Note: We might start having the opposite problem (bias toward extreme tempos) if we have too few tempo buckets since I'm dumping all the overflow on the closest edge rather than splitting it properly
+  //But hopefully this is fine - SD scales with number of buckets, and the far edge is at least 4 SDs out with default settings
+  //UPDATE: Pretty sure correct answer is always add to diagonal element instead
+  Matrix tempoGaussMatSums = tempoGaussMat.times(probsonemat);
+  for(int k = 0; k < nTempoBuckets; k++){
+    tempoGaussMat.set(k, k, tempoGaussMat.get(k, k) + 1-tempoGaussMatSums.get(k, 0));
+  }
   oldtime = millis();
-  
+  printMatrix(tempoGaussMat.times(probsonemat));
+  printMatrix(tempoGaussMat);
+  //assert(false);
 }      
 
 void draw()
@@ -218,9 +223,7 @@ void draw()
     beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
   }
 
- 
- ArrayList<Integer> beatpositions = new ArrayList<Integer>();
- for(int i = 0; i < bucketsPerRhythm+1; i++){
+  for(int i = 0; i < bucketsPerRhythm+1; i++){
    if(rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0){
      //beatpositions.add(i);
      for(int j = 0; j < (bucketsPerRhythm+1); j++){
@@ -354,6 +357,23 @@ void draw()
   }
 
   newprobs2 = prenewprobs2.times(tempoGaussMat);
+  
+  //NOTE: msPerRhythm scales linearly with bucket index
+  //This means a LOWER bucket index corresponds to a FASTER tempo!!
+  //Also these tempo probs are unnormalized
+  Matrix temp = new Matrix(1, bucketsPerRhythm+1, 1).times(newprobs2);
+  printMatrix(temp);
+  double maxval = 0;
+  int maxind = 0;
+  for (int i = 0; i < nTempoBuckets; i++){
+    if(temp.get(0, i) > maxval){
+      maxval = temp.get(0, i);
+      maxind = i;
+    }
+  }
+  println("maxval: " + maxval + ", maxind: " + maxind);
+  double BPM = 60000 / (msPerRhythm.get(maxind, 0)*(bucketsPerRhythm+1)) * nArr.quarternotespermeasure*measuresPerRhythm; //remember msPerRhythm is actually storing ms per time-bucket
+  println("BPM: " + BPM);
   
   newprobsum = new Matrix(1, bucketsPerRhythm+1, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
         
@@ -569,6 +589,18 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     }
   }
   
+  void printMatrix(Matrix arr)
+  {
+    for (int i = 0; i < arr.getRowDimension(); i++)
+    {
+      for (int j = 0; j < arr.getColumnDimension(); j++)
+      {
+        System.out.format("%2f ", arr.get(i, j));
+      }
+      println();
+    }
+  }
+  
   void printArray(double[] arr)
   {
     for (int i = 0; i < arr.length; i++)
@@ -588,65 +620,3 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     }
     println();
   }
-  
-//public void detect(AudioBuffer buffer)
-//    {
-//        float[] spec = new float[timeSize/2+1];
-//        int[] fzeros = new int[PITCHES.length];
-//        // perform fft on the buffer
-//        fft.forward(buffer);
-//        for (int i = 0; i < spec.length; i++) spec[i] = 1000 * fft.getBand(i);
-
-//        // spectrum pre-processing
-//        sw.whiten(spec);
-//        spec = sw.wSpec;
-
-//        // iteratively find all presented pitches
-//        float test = 0, lasttest = 0;
-//        int loopcount = 1;
-//        float[] fzeroInfo = new float[3]; // ind 0 is the pitch, ind 1 its salience, ind 2 its ind in PITCHES
-//        while (true) {
-//            detectfzero(spec, fzeroInfo);
-//            lasttest = test;
-//            test = (test + fzeroInfo[1]) / pow(loopcount, .7f);
-//            if (test <= lasttest) break;
-//            loopcount++;
-
-//            // subtract the information of the found pitch from the current spectrum
-//            for (int i = 1; i * fzeroInfo[0] < sampleRate / 2; ++i) {
-//                int partialInd = floor(i * fzeroInfo[0] * timeSize / sampleRate);
-//                float weighting = (fzeroInfo[0] + 52) / (i * fzeroInfo[0] + 320);
-//                spec[partialInd] *= (1 - 0.89f * weighting);
-//                spec[partialInd-1] *= (1 - 0.89f * weighting);
-//            }
-
-//            // update fzeros
-//            if (fzeros[(int) fzeroInfo[2]] == 0) fzeros[(int) fzeroInfo[2]] = 1;
-//        }
-//    }
-  
-//    // utility function for detecting a single pitch
-//    private void detectfzero(float[] spec, float[] fzeroInfo)
-//    {
-//        float maxSalience = 0;
-//        for (int j = 0; j < PITCHES.length; ++j) {
-//            float cSalience = 0; // salience of the candidate pitch
-//            float val = 0;
-//            for (int i = 1; i * PITCHES[j] < sampleRate / 2; ++i) {
-//                int bin = round(i * PITCHES[j] * timeSize / sampleRate);
-//                // use the largest value of bins in vicinity
-//                if (bin == timeSize/2) val = max(spec[bin-3], spec[bin-2], spec[bin-1]);
-//                else if (bin == timeSize/2-1) val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin]);
-//                else val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin], spec[bin+1]);
-//                // calculate the salience of the current candidate
-//                float weighting = (PITCHES[j] + 52) / (i * PITCHES[j] + 320);
-//                cSalience += val * weighting;
-//            }
-//            if (cSalience > maxSalience) {
-//                maxSalience = cSalience;
-//                fzeroInfo[0] = PITCHES[j];
-//                fzeroInfo[1] = cSalience;
-//                fzeroInfo[2] = j;
-//            }
-//        }
-//    }
