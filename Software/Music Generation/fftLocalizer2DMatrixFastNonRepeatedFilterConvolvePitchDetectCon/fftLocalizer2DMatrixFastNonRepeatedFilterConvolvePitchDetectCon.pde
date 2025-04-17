@@ -14,6 +14,7 @@ import java.awt.Rectangle;
 
 boolean hearNotes = false;
 boolean watchConductor = false;
+boolean ignorePitch = true;
 
 //String fileName = "twinkle_twinkle2_d4.mid";
 //String fileName = "GoC.mid";
@@ -390,7 +391,7 @@ void draw()
               conductpattern = nconductpatterns-1;
             }
             if (conductpattern > 0) {
-              beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * 0.01 * GaussPDF(disp, 0, beatSD));
+              beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
             } else {
               println("conductpattern == 0, I wasn't expecting this but I'm ignoring so it should be fine");
             }
@@ -475,7 +476,7 @@ void draw()
   }
 
   boolean keyPressedBeat = keyPressed;
-  boolean heardBeat = (hearNotes && amp.analyze() > 0.7 * beatThresh && hasPitch);
+  boolean heardBeat = (hearNotes && amp.analyze() > 0.7 * beatThresh && (ignorePitch || hasPitch));
   boolean sawBeat = iv > 0;
   boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat;
 
@@ -515,11 +516,11 @@ void draw()
         tempil += probs2.get(j, l)*posPDF;
       }
       if (isBeat) {
-        if (keyPressedBeat) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
+        if (keyPressedBeat || (heardBeat && ignorePitch)) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
           tempil *= beatProbs.get(i, 0);
         else
         {
-          if (heardBeat) {
+          if (heardBeat) { //We know we're not ignoring pitch because DeMorgan stuff
             for (int h = 0; h < fzeros.length; h++)
             {
               if (fzeros[h] == 1)
@@ -579,6 +580,10 @@ void draw()
   //Display default beatProbArray
   dispProbArray(beatProbs, detectedBeat);
   //Override if saw or heard a beat
+  if (hasPitch && !ignorePitch) {
+    background(0, 255, 0); //Green
+    dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
+  }
   if (sawBeat) {
     switch (iv)
     {
@@ -598,11 +603,8 @@ void draw()
     }
     dispProbArray(beatProbsArrVis[iv], detectedBeat);
   }
-  if (hasPitch) {
-    dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
-  }
   //Override the override if keyboard input
-  if (keyPressedBeat) {
+  if (keyPressedBeat || (hasPitch && ignorePitch)) {
     dispProbArray(beatProbs, detectedBeat);
   }
   //In all cases, display our position estimate
