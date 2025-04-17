@@ -30,6 +30,8 @@ class NoteArray
   private long minDiff; // minimum difference in notes, in ticks (may need to be converted)
 
   public float quarternotespermeasure;
+  public int notespermeasure;
+  public int notesize;
   public double BPM;
   public ArrayList<ArrayList<ArrayList<Integer>>> notes;
   public ArrayList<ArrayList<Integer>> pattern;
@@ -74,7 +76,10 @@ class NoteArray
         else if (b[1] == 0x58) // 0x58 == time signature 
         {
           quarternotespermeasure = b[3] * 4.0/(1 << b[4]); // 4th byte is the numerator of the time signature
+          notespermeasure = b[3];
+          notesize = 1 << b[4];
           println("quarter notes per measure " + quarternotespermeasure);
+          println("time signature is " + notespermeasure + "/" + notesize);
         }
         metaidx++;
       }
@@ -182,21 +187,79 @@ class NoteArray
       
       }
       int max_size = notes.get(0).size();
-      float bucketsperquarternote = this.bucketspermeasure / quarternotespermeasure; // buckets/measure * measure/quarternote = buckets/quarternote
+      //int conductingnotespermeasure;
+      //if (notespermeasure <= 6)
+      //  conductingnotespermeasure = notespermeasure;
+      //else
+      //  conductingnotespermeasure = 
+      float bucketspernote = 1.0 * this.bucketspermeasure / notespermeasure; // buckets/measure * measure/note = buckets/note
+      println("buckets per measure is " + bucketspermeasure);
+      println("buckets per note is " + bucketspernote);
       int counter = 1;
+      
       notes.add(new ArrayList<ArrayList<Integer>>());
       for (int i = 0; i < max_size; i++)
       {
         notes.get(notes.size()-1).add(new ArrayList<Integer>());
-        if (i % bucketsperquarternote == 0)
+      }
+      float i = 0;
+      float epsilon = 1e-5;
+      while (i < max_size)
+      {
+          println(i % bucketspermeasure);
+          
+          if ((i % bucketspermeasure) == 0)
+            notes.get(notes.size()-1).get(round(i)).add(1);
+          else if ((i % bucketspermeasure) >= ((notespermeasure-1) * bucketspernote) - epsilon)
+            notes.get(notes.size()-1).get(round(i)).add(4);
+          else if ((i % bucketspermeasure) >= (notespermeasure+1)/2 * bucketspernote - epsilon)
+            notes.get(notes.size()-1).get(round(i)).add(3);
+          else if ((i % bucketspermeasure) >= (bucketspernote) - epsilon)
+            notes.get(notes.size()-1).get(round(i)).add(2);
+        i += bucketspernote;
+        //i = round(i / bucketspernote) * bucketspernote;
+      }
+      if (notespermeasure == 6 && notesize == 8)
+      {
+        bucketspernote = this.bucketspermeasure/2.0;
+        i = 0;
+        while (i < max_size)
         {
-          notes.get(notes.size()-1).get(i).add(counter);
-          //if (notes.get(0).get(i).size() > 0)
-          //  notes.get(notes.size()-1).get(i).add(notes.get(0).get(i).get(0));
-          counter = (counter%(int)quarternotespermeasure)+1;
+            println(i % bucketspermeasure);
+            
+            //if ((i % bucketspermeasure) == 0)
+            //  notes.get(notes.size()-1).get(round(i)).add(1);
+            if ((i % bucketspermeasure) >= bucketspernote - epsilon)
+              notes.get(notes.size()-1).get(round(i)).add(4);
+            //else if ((i % bucketspermeasure) >= (notespermeasure+1)/2 * bucketspernote - epsilon)
+            //  notes.get(notes.size()-1).get(round(i)).add(3);
+            //else if ((i % bucketspermeasure) >= (bucketspernote) - epsilon)
+            //  notes.get(notes.size()-1).get(round(i)).add(2);
+          i += bucketspernote;
+          //i = round(i / bucketspernote) * bucketspernote;
         }
       }
-      //printTrack(notes.get(notes.size()-1));
+      //for (int i = 0; i < max_size; i++)
+      //{
+      //  notes.get(notes.size()-1).add(new ArrayList<Integer>());
+      //  if (i % bucketspernote == 0)
+      //  {
+      //    if ((i % bucketspermeasure) == 0)
+      //      notes.get(notes.size()-1).get(i).add(1);
+      //    else if ((i % bucketspermeasure) == ((notespermeasure-1) * bucketspernote))
+      //      notes.get(notes.size()-1).get(i).add(4);
+      //    else if ((i % bucketspermeasure) >= (notespermeasure+1)/2 * bucketspernote)
+      //      notes.get(notes.size()-1).get(i).add(3);
+      //    else if ((i % bucketspermeasure) >= (bucketspernote))
+      //      notes.get(notes.size()-1).get(i).add(2);
+          
+          
+      //    //if (notes.get(0).get(i).size() > 0)
+      //    //  notes.get(notes.size()-1).get(i).add(notes.get(0).get(i).get(0));
+      //    counter = (counter%(int)notespermeasure)+1;
+      //  }
+      //}
+      printTrack(notes.get(notes.size()-1));
       //pattern = findPattern(notes.get(1));
     }
     catch (InvalidMidiDataException e)

@@ -34,11 +34,14 @@ double[] prevV;
 double[] currV;
 
 
-String fileName = "twinkle_twinkle2_d4.mid";
+//String fileName = "twinkle_twinkle2_d4.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
-//String fileName = "ae_test3.mid";-
+//String fileName = "ae_test3.mid";
 //String fileName = "alt_test.mid";
+String fileName = "six_eighths_test.mid";
+//String fileName = "three_fourths_test.mid";
+//String fileName = "five_fourths_test.mid";
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f, 61.7f, 65.4f, 69.3f,
@@ -79,7 +82,7 @@ double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO
 double measureRange = 0.5;
 // how many measures we see on each side of current bucket
 
-int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 12; //Pick something reasonably large (but not so large that it makes computations slow)
 // total # of buckets for window (+1?)
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
@@ -178,7 +181,7 @@ void setup()
   notes = new ArrayList<ArrayList<Integer>>();
 
   nArr = new NoteArray(fileName, bucketsPerMeasure);
-
+  assert(false);
 
   notes = nArr.notes.get(playHarmony);
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
@@ -311,7 +314,7 @@ void draw()
   prevV = currV;
   currV = velocityVector();
   int iv = interpretVector(currV, 1.0);
-  println(iv);
+  //println(iv);
 
   rhythmPattern = sublist(nArr.notes.get(1-playHarmony), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
 
@@ -352,7 +355,7 @@ void draw()
         int conductpattern = conductPattern.get(i).get(0);
         //println(conductpattern);
         if (conductpattern >= nconductpatterns) {
-          println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
+          //println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
           conductpattern = nconductpatterns-1;
         }
         if (conductpattern > 0) {
