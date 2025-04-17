@@ -12,7 +12,7 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = true;
+boolean hearNotes = false;
 boolean watchConductor = false;
 
 //String fileName = "twinkle_twinkle2_d4.mid";
@@ -155,6 +155,8 @@ void setup()
   previous_time = millis();
 
   // Create an Input stream which is routed into the Amplitude analyzer
+  pd2 = new PitchDetect(timeSize*2, sampleRate);
+
   if (hearNotes){
     pd = new PitchDetector(this, 0.55); //Last arg is confidence - increase to filter out more garbage
     in = new AudioIn(this, 0);
@@ -162,7 +164,6 @@ void setup()
   
     fft = new FFT(this, num_bands);
     //fft = new FFT(timeSize, sampleRate);
-    pd2 = new PitchDetect(timeSize*2, sampleRate);
     //minim = new Minim(this);
     
     in.amp(1);
@@ -359,16 +360,17 @@ void draw()
 
   //ArrayList<Integer> beatpositions = new ArrayList<Integer>();
   for (int i = 0; i < bucketsPerRhythm+1; i++) {
-    if (hearNotes){
-      if (rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0) {
-        //beatpositions.add(i);
-        for (int j = 0; j < (bucketsPerRhythm+1); j++) {
-          int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
-          //disp = #buckets off from i that we are
-          beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
-          for (int k = 0; k < rhythmPattern.get(i).size(); k++)
-          {
-            //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
+    if (rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0) {
+      //beatpositions.add(i);
+      for (int j = 0; j < (bucketsPerRhythm+1); j++) {
+        int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+        //disp = #buckets off from i that we are
+        beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+        for (int k = 0; k < rhythmPattern.get(i).size(); k++)
+        {
+          //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
+          if (hearNotes){
+
             beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
           }
         }
