@@ -12,59 +12,14 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-//CV conductor = new CV();
-static Capture video;
-static OpenCV opencv;
-
-PImage src, colorFilteredImage;
-int previous_time = 0;
-int current_time = 0;
-boolean play_trigger = true;
-ArrayList<Contour> contours;
-
-// <1> Set the range of Hue values for our filter
-int rangeLow = 20;
-int rangeHigh = 35;
-
-int[] p1 = {0, 0};
-int[] p2 = {0, 0};
-int time1 = 0;
-int time2 = 0;
-double[] prevV;
-double[] currV;
-
+boolean hearNotes = true;
+boolean watchConductor = false;
 
 String fileName = "twinkle_twinkle2_d4.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";-
 //String fileName = "alt_test.mid";
-public static final int NOTE_ON = 0x90;
-public static final int NOTE_OFF = 0x80;
-public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f, 61.7f, 65.4f, 69.3f,
-  73.4f, 77.8f, 82.4f, 87.3f, 92.5f, 98.0f, 103.8f, 110.0f, 116.5f, 123.5f,
-  130.8f, 138.6f, 146.8f, 155.6f, 164.8f, 174.6f, 185.0f, 196.0f, 207.7f, 220.0f,
-  233.1f, 246.9f, 261.6f, 277.2f, 293.7f, 311.1f, 329.6f, 349.2f, 370.0f, 392.0f,
-  415.3f, 440.0f, 466.2f, 493.9f, 523.3f, 554.4f, 587.3f, 622.3f, 659.3f, 698.5f,
-  740.0f, 784.0f, 830.6f, 880.0f, 932.3f, 987.8f, 1046.5f, 1108.7f, 1174.7f, 1244.5f,
-  1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f };
-public final int[] pitch_offsets = {0, 12, 19, 24, 28, 31, 33, 36};
-SpecWhitener sw;
-//Minim minim;
-//AudioInput in2;
-PitchDetect pd2;
-
-AudioIn in; //Raw sound input
-PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but we might use this eventually to grab pitch info from a human
-Amplitude amp; //Get amplitudes from input
-MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
-FFT fft;
-int num_bands = 1024;
-int timeSize = num_bands;
-int sampleRate = 44100;
-ArrayList<float[]> ref_freqs;
-ArrayList<Integer> ref_freq_times;
-long lastPlayedTime;
 
 int playHarmony = 0;
 double beatThreshScale = 0.7;
@@ -79,12 +34,12 @@ double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO
 double measureRange = 0.5;
 // how many measures we see on each side of current bucket
 
-int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large that it makes computations slow)
 // total # of buckets for window (+1?)
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 //
-int nTempoBuckets = 12; //Same idea
+int nTempoBuckets = 36; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
@@ -111,6 +66,55 @@ Matrix[] beatProbsArrVis;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
+public static final int NOTE_ON = 0x90;
+public static final int NOTE_OFF = 0x80;
+
+//hearNote stuff
+public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f, 61.7f, 65.4f, 69.3f,
+  73.4f, 77.8f, 82.4f, 87.3f, 92.5f, 98.0f, 103.8f, 110.0f, 116.5f, 123.5f,
+  130.8f, 138.6f, 146.8f, 155.6f, 164.8f, 174.6f, 185.0f, 196.0f, 207.7f, 220.0f,
+  233.1f, 246.9f, 261.6f, 277.2f, 293.7f, 311.1f, 329.6f, 349.2f, 370.0f, 392.0f,
+  415.3f, 440.0f, 466.2f, 493.9f, 523.3f, 554.4f, 587.3f, 622.3f, 659.3f, 698.5f,
+  740.0f, 784.0f, 830.6f, 880.0f, 932.3f, 987.8f, 1046.5f, 1108.7f, 1174.7f, 1244.5f,
+  1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f };
+public final int[] pitch_offsets = {0, 12, 19, 24, 28, 31, 33, 36};
+SpecWhitener sw;
+//Minim minim;
+//AudioInput in2;
+PitchDetect pd2;
+
+AudioIn in; //Raw sound input
+PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but we might use this eventually to grab pitch info from a human
+Amplitude amp; //Get amplitudes from input
+MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
+FFT fft;
+int num_bands = 1024;
+int timeSize = num_bands;
+int sampleRate = 44100;
+ArrayList<float[]> ref_freqs;
+ArrayList<Integer> ref_freq_times;
+long lastPlayedTime;
+
+//CV stuff
+static Capture video;
+static OpenCV opencv;
+
+PImage src, colorFilteredImage;
+int previous_time = 0;
+int current_time = 0;
+boolean play_trigger = true;
+ArrayList<Contour> contours;
+
+// <1> Set the range of Hue values for our filter
+int rangeLow = 20;
+int rangeHigh = 35;
+
+int[] p1 = {0, 0};
+int[] p2 = {0, 0};
+int time1 = 0;
+int time2 = 0;
+double[] prevV;
+double[] currV;
 
 int oldtime = millis(); //Time between code start and last beat check/update. Processing has 64 bit integers, so we probably don't overflow - max is about 2 billion milliseconds, so about 500 hours
 ArrayList<Integer> pitch = new ArrayList<Integer>(); //All notes currently playing
@@ -127,32 +131,47 @@ ArrayList<ArrayList<Integer>> conductPattern;
 final int nconductpatterns = 5; //There's 4 patterns, but +1 because zero-indexing
 final int conductChannel = 2; //TODO autoset this maybe?
 int bucketShift = 0;
+
 void setup()
 {
 
   //println(bucketsPerMeasure);
   println("start");
 
-  video = new Capture(this, 320, 240, 30);
-
-  opencv = new OpenCV(this, video.width, video.height);
-
-  video.start();
-
-  contours = new ArrayList<Contour>();
+  if (watchConductor){
+    video = new Capture(this, 320, 240, 30);
+  
+    opencv = new OpenCV(this, video.width, video.height);
+  
+    video.start();
+  
+    contours = new ArrayList<Contour>();
+  }
 
   size(1280, 480, P2D);
   previous_time = millis();
 
   // Create an Input stream which is routed into the Amplitude analyzer
-  pd = new PitchDetector(this, 0.55); //Last arg is confidence - increase to filter out more garbage
-  in = new AudioIn(this, 0);
-  amp = new Amplitude(this);
-
-  fft = new FFT(this, num_bands);
-  //fft = new FFT(timeSize, sampleRate);
-  pd2 = new PitchDetect(timeSize*2, sampleRate);
-  //minim = new Minim(this);
+  if (hearNotes){
+    pd = new PitchDetector(this, 0.55); //Last arg is confidence - increase to filter out more garbage
+    in = new AudioIn(this, 0);
+    amp = new Amplitude(this);
+  
+    fft = new FFT(this, num_bands);
+    //fft = new FFT(timeSize, sampleRate);
+    pd2 = new PitchDetect(timeSize*2, sampleRate);
+    //minim = new Minim(this);
+    
+    in.amp(1);
+    // start the Audio Input
+    in.start();
+    
+    // patch the AudioIn
+    pd.input(in);
+    amp.input(in);
+    fft.input(in);
+    sw = new SpecWhitener(timeSize, sampleRate);
+  }
 
   //// use the getLineIn method of the Minim object to get an AudioInput
 
@@ -163,17 +182,7 @@ void setup()
   myBus = new MidiBus(this, 0, 2);
   MidiBus.list();
 
-  println(fft.getClass());
-
-  in.amp(1);
-  // start the Audio Input
-  in.start();
   
-  // patch the AudioIn
-  pd.input(in);
-  amp.input(in);
-  fft.input(in);
-  sw = new SpecWhitener(timeSize, sampleRate);
 
   notes = new ArrayList<ArrayList<Integer>>();
 
@@ -252,75 +261,78 @@ void draw()
 {
   background(255);
 
-  // Read last captured frame
-  while (!video.available()) {
-      delay(10);
+  int iv = 0; //To be the detected conducting pattern if that's enabled
+  if (watchConductor){
+    // Read last captured frame
+    while (!video.available()) {
+        delay(10);
+    }
+    video.read();
+    set(0, 0, video);
+  
+    // <2> Load the new frame of our movie in to OpenCV
+    opencv.loadImage(video);
+    //opencv.blur(300);
+  
+    // Tell OpenCV to use color information
+    opencv.useColor();
+    opencv.blur(50);
+    //opencv.blur(10);
+    src = opencv.getSnapshot();
+  
+    // <3> Tell OpenCV to work in HSV color space.
+    opencv.useColor(HSB);
+  
+    // <4> Copy the Hue channel of our image into
+    //     the gray channel, which we process.
+    opencv.setGray(opencv.getH().clone());
+  
+    // <5> Filter the image based on the range of
+    //     hue values that match the object we want to track.
+    opencv.inRange(rangeLow, rangeHigh);
+  
+    // <6> Get the processed image for reference.
+  
+    colorFilteredImage = opencv.getSnapshot();
+  
+    // <7> Find contours in our range image.
+    //     Passing 'true' sorts them by descending area.
+    contours = opencv.findContours(true, true);
+  
+    // <8> Display background images
+    image(src, 0, 0);
+    //image(colorFilteredImage, src.width, 0);
+  
+    // <9> Check to make sure we've found any contours
+    if (contours.size() > 0) {
+      // <9> Get the first contour, which will be the largest one
+      Contour biggestContour = contours.get(0);
+  
+      // <10> Find the bounding box of the largest contour,
+      //      and hence our object.
+      Rectangle r = biggestContour.getBoundingBox();
+  
+      // <11> Draw the bounding box of our object
+      noFill();
+      strokeWeight(2);
+      stroke(255, 0, 0);
+      rect(r.x, r.y, r.width, r.height);
+  
+      p2[0] = p1[0];
+      p2[1] = p1[1];
+      time2 = time1;
+      p1[0] = r.x + r.width/2;
+      p1[1] = r.y + r.height/2;
+      time1 = millis();
+    }
+    //println(currV);
+    //  println();
+    //if (currV > 0.5/*.20*/){
+    prevV = currV;
+    currV = velocityVector();
+    iv = interpretVector(currV, 1.0);
+    println(iv);
   }
-  video.read();
-  set(0, 0, video);
-
-  // <2> Load the new frame of our movie in to OpenCV
-  opencv.loadImage(video);
-  //opencv.blur(300);
-
-  // Tell OpenCV to use color information
-  opencv.useColor();
-  opencv.blur(50);
-  //opencv.blur(10);
-  src = opencv.getSnapshot();
-
-  // <3> Tell OpenCV to work in HSV color space.
-  opencv.useColor(HSB);
-
-  // <4> Copy the Hue channel of our image into
-  //     the gray channel, which we process.
-  opencv.setGray(opencv.getH().clone());
-
-  // <5> Filter the image based on the range of
-  //     hue values that match the object we want to track.
-  opencv.inRange(rangeLow, rangeHigh);
-
-  // <6> Get the processed image for reference.
-
-  colorFilteredImage = opencv.getSnapshot();
-
-  // <7> Find contours in our range image.
-  //     Passing 'true' sorts them by descending area.
-  contours = opencv.findContours(true, true);
-
-  // <8> Display background images
-  image(src, 0, 0);
-  //image(colorFilteredImage, src.width, 0);
-
-  // <9> Check to make sure we've found any contours
-  if (contours.size() > 0) {
-    // <9> Get the first contour, which will be the largest one
-    Contour biggestContour = contours.get(0);
-
-    // <10> Find the bounding box of the largest contour,
-    //      and hence our object.
-    Rectangle r = biggestContour.getBoundingBox();
-
-    // <11> Draw the bounding box of our object
-    noFill();
-    strokeWeight(2);
-    stroke(255, 0, 0);
-    rect(r.x, r.y, r.width, r.height);
-
-    p2[0] = p1[0];
-    p2[1] = p1[1];
-    time2 = time1;
-    p1[0] = r.x + r.width/2;
-    p1[1] = r.y + r.height/2;
-    time1 = millis();
-  }
-  //println(currV);
-  //  println();
-  //if (currV > 0.5/*.20*/){
-  prevV = currV;
-  currV = velocityVector();
-  int iv = interpretVector(currV, 1.0);
-  println(iv);
 
   rhythmPattern = sublist(nArr.notes.get(1-playHarmony), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
 
@@ -329,45 +341,53 @@ void draw()
   //println(conductPattern);
 
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
-  for (int i = 0; i < beatProbsArr.length; i++)
-  {
-    beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+  if (hearNotes){
+    for (int i = 0; i < beatProbsArr.length; i++)
+    {
+      beatProbsArr[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+    }
   }
-  for (int i = 0; i < nconductpatterns; i++) {
-    beatProbsArrVis[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+  if (watchConductor){
+    for (int i = 0; i < nconductpatterns; i++) {
+      beatProbsArrVis[i] = new Matrix(bucketsPerRhythm+1, 1, 0.01);
+    }
   }
 
 
   //ArrayList<Integer> beatpositions = new ArrayList<Integer>();
   for (int i = 0; i < bucketsPerRhythm+1; i++) {
-    if (rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0) {
-      //beatpositions.add(i);
-      for (int j = 0; j < (bucketsPerRhythm+1); j++) {
-        int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
-        //disp = #buckets off from i that we are
-        beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
-        for (int k = 0; k < rhythmPattern.get(i).size(); k++)
-        {
-          //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
-          beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+    if (hearNotes){
+      if (rhythmPattern.get(i).size() > 0 && rhythmPattern.get(i).get(0) > 0) {
+        //beatpositions.add(i);
+        for (int j = 0; j < (bucketsPerRhythm+1); j++) {
+          int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+          //disp = #buckets off from i that we are
+          beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+          for (int k = 0; k < rhythmPattern.get(i).size(); k++)
+          {
+            //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
+            beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+          }
         }
       }
     }
-    if (conductPattern.get(i).size() > 0/* && rhythmPattern.get(i).get(0) > 0*/) {
-      //beatpositions.add(i);
-      for (int j = 0; j < (bucketsPerRhythm+1); j++) {
-        int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
-        //disp = #buckets off from i that we are
-        int conductpattern = conductPattern.get(i).get(0);
-        //println(conductpattern);
-        if (conductpattern >= nconductpatterns) {
-          println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
-          conductpattern = nconductpatterns-1;
-        }
-        if (conductpattern > 0) {
-          beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * 0.01 * GaussPDF(disp, 0, beatSD));
-        } else {
-          println("conductpattern == 0, I wasn't expecting this but I'm ignoring so it should be fine");
+    if (watchConductor){
+      if (conductPattern.get(i).size() > 0/* && rhythmPattern.get(i).get(0) > 0*/) {
+        //beatpositions.add(i);
+        for (int j = 0; j < (bucketsPerRhythm+1); j++) {
+          int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
+          //disp = #buckets off from i that we are
+          int conductpattern = conductPattern.get(i).get(0);
+          //println(conductpattern);
+          if (conductpattern >= nconductpatterns) {
+            println("conductpattern >= nconductpatterns, setting to max and hoping for the best...");
+            conductpattern = nconductpatterns-1;
+          }
+          if (conductpattern > 0) {
+            beatProbsArrVis[conductpattern].set(j, 0, beatProbsArrVis[conductpattern].get(j, 0) + beatprobamp * 0.01 * GaussPDF(disp, 0, beatSD));
+          } else {
+            println("conductpattern == 0, I wasn't expecting this but I'm ignoring so it should be fine");
+          }
         }
       }
     }
@@ -382,24 +402,28 @@ void draw()
   for (int i = 0; i < (bucketsPerRhythm+1); i++) {
     beatProbs.set(i, 0, beatProbs.get(i, 0) / beatProbSum);
   }
-  for (int h = 0; h < beatProbsArr.length; h++)
-  {
-    beatProbSum = 0;
-    for (int i = 0; i < (bucketsPerRhythm+1); i++) {
-      beatProbSum += beatProbsArr[h].get(i, 0);
-    }
-    for (int i = 0; i < (bucketsPerRhythm+1); i++) {
-      beatProbsArr[h].set(i, 0, beatProbsArr[h].get(i, 0) / beatProbSum);
+  if (hearNotes){
+    for (int h = 0; h < beatProbsArr.length; h++)
+    {
+      beatProbSum = 0;
+      for (int i = 0; i < (bucketsPerRhythm+1); i++) {
+        beatProbSum += beatProbsArr[h].get(i, 0);
+      }
+      for (int i = 0; i < (bucketsPerRhythm+1); i++) {
+        beatProbsArr[h].set(i, 0, beatProbsArr[h].get(i, 0) / beatProbSum);
+      }
     }
   }
-  for (int h = 0; h < nconductpatterns; h++)
-  {
-    beatProbSum = 0;
-    for (int i = 0; i < (bucketsPerRhythm+1); i++) {
-      beatProbSum += beatProbsArrVis[h].get(i, 0);
-    }
-    for (int i = 0; i < (bucketsPerRhythm+1); i++) {
-      beatProbsArrVis[h].set(i, 0, beatProbsArrVis[h].get(i, 0) / beatProbSum);
+  if (watchConductor){
+    for (int h = 0; h < nconductpatterns; h++)
+    {
+      beatProbSum = 0;
+      for (int i = 0; i < (bucketsPerRhythm+1); i++) {
+        beatProbSum += beatProbsArrVis[h].get(i, 0);
+      }
+      for (int i = 0; i < (bucketsPerRhythm+1); i++) {
+        beatProbsArrVis[h].set(i, 0, beatProbsArrVis[h].get(i, 0) / beatProbSum);
+      }
     }
   }
 
@@ -412,43 +436,50 @@ void draw()
   float[] freqs = new float[num_bands];
 
   float[] buffer = new float[num_bands];
-  fft.analyze(buffer);
-
-  float[] pd2out = pd2.detect(buffer);
-  int[] fzeros = pd2.fzeros;
-
-  //for (int i = 0; i < fzeros.length; i++)
-  //{
-  //  if (fzeros[i] == 1)
-  //  {
-  //    println(PITCHES[i]);
-  //  }
-  //}
+  
   boolean hasPitch = false;
   int firstPitchIdx = 0;
-  for (int i = 20; i < PITCHES.length; i++)
-  {
-    if (fzeros[i] == 1)
+  int[] fzeros = pd2.fzeros;
+  if (hearNotes){
+
+    fft.analyze(buffer);
+  
+    float[] pd2out = pd2.detect(buffer);
+  
+    //for (int i = 0; i < fzeros.length; i++)
+    //{
+    //  if (fzeros[i] == 1)
+    //  {
+    //    println(PITCHES[i]);
+    //  }
+    //}
+    
+    for (int i = 20; i < PITCHES.length; i++)
     {
-      hasPitch = true;
-      firstPitchIdx = i;
-      //println(PITCHES[i]);
-      break;
+      if (fzeros[i] == 1)
+      {
+        hasPitch = true;
+        firstPitchIdx = i;
+        //println(PITCHES[i]);
+        break;
+      }
     }
+    //println("first pitch = " + PITCHES[firstPitchIdx]);
   }
-  //println("first pitch = " + PITCHES[firstPitchIdx]);
 
   boolean keyPressedBeat = keyPressed;
-  boolean heardBeat = (amp.analyze() > 0.7 * beatThresh && hasPitch);
+  boolean heardBeat = (hearNotes && amp.analyze() > 0.7 * beatThresh && hasPitch);
   boolean sawBeat = iv > 0;
   boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat;
 
   //Update beat-hearing threshold
-  if (amp.analyze() > beatThresh) beatThresh += 0.005;
-  else beatThresh = beatThresh - 0.001;
-  if (beatThresh < minBeatThresh)
-  {
-    beatThresh = minBeatThresh;
+  if (hearNotes){
+    if (amp.analyze() > beatThresh) beatThresh += 0.005;
+    else beatThresh = beatThresh - 0.001;
+    if (beatThresh < minBeatThresh)
+    {
+      beatThresh = minBeatThresh;
+    }
   }
 
   boolean isBeat = detectedBeat && beatReady;
@@ -546,16 +577,16 @@ void draw()
     {
       case 1:
         
-        background(0, 0, 255);
+        background(0, 0, 255); //Blue
         break;
       case 2:
-         background(255,255,0);
+         background(255,255,0); //Yellow
          break;
        case 3:
-         background(255,0,255);
+         background(255,0,255); //Magenta
          break;
        case 4:
-         background(255,0,0);
+         background(255,0,0); //Red
          break;
     }
     dispProbArray(beatProbsArrVis[iv], detectedBeat);
@@ -567,6 +598,8 @@ void draw()
   if (keyPressedBeat) {
     dispProbArray(beatProbs, detectedBeat);
   }
+  //In all cases, display our position estimate
+  dispProbArray(probs, isBeat);
 
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
   if (bucketShift == 0) {
@@ -777,8 +810,8 @@ double[] velocityVector() {
     return zero;
   }
   double[] v1 = {(p1[0] - p2[0])/time, (p1[1] - p2[1])/time};
-  double v1Length = Math.sqrt(Math.pow(v1[0], 2) + Math.pow(v1[1], 2));
-  double velocity = v1Length;
+  //double v1Length = Math.sqrt(Math.pow(v1[0], 2) + Math.pow(v1[1], 2));
+  //double velocity = v1Length;
   return v1;
 }
 
