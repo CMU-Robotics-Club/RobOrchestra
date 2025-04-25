@@ -12,11 +12,11 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = false;
+boolean hearNotes = true;
 boolean watchConductor = false;
-boolean ignorePitch = true;
+boolean ignorePitch = false;
 
-String fileName = "twinkle_twinkle2_d.mid";
+//String fileName = "twinkle_twinkle2.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
@@ -26,10 +26,11 @@ String fileName = "twinkle_twinkle2_d.mid";
 //String fileName = "five_fourths_test.mid";
 //String fileName = "WWRY3.mid";
 //String fileName = "callresponsetest3.mid";
+String fileName = "mary_had_a_little_lamb.mid";
 
 int playHarmony = 1;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.18; //0.08;
+double minBeatThresh = 0.08; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -40,16 +41,16 @@ double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO
 double measureRange = 0.5;
 // how many measures we see on each side of current bucket
 
-int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
 // total # of buckets for window (+1?)
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 //
-int nTempoBuckets = 36; //Same idea
+int nTempoBuckets = 18; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
-int maxBPM = 180;
+int maxBPM = 120;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -58,8 +59,8 @@ float maxMsPerRhythm;
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/256.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double tempoSD = nTempoBuckets/4.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -69,6 +70,7 @@ Matrix probs2;
 Matrix beatProbs; //P(location | heard a beat)
 Matrix[] beatProbsArr;
 Matrix[] beatProbsArrVis;
+Matrix[] probs2Arr;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
@@ -131,6 +133,8 @@ int rhythmnum = 0; //Again, this is actually counting instances of the rhythm pa
 int bucket = 0;
 boolean beatReady = true; //Keep track of repeated beat detections so we can filter those out
 long lastReady;
+int numtranspositions = 12;
+double transpositionweighting = 0.99; // between 0 and 1, bigger = less transpose blurring
 
 ArrayList<ArrayList<Integer>> rhythmPattern;
 ArrayList<ArrayList<Integer>> conductPattern;
@@ -213,9 +217,15 @@ void setup()
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm+1, 1, 1.0/(bucketsPerRhythm+1));
   probsonemat = new Matrix(nTempoBuckets, 1, 1);
-  probs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
+  //probs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
+  probs2Arr = new Matrix[numtranspositions];
+  for (int i = 0; i < numtranspositions; i++)
+  {
+    probs2Arr[i] = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
+  }
+  
   beatProbs = new Matrix(bucketsPerRhythm+1, 1, 0.01); //P(location | heard a beat)
-  beatProbsArr = new Matrix[PITCHES.length];
+  beatProbsArr = new Matrix[numtranspositions];
   beatProbsArrVis = new Matrix[nconductpatterns];
   for (int i = 0; i < beatProbsArr.length; i++)
   {
@@ -232,18 +242,22 @@ void setup()
     assert(msPerRhythm.get(i, 0) > 0);
   }
 
- for(int i = 0; i < bucketsPerRhythm+1; i++){
-   for(int j = 0; j < nTempoBuckets; j++){
-     if (i == bucketsPerRhythm/2)
-     {
-       probs2.set(i, j, 1);
-     }
-     else
-     {
-       probs2.set(i, j, 0);
+ for (int h = 0; h < numtranspositions; h++)
+ {
+   for(int i = 0; i < bucketsPerRhythm+1; i++){
+     for(int j = 0; j < nTempoBuckets; j++){
+       if (i == bucketsPerRhythm/2)
+       {
+         probs2Arr[h].set(i, j, 1);
+       }
+       else
+       {
+         probs2Arr[h].set(i, j, 0);
+       }
      }
    }
  }
+  // should normalize, hopefully fine
  
  //Set up tempoGaussMat
   for(int k = 0; k < nTempoBuckets; k++){
@@ -369,13 +383,16 @@ void draw()
         int disp = min(abs( (i-j)%(bucketsPerRhythm+1)), abs( (j-i)%(bucketsPerRhythm+1)));
         //disp = #buckets off from i that we are
         beatProbs.set(j, 0, beatProbs.get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
-        for (int k = 0; k < rhythmPattern.get(i).size(); k++)
-        {
-          //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
-          if (hearNotes){
-
-            beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
-          }
+        boolean[] heardPitchesArr = new boolean[numtranspositions];
+        if (hearNotes){
+          for (int k = 0; k < rhythmPattern.get(i).size(); k++)
+          {
+            //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
+            if (heardPitchesArr[(rhythmPattern.get(i).get(k)-28) % numtranspositions]) continue;
+            
+            beatProbsArr[(rhythmPattern.get(i).get(k)-28) % numtranspositions].set(j, 0, beatProbsArr[(rhythmPattern.get(i).get(k)-28) % numtranspositions].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
+            heardPitchesArr[(rhythmPattern.get(i).get(k)-28) % numtranspositions] = true;
+           }
         }
       }
     }
@@ -424,6 +441,12 @@ void draw()
       }
     }
   }
+  //for (int i = 0; i < beatProbsArr.length; i++)
+  //{
+  //  println("i = " + i);
+  //  printMatrix(beatProbsArr[i].getArray());
+  //}
+  //assert(false);
   if (watchConductor){
     for (int h = 0; h < nconductpatterns; h++)
     {
@@ -496,80 +519,113 @@ void draw()
 
   boolean isBeat = detectedBeat && beatReady;
   beatReady = !detectedBeat; //Avoid repeated beats
-  if (isBeat) println("beat");
+  //if (isBeat) println("beat");
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
-  double newprobsum = 0;
-
+  double[] newprobsumArr = new double[numtranspositions];
+  
 
   //Get new position probabilities, based on time since last read and whether we heard a beat
   //Going to bucket i from bucket j in time t
-  Matrix prenewprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
-  for (int i = 0; i < bucketsPerRhythm+1; i++) { //New pos
-    if (i-bucketShift < 0 || i-bucketShift >= bucketsPerRhythm+1) continue;
-    for (int l = 0; l < nTempoBuckets; l++) { //Old tempo (okay, this gets weird because we're updating position with the old tempo now. Should be close though)
-      float tbuckets = (float)t / (float)msPerRhythm.get(l, 0); //tbuckets is time in buckets and likely small
-
-      float tempil = 0;
-
-      for (int j = 0; j < (bucketsPerRhythm+1); j++) { //Old pos
-        //float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)((i-(j+tbuckets)-(bucketsPerRhythm+1))%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i-(bucketsPerRhythm+1))%(bucketsPerRhythm+1)))};
-        float[] stuffToTry = {i-(j+tbuckets)};
-        float disp = min(stuffToTry); //nBuckets you're off in the time direction
-        double posPDF = GaussPDF(disp, 0, posSD);
-        tempil += probs2.get(j, l)*posPDF;
-      }
-      if (isBeat) {
-        if (keyPressedBeat || (heardBeat && ignorePitch)) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
-          tempil *= beatProbs.get(i, 0);
-        else
-        {
-          if (heardBeat) { //We know we're not ignoring pitch because DeMorgan stuff
-            for (int h = 0; h < fzeros.length; h++)
-            {
-              if (fzeros[h] == 1)
+  for (int k = 0; k < numtranspositions; k++)
+  {
+    Matrix prenewprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
+    for (int i = 0; i < bucketsPerRhythm+1; i++) { //New pos
+      if (i-bucketShift < 0 || i-bucketShift >= bucketsPerRhythm+1) continue;
+      for (int l = 0; l < nTempoBuckets; l++) { //Old tempo (okay, this gets weird because we're updating position with the old tempo now. Should be close though)
+        float tbuckets = (float)t / (float)msPerRhythm.get(l, 0); //tbuckets is time in buckets and likely small
+  
+        float tempil = 0;
+  
+        for (int j = 0; j < (bucketsPerRhythm+1); j++) { //Old pos
+          //float[] stuffToTry = {abs( (float) ((i-(j+tbuckets)+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i+bucketsPerRhythm+1)%(bucketsPerRhythm+1))), abs( (float)((i-(j+tbuckets)-(bucketsPerRhythm+1))%(bucketsPerRhythm+1))), abs( (float)(((j+tbuckets)-i-(bucketsPerRhythm+1))%(bucketsPerRhythm+1)))};
+          float[] stuffToTry = {i-(j+tbuckets)};
+          float disp = min(stuffToTry); //nBuckets you're off in the time direction
+          double posPDF = GaussPDF(disp, 0, posSD);
+          tempil += probs2Arr[k].get(j, l)*posPDF; // tempil is unnormalized probability of being at position index i with tempo index l
+        }
+        
+        if (isBeat) {
+          if (keyPressedBeat || (heardBeat && ignorePitch)) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
+            tempil *= beatProbs.get(i, 0);
+          else
+          {
+            if (heardBeat) { //We know we're not ignoring pitch because DeMorgan stuff
+              boolean[] heardPitchesArr = new boolean[numtranspositions];
+              // look at this if things are off by constant
+              for (int h = 20; h < fzeros.length; h++)
               {
-                tempil *= beatProbsArr[h].get(i, 0);
-              } else
-                tempil *= 1-beatProbsArr[h].get(i, 0);
+                if (fzeros[h] == 1) {
+                  heardPitchesArr[h%numtranspositions] = true;
+                }
+              }
+              for (int h = 0; h < heardPitchesArr.length; h++)
+              {
+                if (heardPitchesArr[h])
+                {
+                  tempil *= beatProbsArr[(h-k+numtranspositions)%numtranspositions].get(i, 0);
+                }
+                else
+                  tempil *= 1-beatProbsArr[(h-k+numtranspositions)%numtranspositions].get(i, 0);
+              }
+            }
+  
+            if (sawBeat) {
+              tempil *= beatProbsArrVis[iv].get(i, 0);
             }
           }
-
-          if (sawBeat) {
-            tempil *= beatProbsArrVis[iv].get(i, 0);
-          }
+        } else {
+          tempil *= (1-beatProbs.get(i, 0));
         }
-      } else {
-        tempil *= (1-beatProbs.get(i, 0));
+        prenewprobs2.set(i-bucketShift, l, tempil);
       }
-
-      prenewprobs2.set(i-bucketShift, l, tempil);
     }
+    
+    newprobs2 = prenewprobs2.times(tempoGaussMat);
+    //Matrix onemat = new Matrix(bucketsPerRhythm+1, nTempoBuckets, (1-transpositionweighting)/numtranspositions);
+    //newprobs2 = (newprobs2.times(transpositionweighting)).plus(onemat);
+    newprobsumArr[k] = new Matrix(1, bucketsPerRhythm+1, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
+    
+  
+    probs2Arr[k] = newprobs2;
   }
-
-  newprobs2 = prenewprobs2.times(tempoGaussMat);
-
-  newprobsum = new Matrix(1, bucketsPerRhythm+1, 1).times(newprobs2).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
-
-  //Normalize and get most likely
+  
+  probs = new Matrix(bucketsPerRhythm+1, 1, 0);
   double newprobmax = -1; //Set this to min probability we're comfortable playing on, or negative if we always want to play
   int newprobmaxind = -1;
+  int newprobmaxtransposeind = -1;
+  double newprobsumArrsum = 0;
+  for (int k = 0; k < numtranspositions; k++)
+  {
+    newprobsumArrsum += newprobsumArr[k];
+    //println("sum for k = " + k + " : " + newprobsumArr[k]);
+  }
+  for (int k = 0; k < numtranspositions; k++)
+  {
+    // Normalize probs2Arr
+    probs = probs2Arr[k].times(1/newprobsumArr[k]).times(probsonemat);
+    //We want to add across the rows of newprobs2 and dump that into probs. Can do that with matrix multiplication.
+    probs2Arr[k] = probs2Arr[k].times(1/newprobsumArrsum);
+    //transposition probability blurring is probably wrong
+    //probs2Arr[k] = probs2Arr[k].times(newprobsumArr[k]/newprobsumArrsum * transpositionweighting + (1-transpositionweighting)/numtranspositions);
 
+  
+      //Get most likely
 
-  //We want to add across the rows of newprobs2 and dump that into probs. Can do that with matrix multiplication.
-  newprobs2 = newprobs2.times(1/newprobsum);
-  probs = newprobs2.times(probsonemat);
-
-  //printMatrix(probs.getArray());
-  for (int i = 0; i < (bucketsPerRhythm+1); i++) {
-    if (probs.get(i, 0) > newprobmax) {
-      newprobmax = probs.get(i, 0);
-      newprobmaxind = i;
-    }
+    //printMatrix(probs.getArray());
+      for (int i = 0; i < (bucketsPerRhythm+1); i++) {
+        if (probs.get(i, 0) > newprobmax) {
+          newprobmax = probs.get(i, 0);
+          newprobmaxind = i;
+          newprobmaxtransposeind = k;
+        }
+      }
+    
   }
 
-  probs2 = newprobs2;
-  //dispProbArray(probs, detectedBeat);
+  //println("transpose ind: " + newprobmaxtransposeind);
+  
+  //dispProbArray(pprobs, detectedBeat);
 
   ////if (!(hasPitch && !keyPressedBeat))
   //if(keyPressedBeat || !isBeat)
@@ -586,7 +642,7 @@ void draw()
   //Override if saw or heard a beat
   if (hasPitch && !ignorePitch) {
     background(0, 255, 0); //Green
-    dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
+    dispProbArray(beatProbsArr[(firstPitchIdx-newprobmaxtransposeind) % numtranspositions], detectedBeat);
   }
   if (sawBeat) {
     switch (iv)
@@ -614,7 +670,8 @@ void draw()
   //In all cases, display our position estimate
   //background(255);
   //dispProbArray(beatProbsArrVis[4], detectedBeat);
-  dispProbArray(probs, isBeat);
+  // TODO: fix, only shows last transpose probs
+  dispProbArray(probs2Arr[newprobmaxtransposeind].times(1/newprobsumArr[newprobmaxtransposeind]).times(probsonemat), isBeat);
   
 
   bucketShift = newprobmaxind - (bucketsPerRhythm/2);
@@ -622,7 +679,7 @@ void draw()
     //We haven't gotten to the next bucket yet, don't repeat the note
     return;
   }
-  println(bucketShift);
+
   bucket += bucketShift;
 
   if (newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
@@ -631,17 +688,29 @@ void draw()
       for (Integer ppitch : pitch) {
         if (ppitch > 0) {
 
-          myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          myBus.sendNoteOff(new Note(0, ppitch.intValue(), 100));
         }
       }
 
       //Start new note
-      pitch = newpitch; //Which we know is non-zero because of outer if statement
+      ArrayList<Integer> pitch = new ArrayList<Integer>();
+      for (int i = 0; i < newpitch.size(); i++)
+      {
+        // go down the octave if transposing by a lot
+        if (newprobmaxtransposeind >= numtranspositions / 2.0)
+          pitch.add(newpitch.get(i) + newprobmaxtransposeind - numtranspositions);
+        else
+          pitch.add(newpitch.get(i) + newprobmaxtransposeind);
+      }
+      //pitch = newpitch; //Which we know is non-zero because of outer if statement
       //println(pitch);
+      
+      
       for (Integer ppitch : pitch) {
         if (ppitch > 0) {
-          myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          myBus.sendNoteOn(new Note(0, ppitch.intValue(), 100));
         }
+        
       }
       lastPlayedTime = millis();
     }
@@ -649,8 +718,11 @@ void draw()
     System.out.println("Help I'm lost");
     //exit();
   }
-
-
+  //printMatrix(probsonemat.getArray());
+  //printMatrix(probs.getArray());
+  //printMatrix(probs2Arr[0].getArray());
+  //assert(false);
+  
   //If things get weird, consider adding a small delay here. Seems fine for now though.
   //delay(250);
 }
