@@ -30,7 +30,7 @@ String fileName = "twinkle_twinkle2.mid";
 
 int playHarmony = 1;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.01;//8; //0.08;
+double minBeatThresh = 0.3;//8; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -41,7 +41,7 @@ double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO
 double measureRange = 0.5;
 // how many measures we see on each side of current bucket
 
-int bucketsPerRhythm = 48; //Pick something reasonably large (but not so large that it makes computations slow)
+int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large that it makes computations slow)
 // total # of buckets for window (+1?)
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
@@ -60,7 +60,7 @@ float maxMsPerRhythm;
 double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/4.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/40.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -134,7 +134,7 @@ int bucket = 0;
 boolean beatReady = true; //Keep track of repeated beat detections so we can filter those out
 long lastReady;
 int numtranspositions = 12;
-double transpositionweighting = 0.99; // between 0 and 1, bigger = less transpose blurring
+double transpositionweighting = 0.999;//.9; // between 0 and 1, bigger = less transpose blurring
 
 ArrayList<ArrayList<Integer>> rhythmPattern;
 ArrayList<ArrayList<Integer>> conductPattern;
@@ -158,7 +158,7 @@ void setup()
     contours = new ArrayList<Contour>();
   }
 
-  size(1600, 480, P2D);
+  size(1000, 480, P2D);
   previous_time = millis();
 
   // Create an Input stream which is routed into the Amplitude analyzer
@@ -204,15 +204,7 @@ void setup()
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
   println("harmony size: " + notes.size());
 
-  //rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
-
   float measuresPerRhythm = (1.0 * (bucketsPerRhythm+1)) / bucketsPerMeasure; //(buckets/rhythm) / (buckets/measure)
-
-  //Before resample, notes uses bucketsPerMeasure
-  //Have bucketsPerMeasure, measuresPerRhythm, and bucketsPerRhythm
-  //notes = resampleBy(notes, 1.0/bucketsPerMeasure/measuresPerRhythm*(bucketsPerRhythm+1));
-  //notes = resampleBy(notes, 1.0/bucketsPerMeasure*(bucketsPerRhythm+1));
-
 
   //bucketsPerRhythm = rhythmPattern.size();
   probs = new Matrix(bucketsPerRhythm+1, 1, 1.0/(bucketsPerRhythm+1));
@@ -483,7 +475,7 @@ void draw()
     }
     if(i == PITCHES.length || (i > 0 && (PITCHES[i]-temp) > (temp-PITCHES[i-1])))i--;
     fzeros[i] = 1;
-    print("FOUND PITCH" + PITCHES[i]);
+    //println("FOUND PITCH" + PITCHES[i]);
   }
   
   if (hearNotes){
@@ -492,10 +484,11 @@ void draw()
     {
       if (fzeros[i] == 1)
       {
-        println(PITCHES[i]);
+        //println(PITCHES[i]);
       }
     }
     
+    //println("Pitches");
     for (int i = 20; i < PITCHES.length; i++)
     {
       if (fzeros[i] == 1)
@@ -509,6 +502,7 @@ void draw()
     
     //println("first pitch = " + PITCHES[firstPitchIdx]);
   }
+
 
   boolean keyPressedBeat = keyPressed;
   boolean heardBeat = (hearNotes && amp.analyze() > beatThreshScale * beatThresh && (ignorePitch || hasPitch));
@@ -524,10 +518,11 @@ void draw()
       beatThresh = minBeatThresh;
     }
   }
+  
   //println("Heard: " + amp.analyze() + ", thresh: " + beatThresh);
 
   boolean isBeat = detectedBeat && beatReady;
-  beatReady = !detectedBeat; //Avoid repeated beats
+  beatReady = true;//!detectedBeat; //Avoid repeated beats
   //if (isBeat) println("beat");
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
@@ -568,6 +563,8 @@ void draw()
                   heardPitchesArr[h%numtranspositions] = true;
                 }
               }
+              
+              tempil *= beatProbs.get(i, 0); //Still want to multiply in probability of something being there - it's more likely you play the wrong note at the right time than the wrong note at the wrong time
               for (int h = 0; h < heardPitchesArr.length; h++)
               {
                 if (heardPitchesArr[h])
@@ -612,13 +609,11 @@ void draw()
   for (int k = 0; k < numtranspositions; k++)
   {
     // Normalize probs2Arr
-    probs = probs2Arr[k].times(1/newprobsumArr[k]).times(probsonemat);
     //We want to add across the rows of newprobs2 and dump that into probs. Can do that with matrix multiplication.
-    probs2Arr[k] = probs2Arr[k].times(1/newprobsumArrsum);
     probs = probs2Arr[k].times(probsonemat);
-    //transposition probability blurring is probably wrong
+    //Blur transposition probabilities (weighted average with uniform distribution)
+    probs2Arr[k] = probs2Arr[k].times(1/newprobsumArr[k]); //These each individually now sum to 1
     probs2Arr[k] = probs2Arr[k].times(newprobsumArr[k]/newprobsumArrsum * transpositionweighting + (1-transpositionweighting)/numtranspositions);
-
   
       //Get most likely
 
@@ -630,27 +625,18 @@ void draw()
           newprobmaxtransposeind = k;
         }
       }
+      
+      double tempp = new Matrix(1, bucketsPerRhythm+1, 1).times(probs2Arr[k]).times(new Matrix(nTempoBuckets, 1, 1)).get(0, 0);
+      println("k = " + k + ", arrsum = " + tempp);
     
   }
 
   println("transpose ind: " + newprobmaxtransposeind);
   
-  //dispProbArray(pprobs, detectedBeat);
-
-  ////if (!(hasPitch && !keyPressedBeat))
-  //if(keyPressedBeat || !isBeat)
-  //{
-  //  //Disp default beat array
-  //  background(0,0,255);
-  //  dispProbArray(beatProbs, detectedBeat);
-  //}
-  //else dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
-  ////dispProbArray(new Matrix(test, cap), false);
-
   //Display default beatProbArray
   dispProbArray(beatProbs, detectedBeat);
   //Override if saw or heard a beat
-  if (hasPitch && !ignorePitch) {
+  if (heardBeat && hasPitch && !ignorePitch) {
     background(0, 255, 0); //Green
     dispProbArray(beatProbsArr[(firstPitchIdx-newprobmaxtransposeind) % numtranspositions], detectedBeat);
   }
