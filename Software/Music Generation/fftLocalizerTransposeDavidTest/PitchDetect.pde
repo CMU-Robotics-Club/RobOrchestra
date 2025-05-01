@@ -61,7 +61,7 @@ public class PitchDetect extends PApplet
         // spectrum pre-processing
         sw.whiten(spec2);
         spec = sw.wSpec;
-        //spec = spec2;
+        spec = spec2;
 
         // iteratively find all presented pitches
         float test = 0, lasttest = 0;

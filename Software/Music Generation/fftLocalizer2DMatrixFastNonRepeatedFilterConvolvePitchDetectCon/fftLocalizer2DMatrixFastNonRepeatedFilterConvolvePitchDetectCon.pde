@@ -12,11 +12,11 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = false;
+boolean hearNotes = true;
 boolean watchConductor = false;
 boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
 
-String fileName = "twinkle_twinkle2_d.mid";
+//String fileName = "twinkle_twinkle_xylo.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
@@ -26,10 +26,12 @@ String fileName = "twinkle_twinkle2_d.mid";
 //String fileName = "five_fourths_test.mid";
 //String fileName = "WWRY3.mid";
 //String fileName = "callresponsetest3.mid";
+//String fileName = "AuldLangSyne2.mid";
+String fileName = "boat1.mid";
 
 int playHarmony = 1;
 double beatThreshScale = 0.7;
-double minBeatThresh = 0.18; //0.08;
+double minBeatThresh = 0.5; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
 //Want to automatically adjust this based on background volume
 //Median is just bad (probably more non-beats than beats, so it'll be too low)
@@ -49,17 +51,17 @@ int nTempoBuckets = 36; //Same idea
 
 //Upper and lower bounds on tempo.
 int minBPM = 60;
-int maxBPM = 180;
+int maxBPM = 120;
 
 //We'll compute these
 float minMsPerRhythm;
 float maxMsPerRhythm;
 
 //Gaussian parameters. Hopefully don't need changing anymore
-double beatprobamp = 4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
+double beatprobamp = 3; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/256.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/8.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double tempoSD = nTempoBuckets/16.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -451,15 +453,38 @@ void draw()
   
   boolean hasPitch = false;
   int firstPitchIdx = 0;
-  int[] fzeros = pd2.fzeros;
-  if (hearNotes){
+  int[] fzeros = new int[PITCHES.length];
+  
+  float temp;
+  int freqFudge = 5;
+  if (hearNotes && !ignorePitch){
+    
 
     fft.analyze(buffer);
   
     float[] pd2out = pd2.detect(buffer);
-  
+    //fzeros = pd2.fzeros;
+    //println("PITCHES");
+    
+      temp = pd.analyze() + freqFudge;
+     
+     if(temp > freqFudge){
+      int bin = round((log(temp / PITCHES[0])  / log(2)) * 12);
+      //int i = 0;
+      //while(i < PITCHES.length && PITCHES[i] < temp){
+      //  i++;
+      //}
+      
+      //if(i == PITCHES.length || (i > 0 && (PITCHES[i]-temp) > (temp-PITCHES[i-1])))i--;
+      //assert(bin == i);
+      if (bin < PITCHES.length)
+        fzeros[bin] = 1;
+      //println("FOUND PITCH" + PITCHES[i]);
+      }
+      
     for (int i = 20; i < fzeros.length; i++)
     {
+
       if (fzeros[i] == 1)
       {
         println(PITCHES[i]);
@@ -622,7 +647,7 @@ void draw()
     //We haven't gotten to the next bucket yet, don't repeat the note
     return;
   }
-  println(bucketShift);
+  //println(bucketShift);
   bucket += bucketShift;
 
   if (newprobmaxind > -1) { //Throw out cases where we're super non-confident about where we are. Negative to always assume the best guess is correct
