@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import javax.sound.midi.*; //For reading MIDI file
 import Jama.*; //Matrix math
 
-String fileName = "WorseApple.mid";
-//String fileName = "WWRY3.mid";
+//String fileName = "WorseApple.mid";
+String fileName = "WWRY3.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
 //String fileName = "alt_test.mid";
