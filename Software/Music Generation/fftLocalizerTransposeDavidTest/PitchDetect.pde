@@ -84,8 +84,21 @@ public class PitchDetect extends PApplet
                 if (partialInd < 1) continue;
                 if (partialInd > 510) continue;
                 float weighting = (fzeroInfo[0] + 52) / (i * fzeroInfo[0] + 320);
-                spec[partialInd] *= (1 - 0.89f * weighting);
-                spec[partialInd-1] *= (1 - 0.89f * weighting);    
+                //spec[partialInd] *= (1 - 0.89f * weighting);
+                //spec[partialInd-1] *= (1 - 0.89f * weighting);    
+                
+                float overtoneFreq = i * fzeroInfo[0];
+                int k = round((log(overtoneFreq / PITCHES[0]) / log(2))*12);
+                int minbin;
+                if (k == 0) minbin = 0;
+                else minbin = max(0, round(((genPitches(k-1)+genPitches(k))/2) * timeSize / sampleRate));
+                int maxbin;
+                if (genPitches(k) > sampleRate/2) maxbin =timeSize/2-1;
+                else maxbin = min(timeSize/2-1, round(((genPitches(k)+genPitches(k+1))/2) * timeSize / sampleRate));
+                for (int h = minbin; h < maxbin; h++)
+                {
+                  spec[h] *= (1 - 0.89f * weighting);  
+                }
             }
 
             // update fzeros
@@ -109,17 +122,31 @@ public class PitchDetect extends PApplet
         //println("detectfzero");
         float maxSalience = -1000000.0f;
         for (int j = 10; j < PITCHES.length; ++j) {
+            
             float cSalience = 0; // salience of the candidate pitch
             float val = 0;
-            for (int i = 0; i * PITCHES[j] < sampleRate / 2; ++i) {
+            for (int i = 1; i < 10 && i * PITCHES[j] < sampleRate / 2; ++i) {
                 int bin = round(i * PITCHES[j] * timeSize / sampleRate);
+                float overtoneFreq = i * PITCHES[j];
+                int k = round((log(overtoneFreq / PITCHES[0]) / log(2))*12);
+                int minbin;
+                if (k == 0) minbin = 0;
+                else minbin = max(0, round(((genPitches(k-1)+genPitches(k))/2) * timeSize / sampleRate));
+                int maxbin;
+                if (genPitches(k) > sampleRate/2) maxbin =timeSize/2-1;
+                else maxbin = min(timeSize/2-1, round(((genPitches(k)+genPitches(k+1))/2) * timeSize / sampleRate));
                 //fzeroInfo[0] = max(1, maxind * sampleRate / (2*spec3.length));
                 // use the largest value of bins in vicinity
                 if (bin < 5) continue;
-                if (bin > 510) continue;
-                if (bin == timeSize/2) val = max(spec[bin-3], spec[bin-2], spec[bin-1]);
-                else if (bin == timeSize/2-1) val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin]);
-                else val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin], spec[bin+1]);
+                if (bin > 510) break;
+                //if (bin == timeSize/2) val = max(spec[bin-3], spec[bin-2], spec[bin-1]);
+                //else if (bin == timeSize/2-1) val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin]);
+                //else val = max(max(spec[bin-3], spec[bin-2], spec[bin-1]), spec[bin], spec[bin+1]);
+                //println("min bin = " + minbin + ", max bin = " + maxbin);
+                for (int h = minbin; h < maxbin; h++)
+                {
+                  val = max(val, spec[h]);
+                }
                 // calculate the salience of the current candidate
                 float weighting = (PITCHES[j] + 52) / (i * PITCHES[j] + 320);
                 if (Float.isNaN(val)) continue;
@@ -188,5 +215,10 @@ public class PitchDetect extends PApplet
         }
         rect(i*width/n, (1- (float)A.get(i, 0))*height, width/n, (float) A.get(i, 0)*height);
       }
+    }
+    
+    float genPitches(int k)
+    {
+        return PITCHES[0] * pow(2, k/12.0);
     }
 }
