@@ -166,7 +166,7 @@ void setup()
   pd2 = new PitchDetect(timeSize*2, sampleRate);
 
   if (hearNotes){
-    pd = new PitchDetector(this, 1); //Last arg is confidence - increase to filter out more garbage
+    pd = new PitchDetector(this, 0.55); //Last arg is confidence - increase to filter out more garbage
     in = new AudioIn(this, 0);
     amp = new Amplitude(this);
   
