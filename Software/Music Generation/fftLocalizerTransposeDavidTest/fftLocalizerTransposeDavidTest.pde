@@ -12,9 +12,9 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = false;
+boolean hearNotes = true;
 boolean watchConductor = false;
-boolean ignorePitch = true; //If hearNotes is true, treats any loud note as a keyPressedBeat instead of using pitch information
+boolean ignorePitch = false; //If hearNotes is true, treats any loud note as a keyPressedBeat instead of using pitch information
 
 String fileName = "twinkle_twinkle2.mid";
 //String fileName = "twinkle_twinkle_mel_a_spaced2.mid";
@@ -25,11 +25,11 @@ String fileName = "twinkle_twinkle2.mid";
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-String fileName = "WWRY3.mid";
+//String fileName = "WWRY3.mid";
 //String fileName = "callresponsetest3.mid";
 //String fileName = "mary_had_a_little_lamb.mid";
 
-int playHarmony = 0;
+int playHarmony = 1;
 double beatThreshScale = 0.7;
 double minBeatThresh = 0.3;//8; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
@@ -60,8 +60,8 @@ float maxMsPerRhythm;
 //Gaussian parameters. Hopefully don't need changing anymore
 double beatprobamp = .4; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
-double posSD = bucketsPerRhythm/64.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/16.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
+double tempoSD = nTempoBuckets/40.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -464,21 +464,23 @@ void draw()
   int t = newtime - oldtime;
   oldtime = newtime;
   
+
   boolean hasPitch = false;
   int firstPitchIdx = 0;
+  int[] fzeros = new int[PITCHES.length];//pd2.fzeros;
   
-  double temp = pd.analyze(0.8);
-  if(temp > 0){
-    int i = 0;
-    while(i < PITCHES.length && PITCHES[i] < temp){
-      i++;
+  if (hearNotes){  
+    double temp = pd.analyze(0.8);
+    if(temp > 0){
+      int i = 0;
+      while(i < PITCHES.length && PITCHES[i] < temp){
+        i++;
+      }
+      if(i == PITCHES.length || (i > 0 && (PITCHES[i]-temp) > (temp-PITCHES[i-1])))i--;
+      fzeros[i] = 1;
+      //println("FOUND PITCH" + PITCHES[i]);
     }
-    if(i == PITCHES.length || (i > 0 && (PITCHES[i]-temp) > (temp-PITCHES[i-1])))i--;
-    fzeros[i] = 1;
-    //println("FOUND PITCH" + PITCHES[i]);
-  }
   
-  if (hearNotes){
     //println("PITCHES:");
     for (int i = 20; i < fzeros.length; i++)
     {
