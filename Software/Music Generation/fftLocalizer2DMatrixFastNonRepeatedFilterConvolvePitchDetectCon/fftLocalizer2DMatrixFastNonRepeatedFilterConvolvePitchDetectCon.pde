@@ -12,7 +12,7 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = true;
+boolean hearNotes = false;
 boolean watchConductor = false;
 boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
 
@@ -24,12 +24,12 @@ boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a ke
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-//String fileName = "WWRY3.mid";
+String fileName = "WWRY3.mid";
 //String fileName = "callresponsetest3.mid";
 //String fileName = "AuldLangSyne2.mid";
-String fileName = "boat1.mid";
+//String fileName = "boat1.mid";
 
-int playHarmony = 1;
+int playHarmony = 0;
 double beatThreshScale = 0.7;
 double minBeatThresh = 0.5; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
