@@ -29,10 +29,10 @@ const int PWM[] = {PWMA, PWMB, PWMC, PWMD};
 #define BIN1 32
 #define BIN2 33
 //CD on digital ports 40+
-#define CIN1 40
-#define CIN2 41
-#define DIN1 42
-#define DIN2 43
+#define CIN1 42
+#define CIN2 44
+#define DIN1 46
+#define DIN2 48
 
 const int IN1[] = {AIN1, BIN1, CIN1, DIN1};
 const int IN2[] = {AIN2, BIN2, CIN2, DIN2};

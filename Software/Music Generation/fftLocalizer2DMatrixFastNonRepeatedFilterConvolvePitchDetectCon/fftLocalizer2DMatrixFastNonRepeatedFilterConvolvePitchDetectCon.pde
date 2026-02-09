@@ -1,3 +1,5 @@
+//Adapted from: https://github.com/821760408-sp/pitch-detect/tree/master probably? - David doing archaeology, 2/8/26
+
 import processing.sound.AudioIn; //Input from computer mic
 import processing.sound.PitchDetector; //Input from computer mic
 import processing.sound.Amplitude; //Input from computer mic

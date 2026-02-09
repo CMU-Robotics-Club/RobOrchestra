@@ -14,7 +14,7 @@ import java.awt.Rectangle;
 
 boolean hearNotes = true;
 boolean watchConductor = false;
-boolean ignorePitch = false;
+boolean ignorePitch = true;
 
 //String fileName = "twinkle_twinkle2.mid";
 //String fileName = "GoC.mid";
@@ -24,11 +24,11 @@ boolean ignorePitch = false;
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-//String fileName = "WWRY3.mid";
+String fileName = "WWRY3.mid";
 //String fileName = "callresponsetest3.mid";
-String fileName = "mary_had_a_little_lamb.mid";
+//String fileName = "mary_had_a_little_lamb.mid";
 
-int playHarmony = 1;
+int playHarmony = 0;
 double beatThreshScale = 0.7;
 double minBeatThresh = 0.08; //0.08;
 double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
