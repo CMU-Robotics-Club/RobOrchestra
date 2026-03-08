@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 
 ControlP5 cp5;
 MidiBus myBus;
+MidiBus myBusBT;
 
 Button melodyLabel;
 Button harmonyLabel;
@@ -145,7 +146,8 @@ void setup() {
   size(10000, 10000); //Doesn't take variables, changes window size and controlP5 responsive area
   surface.setSize(380 * scale, 278 * scale); //Takes variables, changes window size but apparently not controlP5 responsive area
   cp5 = new ControlP5(this);
-  myBus = new MidiBus(this, 0, 2);
+  myBus = new MidiBus(this, 0, 3);
+  myBusBT = new MidiBus(this, 0, 2); //Second MidiBus, plays same notes as first MidiBus but should point to whatever we're sending to the Bluetooth drums
   MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
@@ -155,7 +157,7 @@ void setup() {
    printArray(Serial.list());
    String[] devs = Serial.list();
    //int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[5], 115200); //9600 for chromatic, 115200 for theremin 
+   mySerial = new Serial( this, devs[4], 115200); //9600 for chromatic, 115200 for theremin 
    // unplug everything besides camera arduino to figure out ports
    //If port is busy, close Arduino serial monitor
   
@@ -396,11 +398,13 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
   
   if(snarePlay <= snareThresh) {
     myBus.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
+    myBusBT.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
   }
    
   delay(2);
   if(tomPlay <= tomThresh) {
     myBus.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
+    myBusBT.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
   }
     
   delay(2);
@@ -428,6 +432,7 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
     print(toneIndex);
     toneToPlay = tonic + scaleOffsets[curScale][curSubScale][toneIndex];
     myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
+    myBusBT.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
     }      
   beatIndex = (beatIndex + 1) % measureLength;
   return toneIndex;
