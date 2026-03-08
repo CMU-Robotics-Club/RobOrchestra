@@ -54,7 +54,8 @@ void setup(){
   
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 1, 2);  
+  myBus = new MidiBus(this, 0, 3);  
+  compBus = new MidiBus(this, 0, 3);  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("twinkle_twinkle_melody.mid")); //INPUT
@@ -70,7 +71,6 @@ void setup(){
     mspertick = (1.0*sequence.getMicrosecondLength()/sequence.getTickLength()/1000);
 
     tracks = sequence.getTracks();
-
     
     nChannels = tracks.length;
     
@@ -126,10 +126,12 @@ void draw(){
                     //Add a new note for the new pitch
                     
                     myBus.sendNoteOn(n);
+                    compBus.sendNoteOn(n);
                   }
                   else{
                     //Note is actually 0 velocity
                     myBus.sendNoteOff(n);
+                    compBus.sendNoteOff(n);
                   }
                   
                   //Print stuff
@@ -139,6 +141,7 @@ void draw(){
         } else if (sm.getCommand() == NOTE_OFF) {
                   Note n = new Note(sm.getChannel(), sm.getData1(), sm.getData2());
                   myBus.sendNoteOff(n);
+                  compBus.sendNoteOff(n);
                   //int key = sm.getData1();
                   //int octave = (key / 12)-1;
                   //int note = key % 12;
