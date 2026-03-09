@@ -1,6 +1,10 @@
 #pragma once
 
 #include <Arduino.h>
+#if defined(ESP32)
+// Prevent Arduino core from releasing BT memory before sketch setup().
+#include <esp32-hal-bt-mem.h>
+#endif
 #include <Control_Surface.h>
 #include <MIDI_Interfaces/BluetoothMIDI_Interface.hpp>
 
@@ -34,6 +38,9 @@ static bool servoAttached[2] = {false, false};
 static bool stickIsDown[2] = {false, false};
 static uint32_t lastHitUs[2] = {0, 0};
 static bool wasConnected = false;
+static uint32_t lastActiveSenseMs = 0;
+
+static constexpr uint32_t kActiveSenseIntervalMs = 300;
 
 static inline uint8_t statusLedPin() {
 #ifdef LED_BUILTIN
@@ -171,24 +178,38 @@ static void begin(const char *bleName, const Config &config, NoteMatcher matcher
   Serial.begin(115200);
 
   midi_ble.setName(bleName);
+  // Match the direct MIDI-interface lifecycle used by prior stable firmware.
+  MIDI_Interface::beginAll();
   midi_ble.setCallbacks(callbacks);
-  // Use the high-level lifecycle entry point to ensure all Control Surface
-  // subsystems are initialized consistently across library/core versions.
-  Control_Surface.begin();
+
+  Serial.print("BLE MIDI ready: ");
+  Serial.println(bleName);
 }
 
 static void update() {
-  Control_Surface.loop();
+  MIDI_Interface::updateAll();
 
   const bool connected = midi_ble.isConnected();
   if (connected != wasConnected) {
     wasConnected = connected;
     digitalWrite(statusLedPin(), connected ? HIGH : LOW);
 
+    Serial.print("BLE ");
+    Serial.println(connected ? "connected" : "disconnected");
+
     if (connected)
       attachAll();
     else
       detachAll();
+  }
+
+  // Keep BLE MIDI link active on hosts that drop idle peripherals.
+  if (connected) {
+    const uint32_t nowMs = millis();
+    if (static_cast<uint32_t>(nowMs - lastActiveSenseMs) >= kActiveSenseIntervalMs) {
+      lastActiveSenseMs = nowMs;
+      midi_ble.send(static_cast<cs::RealTimeMessage>(cs::RealTimeMessage::ActiveSensing));
+    }
   }
 
   serviceReturns(micros());

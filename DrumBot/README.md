@@ -130,3 +130,6 @@ Firmware files are included in [`firmware/`](./firmware):
 - bots: `firmware/bots/SnareBot/SnareBot.ino`, `firmware/bots/TomBot/TomBot.ino`
 
 Compile/upload instructions are in `firmware/README.md`.
+
+If ESP32-S3 upload fails with `No serial data received`, use the manual recovery
+flow in `firmware/README.md` section `ESP32-S3 Upload Recovery (No Serial Data / Port Renames)`.

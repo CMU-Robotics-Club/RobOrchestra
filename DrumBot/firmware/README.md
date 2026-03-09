@@ -30,11 +30,21 @@ Connect ESP32 by USB, then:
 ```bash
 arduino-cli board list
 ```
- 
-Pick:
 
-- `FQBN` from `arduino-cli board list` for your exact board
+- `FQBN` from `arduino-cli board list` for exact board
 - serial `PORT` (example: `/dev/cu.usbserial-0001` on macOS)
+
+For Adafruit Feather ESP32-S3, use:
+
+```bash
+esp32:esp32:adafruit_feather_esp32s3
+```
+
+If your Feather variant has no PSRAM, use:
+
+```bash
+esp32:esp32:adafruit_feather_esp32s3_nopsram
+```
 
 ## 4) Compile
 
@@ -86,8 +96,53 @@ python main.py --model models/gesture_recognizer.task --midi-port RobOrchestra -
 
 ## 8) BLE Not Showing Up? Quick Checks
 
-1. Confirm your board is BLE-capable (`ESP32`, `ESP32-S3`, `ESP32-C3`). `ESP32-S2` has no Bluetooth radio.
-2. Use the exact board `FQBN` reported by `arduino-cli board list` for both compile and upload.
-3. Open serial monitor at `115200` immediately after reset to confirm the sketch is running.
-4. Scan with a BLE tool (for example, nRF Connect) and look for `RobOrchestra_Snare` or `RobOrchestra_Tom`.
-5. On macOS, connect BLE MIDI via Audio MIDI Setup (not the normal Bluetooth menu).
+1. Use the exact board `FQBN` reported by `arduino-cli board list` for both compile and upload.
+2. Open serial monitor at `115200` immediately after reset to confirm the sketch is running.
+3. Scan with a BLE tool (for example, nRF Connect) and look for `RobOrchestra_Snare` or `RobOrchestra_Tom`.
+4. On macOS, connect BLE MIDI via Audio MIDI Setup (not the normal Bluetooth menu).
+5. This firmware sends periodic MIDI Active Sensing when connected to reduce idle disconnects on hosts that drop silent BLE-MIDI links.
+
+## 9) ESP32-S3 Upload Recovery (No Serial Data / Port Renames)
+
+If upload fails with:
+
+- `Failed to connect to ESP32-S3: No serial data received`
+- missing port like `/dev/tty.usbmodem1101` after reset
+
+use this deterministic flow.
+
+### Rebuild to fixed output path
+
+```bash
+cd DrumBot
+arduino-cli compile --fqbn esp32:esp32:adafruit_feather_esp32s3 --build-path /tmp/snare_s3 firmware/bots/SnareBot/SnareBot.ino
+```
+
+### Resolve current USB serial port each time
+
+```bash
+PORT=$(arduino-cli board list | awk '/ESP32 Family Device/ {print $1; exit}')
+echo "$PORT"
+```
+
+On macOS this may change between resets (for example `/dev/cu.usbmodem1101` to `/dev/cu.usbmodemF09E9E7835B01`).
+
+### Enter bootloader manually
+
+```bash
+esptool --chip esp32s3 --port "$PORT" --before no-reset --after no-reset --connect-attempts 0 chip-id
+```
+
+While it prints `Connecting...`:
+
+1. Hold `BOOT`
+2. Tap `EN/RESET`
+3. Release `BOOT` once `Connected to ESP32-S3` appears
+
+### Flash merged image
+
+```bash
+esptool --chip esp32s3 --port "$PORT" --before no-reset --after hard-reset write-flash 0x0 /tmp/snare_s3/SnareBot.ino.merged.bin
+```
+
+If flashing fails with a missing port, rerun the `PORT=...` command and retry.
