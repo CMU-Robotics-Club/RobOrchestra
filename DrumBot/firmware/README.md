@@ -102,6 +102,26 @@ python main.py --model models/gesture_recognizer.task --midi-port RobOrchestra -
 4. On macOS, connect BLE MIDI via Audio MIDI Setup (not the normal Bluetooth menu).
 5. This firmware sends periodic MIDI Active Sensing when connected to reduce idle disconnects on hosts that drop silent BLE-MIDI links.
 
+## 8.1) A/B Test BLE Backend (NimBLE vs Bluedroid)
+
+ESP32-S3 defaults to NimBLE. To compare stability against Bluedroid:
+
+### Default backend (NimBLE on ESP32-S3)
+
+```bash
+arduino-cli compile --upload -p <PORT> --fqbn esp32:esp32:adafruit_feather_esp32s3 firmware/bots/SnareBot/SnareBot.ino
+```
+
+### Forced Bluedroid backend
+
+```bash
+arduino-cli compile --upload -p <PORT> --fqbn esp32:esp32:adafruit_feather_esp32s3 \
+  --build-property compiler.cpp.extra_flags="-DDRUMBOT_USE_BLUEDROID_BLE=1" \
+  firmware/bots/SnareBot/SnareBot.ino
+```
+
+On serial monitor, firmware prints the active backend at boot.
+
 ## 9) ESP32-S3 Upload Recovery (No Serial Data / Port Renames)
 
 If upload fails with:

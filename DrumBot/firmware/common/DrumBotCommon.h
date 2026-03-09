@@ -4,9 +4,16 @@
 #if defined(ESP32)
 // Prevent Arduino core from releasing BT memory before sketch setup().
 #include <esp32-hal-bt-mem.h>
+#include <esp_log.h>
+#include <esp_system.h>
 #endif
 #include <Control_Surface.h>
+#if defined(DRUMBOT_USE_BLUEDROID_BLE) && defined(ESP32)
+#include <MIDI_Interfaces/GenericBLEMIDI_Interface.hpp>
+#include <MIDI_Interfaces/BLEMIDI/ESP32BluedroidBackend.hpp>
+#else
 #include <MIDI_Interfaces/BluetoothMIDI_Interface.hpp>
+#endif
 
 namespace drumbot {
 
@@ -30,7 +37,12 @@ struct Config {
 
 using NoteMatcher = bool (*)(uint8_t note);
 
-static BluetoothMIDI_Interface midi_ble;
+#if defined(DRUMBOT_USE_BLUEDROID_BLE) && defined(ESP32)
+using DrumBotBLEInterface = GenericBLEMIDI_Interface<ESP32BluedroidBackend>;
+#else
+using DrumBotBLEInterface = BluetoothMIDI_Interface;
+#endif
+static DrumBotBLEInterface midi_ble;
 static Config cfg{};
 static NoteMatcher noteMatcher = nullptr;
 
@@ -39,8 +51,11 @@ static bool stickIsDown[2] = {false, false};
 static uint32_t lastHitUs[2] = {0, 0};
 static bool wasConnected = false;
 static uint32_t lastActiveSenseMs = 0;
+static uint32_t lastStateLogMs = 0;
+static uint32_t connectedAtMs = 0;
 
-static constexpr uint32_t kActiveSenseIntervalMs = 300;
+static constexpr uint32_t kActiveSenseIntervalMs = 1000;
+static constexpr uint32_t kConnectGraceMs = 500;
 
 static inline uint8_t statusLedPin() {
 #ifdef LED_BUILTIN
@@ -176,7 +191,24 @@ static void begin(const char *bleName, const Config &config, NoteMatcher matcher
   digitalWrite(statusLedPin(), LOW);
 
   Serial.begin(115200);
+#if defined(ESP32)
+  // Enable backend logs so disconnect reasons are visible in serial monitor.
+  esp_log_level_set("CS-BLEMIDI", ESP_LOG_INFO);
+  Serial.print("ESP reset reason: ");
+  Serial.println(static_cast<int>(esp_reset_reason()));
+#if defined(DRUMBOT_USE_BLUEDROID_BLE)
+  Serial.println("BLE backend: Bluedroid (forced)");
+#else
+  Serial.println("BLE backend: Default (NimBLE on ESP32-S3)");
+#endif
+#endif
 
+  // Wide connection interval range lets macOS pick a comfortable value.
+  // Apple recommends min >= 15 ms, max <= 150 ms for stable peripherals.
+  // Values are BLE units of 1.25 ms: 0x0C=15 ms, 0x0060=120 ms.
+  midi_ble.ble_settings.connection_interval.minimum = 0x000C;
+  midi_ble.ble_settings.connection_interval.maximum = 0x0060;
+  midi_ble.ble_settings.initiate_security = false;
   midi_ble.setName(bleName);
   // Match the direct MIDI-interface lifecycle used by prior stable firmware.
   MIDI_Interface::beginAll();
@@ -190,26 +222,40 @@ static void update() {
   MIDI_Interface::updateAll();
 
   const bool connected = midi_ble.isConnected();
+  const uint32_t nowMs = millis();
   if (connected != wasConnected) {
     wasConnected = connected;
     digitalWrite(statusLedPin(), connected ? HIGH : LOW);
 
-    Serial.print("BLE ");
+    Serial.print("[");
+    Serial.print(nowMs);
+    Serial.print(" ms] BLE ");
     Serial.println(connected ? "connected" : "disconnected");
 
-    if (connected)
+    if (connected) {
       attachAll();
-    else
+      // Defer Active Sensing until GATT discovery settles (see grace period below).
+      connectedAtMs = nowMs;
+      lastActiveSenseMs = nowMs;
+    } else {
       detachAll();
+    }
   }
 
   // Keep BLE MIDI link active on hosts that drop idle peripherals.
-  if (connected) {
-    const uint32_t nowMs = millis();
+  // Wait for grace period after connect so GATT discovery can finish.
+  if (connected && static_cast<uint32_t>(nowMs - connectedAtMs) >= kConnectGraceMs) {
     if (static_cast<uint32_t>(nowMs - lastActiveSenseMs) >= kActiveSenseIntervalMs) {
       lastActiveSenseMs = nowMs;
       midi_ble.send(static_cast<cs::RealTimeMessage>(cs::RealTimeMessage::ActiveSensing));
     }
+  }
+
+  // Periodic status line for runtime diagnostics.
+  if (static_cast<uint32_t>(nowMs - lastStateLogMs) >= 5000) {
+    lastStateLogMs = nowMs;
+    Serial.print("BLE state: ");
+    Serial.println(connected ? "connected" : "advertising");
   }
 
   serviceReturns(micros());

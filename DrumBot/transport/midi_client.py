@@ -75,7 +75,7 @@ class MidiClient:
             note=clamped_note,
             velocity=velocity,
         )
-        self._port.send(msg)
+        self._send(msg)
 
     def send_control_change(self, control: int, value: int) -> None:
         """Send MIDI control change for gesture command events."""
@@ -91,7 +91,18 @@ class MidiClient:
             control=cc,
             value=cc_value,
         )
-        self._port.send(msg)
+        self._send(msg)
+
+    def _send(self, msg: Any) -> None:
+        """Send a MIDI message, logging failures instead of crashing."""
+
+        if self._port is None:
+            return
+        try:
+            self._port.send(msg)
+        except Exception:
+            logger.warning("MIDI send failed (BLE link may have dropped)", exc_info=True)
+            self._port = None
 
     def close(self) -> None:
         """Close output port if connected."""
