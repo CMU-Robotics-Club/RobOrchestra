@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 #if defined(ESP32)
-// Prevent Arduino core from releasing BT memory before sketch setup().
 #include <esp32-hal-bt-mem.h>
 #include <esp_log.h>
 #include <esp_system.h>
@@ -17,22 +16,21 @@
 
 namespace drumbot {
 
+// ── Fixed servo constants (same for every bot) ──────────────────────
+// Only upUs varies per bot — everything else is derived or constant.
+static constexpr uint16_t kStrokeOffsetUs = 450;    // downUs = upUs - 450
+static constexpr uint32_t kStickDownUs    = 80000;  // 80 ms hold in strike position
+static constexpr uint32_t kStickUpUs      = 25000;  // 25 ms cooldown before next hit
+static constexpr uint32_t kStickCycleUs   = kStickDownUs + kStickUpUs;
+
 struct Config {
   uint8_t numServos;
   uint8_t servoPins[2];
   uint8_t pwmChannels[2];
-
-  uint16_t upUs[2];
-  uint16_t downUs[2];
-
+  uint16_t upUs[2];           // only calibration-sensitive value
   uint32_t servoPwmFreq;
   uint8_t servoPwmBits;
-
-  uint32_t stickDownUs;
-  uint32_t stickUpUs;
-
   bool requireCh10;
-  bool debugPrintNotes;
 };
 
 using NoteMatcher = bool (*)(uint8_t note);
@@ -51,11 +49,19 @@ static bool stickIsDown[2] = {false, false};
 static uint32_t lastHitUs[2] = {0, 0};
 static bool wasConnected = false;
 static uint32_t lastActiveSenseMs = 0;
-static uint32_t lastStateLogMs = 0;
 static uint32_t connectedAtMs = 0;
 
 static constexpr uint32_t kActiveSenseIntervalMs = 1000;
 static constexpr uint32_t kConnectGraceMs = 500;
+
+// Calibration CCs: select servo → coarse → fine (triggers update), test hit.
+static constexpr uint8_t kCCServoSelect  = 110;
+static constexpr uint8_t kCCValueCoarse  = 111;
+static constexpr uint8_t kCCValueFine    = 112;
+static constexpr uint8_t kCCTestHit      = 113;
+
+static uint8_t calibServo = 0;
+static uint8_t calibCoarse = 0;
 
 static inline uint8_t statusLedPin() {
 #ifdef LED_BUILTIN
@@ -65,7 +71,6 @@ static inline uint8_t statusLedPin() {
 #endif
 }
 
-static inline uint32_t stickCycleUs() { return cfg.stickDownUs + cfg.stickUpUs; }
 static inline uint32_t servoPeriodUs() { return 1000000UL / cfg.servoPwmFreq; }
 static inline uint32_t maxDuty() { return (1u << cfg.servoPwmBits) - 1u; }
 
@@ -81,6 +86,8 @@ static inline void writeServoUS(uint8_t i, uint16_t pulseUs) {
   ledcWrite(cfg.pwmChannels[i], duty);
 #endif
 }
+
+static inline uint16_t downUs(uint8_t i) { return cfg.upUs[i] - kStrokeOffsetUs; }
 
 static bool attachServo(uint8_t i) {
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
@@ -114,43 +121,53 @@ static void detachServo(uint8_t i) {
 }
 
 static inline bool ready(uint8_t i, uint32_t nowUs) {
-  return servoAttached[i] && static_cast<uint32_t>(nowUs - lastHitUs[i]) >= stickCycleUs();
+  return servoAttached[i] && static_cast<uint32_t>(nowUs - lastHitUs[i]) >= kStickCycleUs;
 }
 
 static inline void hit(uint8_t i, uint32_t nowUs) {
   lastHitUs[i] = nowUs;
   stickIsDown[i] = true;
-  writeServoUS(i, cfg.downUs[i]);
+  writeServoUS(i, downUs(i));
 }
 
 static inline void serviceReturns(uint32_t nowUs) {
   for (uint8_t i = 0; i < cfg.numServos; ++i) {
     if (!servoAttached[i] || !stickIsDown[i]) continue;
-    if (static_cast<uint32_t>(nowUs - lastHitUs[i]) >= cfg.stickDownUs) {
+    if (static_cast<uint32_t>(nowUs - lastHitUs[i]) >= kStickDownUs) {
       writeServoUS(i, cfg.upUs[i]);
       stickIsDown[i] = false;
     }
   }
 }
 
-static inline void hitPreferred() {
+static inline bool hitPreferred() {
   const uint32_t nowUs = micros();
 
   if (ready(0, nowUs)) {
     hit(0, nowUs);
-    return;
+    return true;
   }
 
   if (cfg.numServos == 2 && ready(1, nowUs)) {
     hit(1, nowUs);
+    return true;
   }
+
+  return false;
 }
 
 static void attachAll() {
   const uint32_t nowUs = micros();
   for (uint8_t i = 0; i < cfg.numServos; ++i) {
     if (attachServo(i)) {
-      lastHitUs[i] = nowUs - stickCycleUs();  // Ready immediately.
+      lastHitUs[i] = nowUs - kStickCycleUs;
+      Serial.print("attach servo");
+      Serial.print(i);
+      Serial.println(" OK");
+    } else {
+      Serial.print("attach servo");
+      Serial.print(i);
+      Serial.println(" FAIL");
     }
   }
 }
@@ -161,24 +178,83 @@ static void detachAll() {
   }
 }
 
+static void printConfig() {
+  Serial.println("--- config ---");
+  for (uint8_t i = 0; i < cfg.numServos; ++i) {
+    Serial.print("  servo "); Serial.print(i);
+    Serial.print(": upUs="); Serial.print(cfg.upUs[i]);
+    Serial.print("  downUs="); Serial.println(downUs(i));
+  }
+  Serial.print("  strokeOffset="); Serial.print(kStrokeOffsetUs);
+  Serial.print("  stickDown="); Serial.print(kStickDownUs / 1000);
+  Serial.print("ms  stickUp="); Serial.print(kStickUpUs / 1000);
+  Serial.println("ms");
+}
+
 struct CallbackHandler : FineGrainedMIDI_Callbacks<CallbackHandler> {
   void onNoteOn(Channel ch, uint8_t note, uint8_t vel, Cable) {
     if (vel == 0) return;
     if (cfg.requireCh10 && ch != Channel_10) return;
 
-    if (cfg.debugPrintNotes) {
-      Serial.print("ch=");
-      Serial.print(static_cast<uint8_t>(ch.getRaw()));
-      Serial.print(" note=");
-      Serial.println(note);
-    }
+    Serial.print("RX note=");
+    Serial.print(note);
+    Serial.print(" vel=");
+    Serial.print(vel);
 
     if (noteMatcher && noteMatcher(note)) {
-      hitPreferred();
+      const bool fired = hitPreferred();
+      if (fired) {
+        Serial.println(" HIT");
+      } else {
+        Serial.print(" BLOCKED attached0=");
+        Serial.print(servoAttached[0] ? 1 : 0);
+        Serial.print(" attached1=");
+        Serial.print((cfg.numServos == 2 && servoAttached[1]) ? 1 : 0);
+        Serial.print(" down0=");
+        Serial.print(stickIsDown[0] ? 1 : 0);
+        Serial.print(" down1=");
+        Serial.println((cfg.numServos == 2 && stickIsDown[1]) ? 1 : 0);
+      }
+    } else {
+      Serial.println(" skip");
     }
   }
 
   void onNoteOff(Channel, uint8_t, uint8_t, Cable) {}
+
+  void onControlChange(Channel, uint8_t cc, uint8_t val, Cable) {
+    switch (cc) {
+      case kCCServoSelect:
+        calibServo = val < cfg.numServos ? val : 0;
+        if (val == 127) printConfig();
+        break;
+      case kCCValueCoarse:
+        calibCoarse = val;
+        break;
+      case kCCValueFine: {
+        uint16_t upVal = (static_cast<uint16_t>(calibCoarse) << 7) | val;
+        cfg.upUs[calibServo] = upVal;
+        if (servoAttached[calibServo] && !stickIsDown[calibServo]) {
+          writeServoUS(calibServo, upVal);
+        }
+        Serial.print("CALIB servo");
+        Serial.print(calibServo);
+        Serial.print(" upUs=");
+        Serial.print(upVal);
+        Serial.print(" -> downUs=");
+        Serial.println(downUs(calibServo));
+        break;
+      }
+      case kCCTestHit: {
+        uint8_t servo = val < cfg.numServos ? val : 0;
+        const uint32_t nowUs = micros();
+        lastHitUs[servo] = nowUs - kStickCycleUs;
+        hit(servo, nowUs);
+        break;
+      }
+      default: break;
+    }
+  }
 };
 
 static CallbackHandler callbacks;
@@ -192,30 +268,27 @@ static void begin(const char *bleName, const Config &config, NoteMatcher matcher
 
   Serial.begin(115200);
 #if defined(ESP32)
-  // Enable backend logs so disconnect reasons are visible in serial monitor.
   esp_log_level_set("CS-BLEMIDI", ESP_LOG_INFO);
   Serial.print("ESP reset reason: ");
   Serial.println(static_cast<int>(esp_reset_reason()));
 #if defined(DRUMBOT_USE_BLUEDROID_BLE)
-  Serial.println("BLE backend: Bluedroid (forced)");
+  Serial.println("BLE backend: Bluedroid");
 #else
-  Serial.println("BLE backend: Default (NimBLE on ESP32-S3)");
+  Serial.println("BLE backend: NimBLE");
 #endif
 #endif
 
-  // Wide connection interval range lets macOS pick a comfortable value.
-  // Apple recommends min >= 15 ms, max <= 150 ms for stable peripherals.
-  // Values are BLE units of 1.25 ms: 0x0C=15 ms, 0x0060=120 ms.
-  midi_ble.ble_settings.connection_interval.minimum = 0x000C;
+  // 30-120 ms connection interval (BLE units of 1.25 ms).
+  midi_ble.ble_settings.connection_interval.minimum = 0x0018;
   midi_ble.ble_settings.connection_interval.maximum = 0x0060;
   midi_ble.ble_settings.initiate_security = false;
   midi_ble.setName(bleName);
-  // Match the direct MIDI-interface lifecycle used by prior stable firmware.
   MIDI_Interface::beginAll();
   midi_ble.setCallbacks(callbacks);
 
   Serial.print("BLE MIDI ready: ");
   Serial.println(bleName);
+  printConfig();
 }
 
 static void update() {
@@ -234,7 +307,6 @@ static void update() {
 
     if (connected) {
       attachAll();
-      // Defer Active Sensing until GATT discovery settles (see grace period below).
       connectedAtMs = nowMs;
       lastActiveSenseMs = nowMs;
     } else {
@@ -242,20 +314,11 @@ static void update() {
     }
   }
 
-  // Keep BLE MIDI link active on hosts that drop idle peripherals.
-  // Wait for grace period after connect so GATT discovery can finish.
   if (connected && static_cast<uint32_t>(nowMs - connectedAtMs) >= kConnectGraceMs) {
     if (static_cast<uint32_t>(nowMs - lastActiveSenseMs) >= kActiveSenseIntervalMs) {
       lastActiveSenseMs = nowMs;
       midi_ble.send(static_cast<cs::RealTimeMessage>(cs::RealTimeMessage::ActiveSensing));
     }
-  }
-
-  // Periodic status line for runtime diagnostics.
-  if (static_cast<uint32_t>(nowMs - lastStateLogMs) >= 5000) {
-    lastStateLogMs = nowMs;
-    Serial.print("BLE state: ");
-    Serial.println(connected ? "connected" : "advertising");
   }
 
   serviceReturns(micros());

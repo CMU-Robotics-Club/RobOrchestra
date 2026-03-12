@@ -24,17 +24,16 @@ class AppConfig:
     hit_velocity_threshold: float = 1.0
     hit_cooldown_ms: int = 120
     hit_velocity_cap: float = 2.5
-    zone_edges: tuple[float, float, float] = (0.25, 0.5, 0.75)
-    zone_labels: tuple[str, str, str, str] = ("HIHAT", "SNARE", "TOM", "CRASH")
+    zone_edges: tuple[float, ...] = (0.5,)
+    zone_labels: tuple[str, ...] = ("SNARE", "TOM")
     midi_enabled: bool = True
     midi_port_name: str | None = None
     midi_channel: int = 9
+    midi_note_off_enabled: bool = False
     midi_zone_notes: Mapping[str, int] = field(
         default_factory=lambda: {
-            "HIHAT": 42,
             "SNARE": 38,
             "TOM": 45,
-            "CRASH": 49,
         }
     )
     midi_command_cc: Mapping[str, int] = field(

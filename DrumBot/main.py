@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import time
 from collections import deque
 from dataclasses import dataclass, replace
@@ -14,15 +15,9 @@ import cv2
 
 from camera import Camera
 from config import AppConfig
-from tracking.gesture_router import CommandEvent, GestureRouter
-from tracking.hand_state import HandStateStore
-from tracking.hit_detector import HitDetector, HitEvent
-from tracking.zone_mapper import ZoneMapper
-from transport.message_protocol import CommandMessage, HitMessage
-from transport.midi_client import MidiClient
-from transport.serial_client import SerialClient
-from vision.frame_overlay import draw_overlay
-from vision.gesture_engine import FrameObservation, GestureEngine
+from tracking import CommandEvent, GestureRouter, HandStateStore, HitDetector, HitEvent, ZoneMapper
+from transport import CommandMessage, HitMessage, MidiClient, SerialClient
+from vision import FrameObservation, GestureEngine, draw_overlay
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +29,7 @@ class EventDispatcher:
     serial_client: SerialClient
     midi_client: MidiClient
     midi_zone_notes: Mapping[str, int]
+    midi_note_off_enabled: bool
     midi_command_cc: Mapping[str, int]
     midi_command_value: int
     recent_commands: deque[str]
@@ -53,8 +49,12 @@ class EventDispatcher:
 
         midi_note = self.midi_zone_notes.get(zone)
         if midi_note is not None:
-            self.midi_client.send_note_on(midi_note, hit_event.velocity)
-            logger.debug("sent MIDI note_on note=%s velocity=%.2f", midi_note, hit_event.velocity)
+            sent_to = self.midi_client.send_note_on(midi_note, hit_event.velocity)
+            if self.midi_note_off_enabled:
+                self.midi_client.send_note_off(midi_note)
+            if sent_to == 0:
+                logger.warning("MIDI note_on dropped (no active outputs). note=%s zone=%s", midi_note, zone)
+            logger.debug("sent MIDI note_on note=%s velocity=%.2f outputs=%s", midi_note, hit_event.velocity, sent_to)
         logger.debug("sent %s", line)
 
     def emit_command(self, command_event: CommandEvent) -> None:
@@ -66,8 +66,10 @@ class EventDispatcher:
 
         cc = self.midi_command_cc.get(command_event.command)
         if cc is not None:
-            self.midi_client.send_control_change(cc, self.midi_command_value)
-            logger.debug("sent MIDI CC cc=%s value=%s", cc, self.midi_command_value)
+            sent_to = self.midi_client.send_control_change(cc, self.midi_command_value)
+            if sent_to == 0:
+                logger.warning("MIDI CC dropped (no active outputs). cc=%s command=%s", cc, command_event.command)
+            logger.debug("sent MIDI CC cc=%s value=%s outputs=%s", cc, self.midi_command_value, sent_to)
         logger.debug("sent %s", line)
 
 
@@ -87,6 +89,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--midi-port", type=str, default=None, help="MIDI output port name (exact or substring)")
     parser.add_argument("--midi-channel", type=int, default=defaults.midi_channel + 1, help="MIDI channel number (1-16)")
+    parser.add_argument("--midi-note-off", action="store_true", help="Send note_off immediately after note_on")
     parser.add_argument("--no-midi", action="store_true", help="Disable MIDI output")
     parser.add_argument("--list-midi-ports", action="store_true", help="List available MIDI output ports and exit")
     return parser.parse_args()
@@ -121,6 +124,7 @@ def main() -> int:
         midi_enabled=not args.no_midi,
         midi_port_name=args.midi_port,
         midi_channel=min(max(args.midi_channel - 1, 0), 15),
+        midi_note_off_enabled=args.midi_note_off,
     )
 
     camera = Camera(
@@ -141,7 +145,6 @@ def main() -> int:
         cooldown_ms=config.hit_cooldown_ms,
         velocity_cap=config.hit_velocity_cap,
     )
-    zone_mapper = ZoneMapper(zone_edges=config.zone_edges, zone_labels=config.zone_labels)
     gesture_router = GestureRouter(
         label_to_command=config.gesture_to_command,
         cooldown_ms=config.gesture_command_cooldown_ms,
@@ -156,13 +159,24 @@ def main() -> int:
         port_name=config.midi_port_name,
         channel=config.midi_channel,
     )
+    if midi_client.connected_output_names:
+        logger.info("Active MIDI outputs: %s", ", ".join(midi_client.connected_output_names))
+    elif config.midi_enabled:
+        logger.warning("MIDI is enabled but no output ports are currently connected")
+
+    zone_labels = _resolve_zone_labels(config.zone_labels, midi_client.connected_output_names)
+    zone_edges = _resolve_zone_edges(zone_labels, config.zone_edges)
+    midi_zone_notes = _resolve_midi_zone_notes(zone_labels, config.midi_zone_notes)
+    zone_mapper = ZoneMapper(zone_edges=zone_edges, zone_labels=zone_labels)
+    logger.info("Zone layout: %s", ", ".join(f"{zone}→note{midi_zone_notes[zone]}" for zone in zone_labels))
 
     recent_commands: deque[str] = deque(maxlen=5)
     recent_hits: deque[str] = deque(maxlen=5)
     dispatcher = EventDispatcher(
         serial_client=serial_client,
         midi_client=midi_client,
-        midi_zone_notes=config.midi_zone_notes,
+        midi_zone_notes=midi_zone_notes,
+        midi_note_off_enabled=config.midi_note_off_enabled,
         midi_command_cc=config.midi_command_cc,
         midi_command_value=config.midi_command_value,
         recent_commands=recent_commands,
@@ -204,6 +218,8 @@ def main() -> int:
                     observation=observation,
                     recent_commands=tuple(recent_commands),
                     recent_hits=tuple(recent_hits),
+                    zone_edges=zone_edges,
+                    zone_labels=zone_labels,
                 )
                 cv2.imshow(config.display_window_name, frame_to_show)
                 key = cv2.waitKey(1) & 0xFF
@@ -264,6 +280,75 @@ def _state_id_for_hand(handedness: str, fallback_id: int) -> int:
     if handedness == "Right":
         return 1
     return 100 + fallback_id
+
+
+def _resolve_zone_labels(default_zone_labels: tuple[str, ...], output_port_names: tuple[str, ...]) -> tuple[str, ...]:
+    """Infer zone labels from connected bot names, falling back to configured defaults."""
+
+    inferred: list[str] = []
+    seen_counts: dict[str, int] = {}
+    for i, name in enumerate(output_port_names):
+        base_zone = _zone_label_for_port(name, i)
+        count = seen_counts.get(base_zone, 0) + 1
+        seen_counts[base_zone] = count
+        inferred.append(base_zone if count == 1 else f"{base_zone}_{count}")
+
+    if inferred:
+        return tuple(inferred)
+    return default_zone_labels
+
+
+def _zone_label_for_port(port_name: str, index: int) -> str:
+    """Map known bot names to stable labels and sanitize unknown names."""
+
+    lowered = port_name.lower()
+    if "snare" in lowered:
+        return "SNARE"
+    if "tom" in lowered:
+        return "TOM"
+
+    normalized = re.sub(r"[^A-Za-z0-9]+", "_", port_name).strip("_").upper()
+    if normalized:
+        return normalized
+    return f"BOT_{index + 1}"
+
+
+def _resolve_zone_edges(zone_labels: tuple[str, ...], fallback_edges: tuple[float, ...]) -> tuple[float, ...]:
+    """Generate evenly split screen zones unless a matching custom fallback is provided."""
+
+    if len(zone_labels) <= 1:
+        return ()
+    if len(fallback_edges) + 1 == len(zone_labels):
+        return fallback_edges
+    zone_count = float(len(zone_labels))
+    return tuple(i / zone_count for i in range(1, len(zone_labels)))
+
+
+def _resolve_midi_zone_notes(zone_labels: tuple[str, ...], configured_notes: Mapping[str, int]) -> dict[str, int]:
+    """Build a complete zone-to-note mapping for all active zones."""
+
+    notes: dict[str, int] = {}
+    for i, zone in enumerate(zone_labels):
+        configured = configured_notes.get(zone)
+        if configured is None:
+            configured = configured_notes.get(re.sub(r"_\d+$", "", zone))
+        if configured is not None:
+            notes[zone] = int(configured)
+            continue
+        notes[zone] = _fallback_note_for_zone(zone, i)
+    return notes
+
+
+def _fallback_note_for_zone(zone_label: str, index: int) -> int:
+    """Choose practical fallback notes for unknown bot labels."""
+
+    upper = zone_label.upper()
+    if "SNARE" in upper:
+        return 38
+    if "TOM" in upper:
+        return 45
+    fallback_cycle = (38, 45, 47, 50, 43, 41, 36)
+    return fallback_cycle[index % len(fallback_cycle)]
 
 
 if __name__ == "__main__":
