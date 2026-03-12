@@ -51,13 +51,13 @@ esp32:esp32:adafruit_feather_esp32s3_nopsram
 ### Snare bot
 
 ```bash
-arduino-cli compile --fqbn <FQBN> firmware/bots/SnareBot/SnareBot.ino
+arduino-cli compile --fqbn esp32:esp32:adafruit_feather_esp32s3 firmware/bots/SnareBot/SnareBot.ino
 ```
 
 ### Tom bot
 
 ```bash
-arduino-cli compile --fqbn <FQBN> firmware/bots/TomBot/TomBot.ino
+arduino-cli compile --fqbn esp32:esp32:adafruit_feather_esp32s3 firmware/bots/TomBot/TomBot.ino
 ```
 
 ## 5) Upload
@@ -65,13 +65,13 @@ arduino-cli compile --fqbn <FQBN> firmware/bots/TomBot/TomBot.ino
 ### Snare bot
 
 ```bash
-arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn <FQBN> firmware/bots/SnareBot/SnareBot.ino
+arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn esp32:esp32:adafruit_feather_esp32s3 firmware/bots/SnareBot/SnareBot.ino
 ```
 
 ### Tom bot
 
 ```bash
-arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn <FQBN> firmware/bots/TomBot/TomBot.ino
+arduino-cli upload -p /dev/cu.usbserial-0001 --fqbn esp32:esp32:adafruit_feather_esp32s3 firmware/bots/TomBot/TomBot.ino
 ```
 
 ## 6) BLE-MIDI Name and Python Port Matching
