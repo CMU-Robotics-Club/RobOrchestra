@@ -121,6 +121,23 @@ class HitDetector:
         return x, y
 
 
+class ZoneHitGate:
+    """Apply a short cooldown per zone to suppress near-duplicate hits."""
+
+    def __init__(self, cooldown_ms: int) -> None:
+        self._cooldown_ms = max(int(cooldown_ms), 0)
+        self._last_hit_ms_by_zone: dict[str, int] = {}
+
+    def should_emit(self, zone: str, timestamp_ms: int) -> bool:
+        if self._cooldown_ms == 0:
+            return True
+        prior = self._last_hit_ms_by_zone.get(zone)
+        if prior is not None and (timestamp_ms - prior) < self._cooldown_ms:
+            return False
+        self._last_hit_ms_by_zone[zone] = timestamp_ms
+        return True
+
+
 # ── Zone mapping ─────────────────────────────────────────────────────
 
 class ZoneMapper:

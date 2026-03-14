@@ -22,6 +22,7 @@ static constexpr uint16_t kStrokeOffsetUs = 450;    // downUs = upUs - 450
 static constexpr uint32_t kStickDownUs    = 80000;  // 80 ms hold in strike position
 static constexpr uint32_t kStickUpUs      = 25000;  // 25 ms cooldown before next hit
 static constexpr uint32_t kStickCycleUs   = kStickDownUs + kStickUpUs;
+static constexpr uint32_t kGlobalHitSpacingUs = 35000;  // avoid near-simultaneous double-stick hits
 
 struct Config {
   uint8_t numServos;
@@ -47,6 +48,8 @@ static NoteMatcher noteMatcher = nullptr;
 static bool servoAttached[2] = {false, false};
 static bool stickIsDown[2] = {false, false};
 static uint32_t lastHitUs[2] = {0, 0};
+static uint8_t nextServo = 0;
+static uint32_t lastAnyHitUs = 0;
 static bool wasConnected = false;
 static uint32_t lastActiveSenseMs = 0;
 static uint32_t connectedAtMs = 0;
@@ -126,6 +129,7 @@ static inline bool ready(uint8_t i, uint32_t nowUs) {
 
 static inline void hit(uint8_t i, uint32_t nowUs) {
   lastHitUs[i] = nowUs;
+  lastAnyHitUs = nowUs;
   stickIsDown[i] = true;
   writeServoUS(i, downUs(i));
 }
@@ -140,24 +144,27 @@ static inline void serviceReturns(uint32_t nowUs) {
   }
 }
 
-static inline bool hitPreferred() {
+static inline int8_t hitPreferred() {
   const uint32_t nowUs = micros();
+  if (cfg.numServos == 0) return -1;
+  if (lastAnyHitUs != 0 && static_cast<uint32_t>(nowUs - lastAnyHitUs) < kGlobalHitSpacingUs) return -1;
 
-  if (ready(0, nowUs)) {
-    hit(0, nowUs);
-    return true;
+  for (uint8_t offset = 0; offset < cfg.numServos; ++offset) {
+    const uint8_t i = (nextServo + offset) % cfg.numServos;
+    if (ready(i, nowUs)) {
+      hit(i, nowUs);
+      nextServo = (i + 1) % cfg.numServos;
+      return static_cast<int8_t>(i);
+    }
   }
 
-  if (cfg.numServos == 2 && ready(1, nowUs)) {
-    hit(1, nowUs);
-    return true;
-  }
-
-  return false;
+  return -1;
 }
 
 static void attachAll() {
   const uint32_t nowUs = micros();
+  nextServo = 0;
+  lastAnyHitUs = 0;
   for (uint8_t i = 0; i < cfg.numServos; ++i) {
     if (attachServo(i)) {
       lastHitUs[i] = nowUs - kStickCycleUs;
@@ -202,9 +209,10 @@ struct CallbackHandler : FineGrainedMIDI_Callbacks<CallbackHandler> {
     Serial.print(vel);
 
     if (noteMatcher && noteMatcher(note)) {
-      const bool fired = hitPreferred();
-      if (fired) {
-        Serial.println(" HIT");
+      const int8_t firedServo = hitPreferred();
+      if (firedServo >= 0) {
+        Serial.print(" HIT servo=");
+        Serial.println(firedServo);
       } else {
         Serial.print(" BLOCKED attached0=");
         Serial.print(servoAttached[0] ? 1 : 0);
@@ -278,9 +286,9 @@ static void begin(const char *bleName, const Config &config, NoteMatcher matcher
 #endif
 #endif
 
-  // 30-120 ms connection interval (BLE units of 1.25 ms).
-  midi_ble.ble_settings.connection_interval.minimum = 0x0018;
-  midi_ble.ble_settings.connection_interval.maximum = 0x0060;
+  // 7.5-15 ms connection interval (BLE units of 1.25 ms).
+  midi_ble.ble_settings.connection_interval.minimum = 0x0006;
+  midi_ble.ble_settings.connection_interval.maximum = 0x000C;
   midi_ble.ble_settings.initiate_security = false;
   midi_ble.setName(bleName);
   MIDI_Interface::beginAll();

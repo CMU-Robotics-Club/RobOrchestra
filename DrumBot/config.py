@@ -15,6 +15,7 @@ class AppConfig:
     camera_width: int = 1280
     camera_height: int = 720
     camera_fps: int = 30
+    mirror_enabled: bool = True
     max_hands: int = 2
     gesture_model_path: Path = Path("models/gesture_recognizer.task")
     gesture_score_threshold: float = 0.55
@@ -23,6 +24,7 @@ class AppConfig:
     hit_min_travel: float = 0.03
     hit_velocity_threshold: float = 1.0
     hit_cooldown_ms: int = 120
+    hit_zone_cooldown_ms: int = 35
     hit_velocity_cap: float = 2.5
     zone_edges: tuple[float, ...] = (0.5,)
     zone_labels: tuple[str, ...] = ("SNARE", "TOM")

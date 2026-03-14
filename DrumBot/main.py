@@ -9,15 +9,15 @@ import time
 from collections import deque
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Sequence
 
 import cv2
 
 from camera import Camera
 from config import AppConfig
-from tracking import CommandEvent, GestureRouter, HandStateStore, HitDetector, HitEvent, ZoneMapper
+from tracking import CommandEvent, GestureRouter, HandStateStore, HitDetector, HitEvent, ZoneHitGate, ZoneMapper
 from transport import CommandMessage, HitMessage, MidiClient, SerialClient
-from vision import FrameObservation, GestureEngine, draw_overlay
+from vision import FrameObservation, GestureEngine, HandObservation, draw_overlay
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path, default=defaults.gesture_model_path, help="Path to gesture_recognizer.task")
     parser.add_argument("--camera-index", type=int, default=defaults.camera_index, help="OpenCV camera index")
+    parser.add_argument("--camera-width", type=int, default=defaults.camera_width, help="Camera frame width")
+    parser.add_argument("--camera-height", type=int, default=defaults.camera_height, help="Camera frame height")
+    parser.add_argument("--camera-fps", type=int, default=defaults.camera_fps, help="Camera target FPS")
+    parser.add_argument("--no-mirror", action="store_true", help="Disable horizontal mirroring")
     parser.add_argument("--no-display", action="store_true", help="Disable OpenCV preview window")
     parser.add_argument("--log-level", type=str, default="INFO", help="Python logging level")
 
@@ -118,6 +122,10 @@ def main() -> int:
         AppConfig(),
         gesture_model_path=args.model,
         camera_index=args.camera_index,
+        camera_width=max(args.camera_width, 160),
+        camera_height=max(args.camera_height, 120),
+        camera_fps=max(args.camera_fps, 1),
+        mirror_enabled=not args.no_mirror,
         serial_port=args.serial_port,
         serial_baudrate=args.baudrate,
         serial_enabled=not args.no_serial,
@@ -145,6 +153,7 @@ def main() -> int:
         cooldown_ms=config.hit_cooldown_ms,
         velocity_cap=config.hit_velocity_cap,
     )
+    zone_hit_gate = ZoneHitGate(cooldown_ms=config.hit_zone_cooldown_ms)
     gesture_router = GestureRouter(
         label_to_command=config.gesture_to_command,
         cooldown_ms=config.gesture_command_cooldown_ms,
@@ -193,6 +202,8 @@ def main() -> int:
             has_frame, frame = camera.read()
             if not has_frame:
                 continue
+            if config.mirror_enabled:
+                frame = cv2.flip(frame, 1)
 
             timestamp_ms = int(time.time() * 1000)
             gesture_engine.submit(frame_bgr=frame, timestamp_ms=timestamp_ms)
@@ -207,6 +218,7 @@ def main() -> int:
                     config=config,
                     hand_states=hand_states,
                     hit_detector=hit_detector,
+                    zone_hit_gate=zone_hit_gate,
                     zone_mapper=zone_mapper,
                     gesture_router=gesture_router,
                     dispatcher=dispatcher,
@@ -242,6 +254,7 @@ def _process_observation(
     config: AppConfig,
     hand_states: HandStateStore,
     hit_detector: HitDetector,
+    zone_hit_gate: ZoneHitGate,
     zone_mapper: ZoneMapper,
     gesture_router: GestureRouter,
     dispatcher: EventDispatcher,
@@ -250,8 +263,9 @@ def _process_observation(
 
     hand_states.prune_stale(current_timestamp_ms=observation.timestamp_ms)
 
-    for hand in observation.hands[: config.max_hands]:
-        hand_state_id = _state_id_for_hand(hand.handedness, hand.hand_id)
+    active_hands = observation.hands[: config.max_hands]
+    state_ids = _resolve_hand_state_ids(active_hands)
+    for hand, hand_state_id in zip(active_hands, state_ids):
         hand_state = hand_states.get_or_create(hand_state_id, hand.handedness)
 
         hit_event = hit_detector.update(
@@ -261,7 +275,10 @@ def _process_observation(
         )
         if hit_event is not None:
             zone = zone_mapper.zone_for_x(hit_event.x)
-            dispatcher.emit_hit(zone, hit_event)
+            if zone_hit_gate.should_emit(zone=zone, timestamp_ms=hit_event.timestamp_ms):
+                dispatcher.emit_hit(zone, hit_event)
+            else:
+                logger.debug("suppressed duplicate hit in zone=%s at %s", zone, hit_event.timestamp_ms)
 
         command_event = gesture_router.route(
             label=hand.top_gesture,
@@ -272,12 +289,26 @@ def _process_observation(
             dispatcher.emit_command(command_event)
 
 
-def _state_id_for_hand(handedness: str, fallback_id: int) -> int:
-    """Use handedness as stable state key when available."""
+def _resolve_hand_state_ids(hands: Sequence[HandObservation]) -> tuple[int, ...]:
+    """Resolve per-hand state IDs while avoiding handedness collisions."""
 
-    if handedness == "Left":
+    handedness_counts: dict[str, int] = {}
+    for hand in hands:
+        if hand.handedness in ("Left", "Right"):
+            handedness_counts[hand.handedness] = handedness_counts.get(hand.handedness, 0) + 1
+
+    state_ids: list[int] = []
+    for hand in hands:
+        state_ids.append(_state_id_for_hand(hand.handedness, hand.hand_id, handedness_counts))
+    return tuple(state_ids)
+
+
+def _state_id_for_hand(handedness: str, fallback_id: int, handedness_counts: Mapping[str, int]) -> int:
+    """Prefer stable handedness IDs, but avoid collisions when labels duplicate."""
+
+    if handedness == "Left" and handedness_counts.get("Left", 0) == 1:
         return 0
-    if handedness == "Right":
+    if handedness == "Right" and handedness_counts.get("Right", 0) == 1:
         return 1
     return 100 + fallback_id
 

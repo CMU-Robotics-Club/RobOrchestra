@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tracking import GestureRouter, HandState, HitDetector, ZoneMapper
+from tracking import GestureRouter, HandState, HitDetector, ZoneHitGate, ZoneMapper
 
 
 # ── Zone mapping ─────────────────────────────────────────────────────
@@ -72,6 +72,21 @@ def test_requires_minimum_travel() -> None:
     d.update(s, _landmarks(0.20, 0.20), 0)
     d.update(s, _landmarks(0.20, 0.205), 33)
     assert d.update(s, _landmarks(0.20, 0.24), 66) is None
+
+
+# ── Hit gating ────────────────────────────────────────────────────────
+
+def test_zone_hit_gate_applies_per_zone_cooldown() -> None:
+    gate = ZoneHitGate(cooldown_ms=40)
+    assert gate.should_emit("SNARE", 1000) is True
+    assert gate.should_emit("SNARE", 1010) is False
+    assert gate.should_emit("SNARE", 1040) is True
+
+
+def test_zone_hit_gate_does_not_block_other_zones() -> None:
+    gate = ZoneHitGate(cooldown_ms=40)
+    assert gate.should_emit("SNARE", 1000) is True
+    assert gate.should_emit("TOM", 1000) is True
 
 
 # ── Gesture routing ──────────────────────────────────────────────────

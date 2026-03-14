@@ -85,6 +85,14 @@ python main.py --model models/gesture_recognizer.task --midi-port RobOrchestra_S
 python main.py --model models/gesture_recognizer.task --midi-port RobOrchestra --serial-port /dev/ttyUSB0
 ```
 
+### Play a MuseScore-exported MIDI file (no camera required)
+
+Export your score from MuseScore as `.mid`, then play it to the bots:
+
+```bash
+python play_midi.py --file /path/to/score.mid --midi-port RobOrchestra
+```
+
 ### No preview window
 
 ```bash
@@ -124,6 +132,10 @@ number of connected bots, and each section is labeled with its bot/zone name.
 |------|-------------|
 | `--model PATH` | Path to `gesture_recognizer.task` |
 | `--camera-index N` | OpenCV camera index (default: 0) |
+| `--camera-width N` | Camera frame width (default: 1280) |
+| `--camera-height N` | Camera frame height (default: 720) |
+| `--camera-fps N` | Camera target FPS (default: 30) |
+| `--no-mirror` | Disable horizontal mirroring (mirroring is enabled by default) |
 | `--midi-port NAME` | MIDI output port name or substring (opens all matches) |
 | `--midi-channel N` | MIDI channel 1-16 (default: 10) |
 | `--midi-note-off` | Also send immediate `note_off` after each hit note |
@@ -167,7 +179,9 @@ Controls:
 
 Defaults are in `config.py` (`AppConfig`):
 
+- Camera behavior: `mirror_enabled`
 - Hit detection: `hit_min_travel`, `hit_velocity_threshold`, `hit_cooldown_ms`
+- Duplicate suppression: `hit_zone_cooldown_ms` (short per-zone anti-double-trigger window)
 - Zone boundaries: `zone_edges`
 - Gesture command cooldown: `gesture_command_cooldown_ms`
 - Zone-note mapping: `midi_zone_notes`

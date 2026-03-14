@@ -118,23 +118,34 @@ class MidiClient:
             return []
         return list(mido.get_output_names())
 
+    @staticmethod
+    def list_input_ports() -> list[str]:
+        if mido is None:
+            return []
+        return list(mido.get_input_names())
+
     def send_note_on(self, note: int, velocity_normalized: float) -> int:
         if not self._ports:
             return 0
         vel = min(max(int(round(velocity_normalized * 127.0)), 1), 127)
         msg = mido.Message("note_on", channel=self._channel, note=min(max(int(note), 0), 127), velocity=vel)
-        return self._send(msg)
+        return self.send_message(msg)
 
     def send_note_off(self, note: int) -> int:
         if not self._ports:
             return 0
         msg = mido.Message("note_off", channel=self._channel, note=min(max(int(note), 0), 127), velocity=0)
-        return self._send(msg)
+        return self.send_message(msg)
 
     def send_control_change(self, control: int, value: int) -> int:
         if not self._ports:
             return 0
         msg = mido.Message("control_change", channel=self._channel, control=min(max(int(control), 0), 127), value=min(max(int(value), 0), 127))
+        return self.send_message(msg)
+
+    def send_message(self, msg: Any) -> int:
+        if not self._ports:
+            return 0
         return self._send(msg)
 
     def _send(self, msg: Any) -> int:

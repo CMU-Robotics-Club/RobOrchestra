@@ -23,6 +23,8 @@ class Camera:
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, self._width)
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self._height)
         capture.set(cv2.CAP_PROP_FPS, self._fps)
+        if hasattr(cv2, "CAP_PROP_BUFFERSIZE"):
+            capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         if not capture.isOpened():
             capture.release()

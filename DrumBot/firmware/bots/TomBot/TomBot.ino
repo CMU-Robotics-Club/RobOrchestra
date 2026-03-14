@@ -27,9 +27,9 @@ static bool shouldTrigger(uint8_t note) {
 
 static constexpr Config TOM_CONFIG = {
     .numServos = 2,
-    .servoPins = {5, 4},
+    .servoPins = {5, 6},
     .pwmChannels = {0, 1},
-    .upUs = {1500, 1700},
+    .upUs = {1640, 1460},
     .servoPwmFreq = 50,
     .servoPwmBits = 14,
     .requireCh10 = false,
