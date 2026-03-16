@@ -31,6 +31,7 @@ int globalVolume = 50; //melody note volume
 double legato = 0.5;
 double lenmult = 1; //Note length multiplier (to speed up/slow down output)
 boolean sendNoteOffCommands = true;
+boolean simulateXylobotRange = true; //Takes channel 1 up/down octaves to fit Xylobot range
 
 //Length of Markov chain states. Smaller number means more random. Really big numbers (on the order of the file size) can lead to errors
 int stateLength = 1000  ; //INPUT
@@ -54,8 +55,8 @@ void setup(){
   
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 3);  
-  compBus = new MidiBus(this, 0, 3);  
+  myBus = new MidiBus(this, 0, 2);  
+  compBus = new MidiBus(this, 0, 4);  
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("twinkle_twinkle_melody.mid")); //INPUT
@@ -63,7 +64,8 @@ void setup(){
   //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("jingle_bells-2.mid")); //INPUT
-  File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
+  File myFile = new File(dataPath("AnotherOneBitesTheDust.mid")); //INPUT
   //File myFile = new File(dataPath("WWRY3.mid")); //INPUT
   
   try{
@@ -119,7 +121,14 @@ void draw(){
                   int octave = (key / 12)-1;
                   int note = key % 12;
                   
-                  Note n = new Note(sm.getChannel(), sm.getData1(), sm.getData2());
+                  //Xylobot range simulator
+                  int pitch = sm.getData1();
+                  if (simulateXylobotRange && sm.getChannel() == 0) {
+                    while (pitch < 60) pitch+=12;
+                    while (pitch > 74) pitch-=12;
+                  }
+                  
+                  Note n = new Note(sm.getChannel(), pitch, sm.getData2());
                   if(sm.getData2() > 0){ //Make sure you're not just setting the velocity to 0...
                     //key is the numerical value for the pitch
                     

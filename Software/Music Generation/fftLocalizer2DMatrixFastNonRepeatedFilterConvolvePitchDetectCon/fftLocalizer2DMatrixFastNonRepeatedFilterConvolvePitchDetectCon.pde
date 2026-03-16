@@ -26,7 +26,8 @@ boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a ke
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-String fileName = "WWRY3.mid";
+//String fileName = "WWRY3.mid";
+String fileName = "AnotherOneBitesTheDust.mid";
 //String fileName = "callresponsetest3.mid";
 //String fileName = "AuldLangSyne2.mid";
 //String fileName = "boat1.mid";
@@ -201,6 +202,7 @@ void setup()
   
   
   notes = nArr.notes.get(playHarmony);
+
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
   println("harmony size: " + notes.size());
 

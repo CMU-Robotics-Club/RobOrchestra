@@ -154,11 +154,13 @@ void setup() {
   
   // playMIDIConduct
   shouldRead = true;
+   print("Arduino stuff");
    printArray(Serial.list());
    String[] devs = Serial.list();
    //int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[4], 115200); //9600 for chromatic, 115200 for theremin 
+   mySerial = new Serial( this, devs[6], 115200); //9600 for chromatic, 115200 for theremin 
    // unplug everything besides camera arduino to figure out ports
+   //Looking for something like "/dev/tty.usbmodem141201" in the printout
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   
