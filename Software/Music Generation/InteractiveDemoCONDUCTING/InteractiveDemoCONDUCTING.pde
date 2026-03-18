@@ -29,8 +29,8 @@ Slider[] noteSliders = {};
 
 int scale = 2;
 
-int snarePitchMIDI = 36;
-int tomPitchMIDI = 37;
+int snarePitchMIDI = 38;
+int tomPitchMIDI = 45;
 int channel = 0;
 int perc_channel = 1;
 int velocity = 100; 
