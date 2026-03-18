@@ -26,8 +26,9 @@ boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a ke
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-//String fileName = "WWRY3.mid";
-String fileName = "AnotherOneBitesTheDust.mid";
+String fileName = "WWRY3.mid";
+//String fileName = "AnotherOneBitesTheDust.mid";
+//String fileName = "Mars3.mid";
 //String fileName = "callresponsetest3.mid";
 //String fileName = "AuldLangSyne2.mid";
 //String fileName = "boat1.mid";
