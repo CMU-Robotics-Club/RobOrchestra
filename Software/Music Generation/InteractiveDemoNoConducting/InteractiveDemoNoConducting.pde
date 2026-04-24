@@ -4,6 +4,7 @@ import themidibus.*;
 ControlP5 cp5;
 MidiBus myBus;
 MidiBus myBusBT;
+MidiBus myBusBT2;
 
 Button melodyLabel;
 Button harmonyLabel;
@@ -134,7 +135,9 @@ void setup() {
   surface.setSize(380 * scale, 278 * scale); //Takes variables, changes window size but apparently not controlP5 responsive area
   cp5 = new ControlP5(this);
   myBus = new MidiBus(this, 0, 3);
-  myBusBT = new MidiBus(this, 0, 2); //Second MidiBus, plays same notes as first MidiBus but should point to whatever we're sending to the Bluetooth drums
+  myBusBT = new MidiBus(this, 0, 4); //Second MidiBus, plays same notes as first MidiBus but should point to whatever we're sending to the Bluetooth drums
+  myBusBT2 = new MidiBus(this, 0, 5); //Second MidiBus, plays same notes as first MidiBus but should point to whatever we're sending to the Bluetooth drums
+
   MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
@@ -325,12 +328,14 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
   if(snarePlay <= snareThresh) {
     myBus.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
     myBusBT.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
+    myBusBT2.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
 }
    
   delay(2); //TODO I don't know why this is here, might've been lag compensation in which case retune. Leaving for now
   if(tomPlay <= tomThresh) {
     myBus.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
     myBusBT.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
+    myBusBT2.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
   }
     
   delay(2); //TODO I don't know why this is here, might've been lag compensation in which case retune. Leaving for now
@@ -359,6 +364,7 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
     toneToPlay = tonic + scaleOffsets[curScale][curSubScale][toneIndex];
     myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
     myBusBT.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
+    myBusBT2.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
     }      
   beatIndex = (beatIndex + 1) % measureLength;
   return toneIndex;

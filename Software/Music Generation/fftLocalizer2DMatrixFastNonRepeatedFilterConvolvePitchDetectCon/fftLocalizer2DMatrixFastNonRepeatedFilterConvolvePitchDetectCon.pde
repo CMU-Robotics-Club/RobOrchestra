@@ -14,9 +14,10 @@ import gab.opencv.*; //OpenCV for Processing
 import processing.video.*; //Video library for Processing X
 import java.awt.Rectangle;
 
-boolean hearNotes = false;
+boolean hearNotes = true;
 boolean watchConductor = false;
 boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
+boolean simulateXylobotRange = false; //Mod by octaves to get to Xylobot range (60-74). NOT NEEDED WHEN USING XYLOBOT, Xylobot's low-level code does this itself
 
 //String fileName = "twinkle_twinkle_xylo.mid";
 //String fileName = "GoC.mid";
@@ -26,22 +27,19 @@ boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a ke
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-String fileName = "WWRY3.mid";
+//String fileName = "WWRY3.mid";
 //String fileName = "AnotherOneBitesTheDust.mid";
 //String fileName = "Mars3.mid";
 //String fileName = "callresponsetest3.mid";
 //String fileName = "AuldLangSyne2.mid";
 //String fileName = "boat1.mid";
 
-int playHarmony = 0;
-double beatThreshScale = 0.7;
-double minBeatThresh = 0.5; //0.08;
-double beatThresh = 0.01; //Amplitude threshold to be considered a beat. NEED TO TUNE THIS when testing in new environment/with Xylobot (also adjust down SimpleSynth volume if necessary)
-//Want to automatically adjust this based on background volume
-//Median is just bad (probably more non-beats than beats, so it'll be too low)
-//Mean is maybe okay, probably want a little higher
-//Really need to also make sure we don't pick up ourself, though hopefully a mean thing will catch that
-//Pretty sure we can just keep a bunch of recent measurements and gradually forget the old stuff. Will this forget how loud we are???
+String fileName = "VivaLaVida.mid";
+
+int playHarmony = 0; //0 to play melody line (track 0), 1 to play harmony line (track 1)
+
+double beatThresh = 0.01; //Tunes itself based on ambient noise, DO NOT TOUCH
+double minBeatThresh = 0.5; //0.08; //Absolute minimum volume to be considered a beat, shouldn't need to touch this much
 
 double measureRange = 0.5;
 // how many measures we see on each side of current bucket
@@ -51,11 +49,12 @@ int bucketsPerRhythm = 96; //Pick something reasonably large (but not so large t
 // rhythmPattern.size() = bucketsPerRhythm + 1
 int bucketsPerMeasure = (int) (bucketsPerRhythm/measureRange)/2; // dont touch, changed to line up w/ bucketsPerRhythm
 //
-int nTempoBuckets = 36; //Same idea
+int nTempoBuckets = 72; //Same idea
 
 //Upper and lower bounds on tempo.
-int minBPM = 60;
-int maxBPM = 120;
+//These are multipliers on whatever tempo's set in the MIDI file
+float minBPMmult = 0.5;
+float maxBPMmult = 2.0;
 
 //We'll compute these
 float minMsPerRhythm;
@@ -192,7 +191,7 @@ void setup()
   //in2.enableMonitoring();
 
 
-  myBus = new MidiBus(this, 0, 2);
+  myBus = new MidiBus(this, 0, 3);
   MidiBus.list();
 
   
@@ -203,9 +202,13 @@ void setup()
   
   
   notes = nArr.notes.get(playHarmony);
+  float minBPM = (float)nArr.BPM * minBPMmult;
+  float maxBPM = (float)nArr.BPM * maxBPMmult;
 
   println("melody size: " + nArr.notes.get(1-playHarmony).size());
   println("harmony size: " + notes.size());
+  
+  
 
   //rhythmPattern = sublist(nArr.notes.get(0), (int) (bucket - bucketsPerRhythm * 0.5), (int) (bucket + bucketsPerRhythm * 0.5));
 
@@ -670,6 +673,14 @@ void draw()
       //println(pitch);
       for (Integer ppitch : pitch) {
         if (ppitch > 0) {
+          if(simulateXylobotRange){
+            while(ppitch < 60){
+              ppitch += 12;
+            }
+            while(ppitch > 74){
+              ppitch -= 12;
+            }
+          }
           myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
         }
       }

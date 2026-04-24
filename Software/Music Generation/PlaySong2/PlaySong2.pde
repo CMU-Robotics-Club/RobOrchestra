@@ -25,6 +25,7 @@ public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#",
 
 MidiBus myBus; //Creates a MidiBus object
 MidiBus compBus; //Creates a MidiBus object
+MidiBus compBus2; //Creates a MidiBus object
 int channel = 1; //set channel. 0 for speakers
 int globalVolume = 50; //melody note volume
 
@@ -55,17 +56,19 @@ void setup(){
   
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 2);  
-  compBus = new MidiBus(this, 0, 4);  
+  myBus = new MidiBus(this, 0, 3);  
+  compBus = new MidiBus(this, 0, 4);
+  compBus2 = new MidiBus(this, 0, 5); 
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("twinkle_twinkle_melody.mid")); //INPUT
-  //File myFile = new File(dataPath("Megalovania.mid")); //INPUT
-  //File myFile = new File(dataPath("StarWarsMainTheme?.mid")); //INPUT
+  File myFile = new File(dataPath("Megalovania.mid")); //INPUT
+  //File myFile = new File(dataPath("StarWarsMainThemeMaybe.mid")); //INPUT
   //File myFile = new File(dataPath("auldlangsyne.mid")); //INPUT
   //File myFile = new File(dataPath("jingle_bells-2.mid")); //INPUT
   //File myFile = new File(dataPath("pokemon_theme.mid")); //INPUT
-  File myFile = new File(dataPath("AnotherOneBitesTheDust.mid")); //INPUT
+  //File myFile = new File(dataPath("AnotherOneBitesTheDust2.mid")); //INPUT
+  //File myFile = new File(dataPath("Mars3.mid")); //INPUT
   //File myFile = new File(dataPath("WWRY3.mid")); //INPUT
   
   try{
@@ -136,11 +139,13 @@ void draw(){
                     
                     myBus.sendNoteOn(n);
                     compBus.sendNoteOn(n);
+                    compBus2.sendNoteOn(n);
                   }
                   else{
                     //Note is actually 0 velocity
                     myBus.sendNoteOff(n);
                     compBus.sendNoteOff(n);
+                    compBus2.sendNoteOff(n);
                   }
                   
                   //Print stuff
@@ -151,6 +156,7 @@ void draw(){
                   Note n = new Note(sm.getChannel(), sm.getData1(), sm.getData2());
                   myBus.sendNoteOff(n);
                   compBus.sendNoteOff(n);
+                  compBus2.sendNoteOff(n);
                   //int key = sm.getData1();
                   //int octave = (key / 12)-1;
                   //int note = key % 12;

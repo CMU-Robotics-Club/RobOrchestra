@@ -35,7 +35,7 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, 0, 1); //Creates bus to send MIDI data to xylobot
+  myBus = new MidiBus(this, 0, 4); //Creates bus to send MIDI data to xylobot
 }
 
 void draw() {
@@ -59,6 +59,8 @@ void draw() {
               myBus.sendNoteOn(mynote);
               pitch++;
               if (pitch > maxpitch){pitch = 60;}
+              
+              System.out.println("test");
                 
          }
     }
