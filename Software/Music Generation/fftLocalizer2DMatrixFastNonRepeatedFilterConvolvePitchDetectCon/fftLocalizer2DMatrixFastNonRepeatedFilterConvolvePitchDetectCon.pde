@@ -27,14 +27,15 @@ boolean simulateXylobotRange = false; //Mod by octaves to get to Xylobot range (
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-//String fileName = "WWRY3.mid";
+String fileName = "WWRY3.mid";
 //String fileName = "AnotherOneBitesTheDust.mid";
 //String fileName = "Mars3.mid";
 //String fileName = "callresponsetest3.mid";
 //String fileName = "AuldLangSyne2.mid";
 //String fileName = "boat1.mid";
 
-String fileName = "VivaLaVida.mid";
+//String fileName = "VivaLaVida.mid";
+//String fileName = "VivaLaVidaSimple.mid";
 
 int playHarmony = 0; //0 to play melody line (track 0), 1 to play harmony line (track 1)
 
@@ -64,7 +65,7 @@ float maxMsPerRhythm;
 double beatprobamp = 3; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/16.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
