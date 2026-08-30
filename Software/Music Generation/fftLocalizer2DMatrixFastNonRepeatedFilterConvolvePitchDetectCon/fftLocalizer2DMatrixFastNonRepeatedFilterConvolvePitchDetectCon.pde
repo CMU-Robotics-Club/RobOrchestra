@@ -98,6 +98,7 @@ AudioIn in; //Raw sound input
 PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but we might use this eventually to grab pitch info from a human
 Amplitude amp; //Get amplitudes from input
 MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
+MidiBus compBus; //Pass MIDI to instruments/SimpleSynth
 FFT fft;
 int num_bands = 1024;
 int timeSize = num_bands;
@@ -192,6 +193,7 @@ void setup()
 
 
   myBus = new MidiBus(this, 0, 3);
+  compBus = new MidiBus(this, 0, 4);
   MidiBus.list();
 
   
@@ -665,6 +667,7 @@ void draw()
         if (ppitch > 0) {
 
           myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          compBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
         }
       }
 
@@ -682,6 +685,7 @@ void draw()
             }
           }
           myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          compBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
         }
       }
       lastPlayedTime = millis();
@@ -799,6 +803,7 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
       for (Integer ppitch : played) {
         if (ppitch > 0) {
           myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          compBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
         }
       }
       //Start new note
@@ -806,6 +811,7 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
       for (Integer ppitch : rhythmPattern.get(i)) {
         if (ppitch > 0) {
           myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          compBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
         }
       }
     }
