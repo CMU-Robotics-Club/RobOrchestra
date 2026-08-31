@@ -23,7 +23,7 @@ class AppConfig:
     hit_min_travel: float = 0.03
     hit_velocity_threshold: float = 1.0
     hit_cooldown_ms: int = 120
-    hit_velocity_cap: float = 5#2.5
+    hit_velocity_cap: float = 2.5
     zone_edges: tuple[float, ...] = (0.5,)
     zone_labels: tuple[str, ...] = ("SNARE", "TOM")
     midi_enabled: bool = True

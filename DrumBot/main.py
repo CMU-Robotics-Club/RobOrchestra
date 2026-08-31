@@ -145,10 +145,10 @@ def main() -> int:
         cooldown_ms=config.hit_cooldown_ms,
         velocity_cap=config.hit_velocity_cap,
     )
-    gesture_router = GestureRouter(
-        label_to_command=config.gesture_to_command,
-        cooldown_ms=config.gesture_command_cooldown_ms,
-    )
+    # gesture_router = GestureRouter(
+    #     label_to_command=config.gesture_to_command,
+    #     cooldown_ms=config.gesture_command_cooldown_ms,
+    # )
     serial_client = SerialClient(
         port=config.serial_port,
         baudrate=config.serial_baudrate,
@@ -208,7 +208,7 @@ def main() -> int:
                     hand_states=hand_states,
                     hit_detector=hit_detector,
                     zone_mapper=zone_mapper,
-                    gesture_router=gesture_router,
+                    #gesture_router=gesture_router,
                     dispatcher=dispatcher,
                 )
 
@@ -243,7 +243,7 @@ def _process_observation(
     hand_states: HandStateStore,
     hit_detector: HitDetector,
     zone_mapper: ZoneMapper,
-    gesture_router: GestureRouter,
+    #gesture_router: GestureRouter,
     dispatcher: EventDispatcher,
 ) -> None:
     """Process one recognizer snapshot."""
@@ -263,13 +263,14 @@ def _process_observation(
             zone = zone_mapper.zone_for_x(hit_event.x)
             dispatcher.emit_hit(zone, hit_event)
 
-        command_event = gesture_router.route(
-            label=hand.top_gesture,
-            handedness=hand.handedness,
-            timestamp_ms=observation.timestamp_ms,
-        )
-        if command_event is not None:
-            dispatcher.emit_command(command_event)
+        # command_event = gesture_router.route(
+        #     label=hand.top_gesture,
+        #     handedness=hand.handedness,
+        #     timestamp_ms=observation.timestamp_ms,
+        # )
+        
+        # if command_event is not None:
+        #     dispatcher.emit_command(command_event)
 
 
 def _state_id_for_hand(handedness: str, fallback_id: int) -> int:
