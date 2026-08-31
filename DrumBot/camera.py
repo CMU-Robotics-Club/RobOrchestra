@@ -35,7 +35,18 @@ class Camera:
 
         if self._capture is None:
             raise RuntimeError("Camera is not started")
-        return self._capture.read()
+        ret, frame = self._capture.read()
+        if not ret:
+            return
+
+        #frame = cv2.flip(frame, 1) #Flip frame horizontally
+
+        #Downsample
+        width = int(frame.shape[1] * 0.25)
+        height = int(frame.shape[0] * 0.25)
+        frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+
+        return (ret, frame)
 
     def close(self) -> None:
         """Release the camera resource."""

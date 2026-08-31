@@ -71,6 +71,9 @@ This opens every MIDI port containing `RobOrchestra` and fans out all notes to b
 
 If `--midi-port` is omitted, the app auto-selects all ports containing `RobOrchestra` or `DrumBot`.
 
+### Testing with SimpleSynth
+python main.py --model models/gesture_recognizer.task --midi-port SimpleSynth --no-serial
+
 ### Single bot only
 
 Target a specific bot by full name:

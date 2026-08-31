@@ -12,18 +12,18 @@ class AppConfig:
     """Runtime configuration values."""
 
     camera_index: int = 0
-    camera_width: int = 1280
+    camera_width: int = 1280 #TODO not sure these change anything unless it's really small
     camera_height: int = 720
-    camera_fps: int = 30
+    camera_fps: int = 30 #Turning this down causes motion blur, thus bad tracking
     max_hands: int = 2
     gesture_model_path: Path = Path("models/gesture_recognizer.task")
     gesture_score_threshold: float = 0.55
-    gesture_command_cooldown_ms: int = 900
-    hit_history_size: int = 8
+    gesture_command_cooldown_ms: int = 0#900
+    hit_history_size: int = 2#8
     hit_min_travel: float = 0.03
     hit_velocity_threshold: float = 1.0
     hit_cooldown_ms: int = 120
-    hit_velocity_cap: float = 2.5
+    hit_velocity_cap: float = 5#2.5
     zone_edges: tuple[float, ...] = (0.5,)
     zone_labels: tuple[str, ...] = ("SNARE", "TOM")
     midi_enabled: bool = True
