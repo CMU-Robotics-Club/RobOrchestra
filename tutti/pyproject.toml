@@ -1,0 +1,34 @@
+[project]
+name = "tutti"
+version = "0.1.0"
+description = "Control software for the RoboOrchestra robotic instrument ensemble"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "mido>=1.3.2",
+    "python-rtmidi>=1.5.8",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+audio = ["sounddevice>=0.4.7"]
+serial = ["pyserial>=3.5"]
+gui = ["PySide6>=6.6"]
+# mediapipe 1.x aborts in its Metal delegate on macOS at graph start;
+# the 0.10 line is what the DrumBot pipeline is tuned against.
+gesture = ["opencv-python>=4.9.0", "mediapipe>=0.10.14,<1.0"]
+
+[project.scripts]
+tutti = "tutti.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=7.4"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tutti"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

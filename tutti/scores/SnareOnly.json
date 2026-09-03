@@ -1,0 +1,7 @@
+{
+  "song": "SnareOnly",
+  "midi": "../../Software/Songs/ThinkingOutLoud.mid",
+  "parts": [
+    {"part_id": 1, "role": "snare", "track": 4, "notes": [38]}
+  ]
+}
