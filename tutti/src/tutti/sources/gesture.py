@@ -312,12 +312,10 @@ class GestureSource(Source):
                         frame=frame,
                         observation=observation,
                         recent_commands=(),
-                        recent_hits=tuple(
-                            f"{r.bot_id} {r.note}" for r in list(self._ensemble.recent)[-4:] if r.ok),
+                        recent_hits=self._overlay_recent(),
                         zone_edges=self._zone_edges,
                         zone_labels=self._zone_labels,
-                        status_line=(f"hits={self.strikes} dropped={self._ensemble.dropped} "
-                                     f"latency={self.latency_ms_mean:.0f}ms"),
+                        status_line=self._overlay_status(),
                     )
                     with self._frame_lock:
                         self._display_frame = shown
@@ -330,6 +328,15 @@ class GestureSource(Source):
             self._stop.set()
         finally:
             self._running.set()
+
+    def _overlay_recent(self) -> tuple[str, ...]:
+        """The last few things the ensemble did, for the preview window."""
+        return tuple(f"{r.bot_id} {r.note}" for r in list(self._ensemble.recent)[-4:] if r.ok)
+
+    def _overlay_status(self) -> str:
+        """The line along the bottom of the preview window."""
+        return (f"hits={self.strikes} dropped={self._ensemble.dropped} "
+                f"latency={self.latency_ms_mean:.0f}ms")
 
     def stop(self) -> None:
         self._stop.set()

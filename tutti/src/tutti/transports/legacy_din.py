@@ -20,6 +20,13 @@ Two things it does better than the Processing sketches it replaces:
   twice to dodge buffer collisions, which bakes about 4 ms of skew into every
   beat. DIN costs 0.96 ms per note-on and that is unavoidable, but there is no
   reason to add to it.
+
+It also drives more than one port at once. The ESP32 bots each show up as
+their own Bluetooth MIDI port on macOS, and the old xylophone hangs off a USB
+adapter, so one stage is three ports. Every port matching any requested name
+is opened, and a hit goes to the ports whose name mentions its bot's role —
+the snare's hits to RobOrchestra_Snare — or, when no name says, to all of
+them, which is safe because every board ignores notes that are not its own.
 """
 
 from __future__ import annotations
@@ -48,6 +55,8 @@ DEFAULT_VELOCITY = 100
 # where it does least damage.
 ROLE_ORDER = {"bass": 0, "kick": 0, "tom": 1, "snare": 2, "xylo": 3}
 
+PORT_HINTS = ("usb-midi", "usb midi", "roborchestra", "arduino")
+
 
 class LegacyDinTransport(Transport):
     """Sends plain MIDI to bots that cannot schedule anything themselves."""
@@ -57,7 +66,7 @@ class LegacyDinTransport(Transport):
     def __init__(
         self,
         instruments: dict[str, Instrument],
-        port_name: str | None = None,
+        port_name: str | Iterable[str] | None = None,
         port=None,
         note_map: dict[str, dict[int, int]] | None = None,
         channels: dict[str, int] | None = None,
@@ -69,8 +78,11 @@ class LegacyDinTransport(Transport):
         self._note_map = note_map or {}
         self._channels = channels or {}
         self._requested_port = port_name
-        self._port = port
-        self._owns_port = port is None
+        # name -> open port. An injected port is the caller's and is never
+        # closed here; opened ones are.
+        self._ports: dict[str, object] = {} if port is None else {"port": port}
+        self._owned: list[str] = []
+        self._routes: dict[str, tuple[str, ...]] = {}
         self._lookahead_s = lookahead_s
         self._send_velocity = send_velocity
         self._clock = clock
@@ -108,26 +120,61 @@ class LegacyDinTransport(Transport):
 
     @staticmethod
     def resolve_port(available: list[str], requested: str | None) -> str | None:
-        """Match a port by exact name, then by substring, case insensitively.
+        """Match one port by exact name, then by substring, case insensitively.
 
         Replaces picking a device by index, which is the single most common way
         a rehearsal starts twenty minutes late.
         """
+        names = LegacyDinTransport.resolve_ports(available, requested)
+        return names[0] if names else None
+
+    @staticmethod
+    def resolve_ports(available: list[str], requested: str | Iterable[str] | None) -> list[str]:
+        """Every port any requested name picks out, in the order they were listed.
+
+        An exact name is that port alone. A substring is every port it
+        matches, which is what lets one word open both Bluetooth drums. With
+        nothing requested the first likely-looking port is used.
+        """
         if not available:
-            return None
-        if requested:
-            if requested in available:
-                return requested
-            lowered = requested.lower()
-            for name in available:
-                if lowered in name.lower():
-                    return name
-            return None
-        for hint in ("usb-midi", "usb midi", "roborchestra", "arduino"):
-            for name in available:
-                if hint in name.lower():
-                    return name
-        return available[0]
+            return []
+        if requested is None:
+            for hint in PORT_HINTS:
+                for name in available:
+                    if hint in name.lower():
+                        return [name]
+            return [available[0]]
+        wanted = [requested] if isinstance(requested, str) else list(requested)
+        found: list[str] = []
+        for request in wanted:
+            if request in available:
+                matches = [request]
+            else:
+                lowered = request.lower()
+                matches = [name for name in available if lowered in name.lower()]
+            for name in matches:
+                if name not in found:
+                    found.append(name)
+        return found
+
+    def routes(self, port_names: Iterable[str]) -> dict[str, tuple[str, ...]]:
+        """Which ports each bot's hits go to.
+
+        The ports whose name mentions the bot's role or id, if any; otherwise
+        all of them. A port named for one bot never carries another bot's
+        hits, so nothing on the snare's link is ever the tom's traffic.
+        """
+        names = list(port_names)
+        routes: dict[str, tuple[str, ...]] = {}
+        for bot_id, inst in self._instruments.items():
+            keys = (inst.role.lower(), bot_id.lower())
+            own = tuple(n for n in names if any(k in n.lower() for k in keys))
+            routes[bot_id] = own or tuple(names)
+        return routes
+
+    @property
+    def port_names(self) -> tuple[str, ...]:
+        return tuple(self._ports)
 
     # timing
 
@@ -177,18 +224,21 @@ class LegacyDinTransport(Transport):
     def start(self) -> None:
         if self._thread is not None:
             return
-        if self._port is None:
+        if not self._ports:
             import mido
 
             available = self.list_ports()
-            name = self.resolve_port(available, self._requested_port)
-            if name is None:
+            names = self.resolve_ports(available, self._requested_port)
+            if not names:
                 raise RuntimeError(
                     f"no MIDI output matched {self._requested_port!r}. "
                     f"Available: {', '.join(available) or 'none'}"
                 )
-            self._port = mido.open_output(name)
-            logger.info("legacy_din using MIDI output %s", name)
+            for name in names:
+                self._ports[name] = mido.open_output(name)
+                self._owned.append(name)
+            logger.info("legacy_din using MIDI output(s) %s", ", ".join(names))
+        self._routes = self.routes(self._ports)
 
         self._origin = (self._clock or time.monotonic)() + self.lead_in_s
         self._stop.clear()
@@ -237,31 +287,36 @@ class LegacyDinTransport(Transport):
             self._wake.clear()
 
     def _emit(self, hit: ScheduledHit) -> None:
-        if self._port is None:
+        if not self._ports:
             return
         import mido
 
         velocity = hit.velocity if self._send_velocity else DEFAULT_VELOCITY
-        self._port.send(mido.Message(
+        message = mido.Message(
             "note_on",
             channel=self.wire_channel(hit),
             note=self.wire_note(hit),
             velocity=max(1, min(127, velocity)),
-        ))
+        )
+        for name in self._routes.get(hit.bot_id, tuple(self._ports)):
+            port = self._ports.get(name)
+            if port is not None:
+                port.send(message)
         self.sent += 1
 
     def panic(self) -> None:
         """Silence everything. Safe to call at any time, including on the way out."""
-        if self._port is None:
+        if not self._ports:
             return
         import mido
 
-        for channel in range(16):
-            try:
-                self._port.send(mido.Message("control_change", channel=channel,
-                                             control=123, value=0))
-            except Exception:
-                logger.warning("panic failed on channel %s", channel, exc_info=True)
+        for port in self._ports.values():
+            for channel in range(16):
+                try:
+                    port.send(mido.Message("control_change", channel=channel,
+                                           control=123, value=0))
+                except Exception:
+                    logger.warning("panic failed on channel %s", channel, exc_info=True)
 
     def close(self) -> None:
         self._stop.set()
@@ -271,9 +326,12 @@ class LegacyDinTransport(Transport):
             self._thread.join(timeout=2.0)
             self._thread = None
         self.panic()
-        if self._port is not None and self._owns_port:
-            self._port.close()
-        self._port = None
+        for name in self._owned:
+            port = self._ports.pop(name, None)
+            if port is not None:
+                port.close()
+        self._owned = []
+        self._ports = {}
 
     @property
     def pending(self) -> int:

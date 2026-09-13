@@ -50,9 +50,18 @@ def tom(sample_rate: int, base_hz: float = 110.0, duration: float = 0.40) -> np.
 
 
 def kick(sample_rate: int, base_hz: float = 52.0, duration: float = 0.32) -> np.ndarray:
+    """A thump with a beater click on the front.
+
+    The fundamental sits where small speakers give up, so the click and a
+    faster-decaying octave above carry the attack; without them a kick on a
+    laptop is a soft nothing and the groove's first beat goes missing.
+    """
     t = np.arange(int(sample_rate * duration)) / sample_rate
     tone = _pitch_drop(t, base_hz, depth=3.2, rate=42.0, sample_rate=sample_rate)
-    return _normalise(tone * np.exp(-t * 11.0))
+    octave = _pitch_drop(t, base_hz * 2.0, depth=3.2, rate=42.0, sample_rate=sample_rate)
+    rng = np.random.default_rng(seed=4)
+    click = rng.standard_normal(t.size) * 0.35 * np.exp(-t * 500.0)
+    return _normalise((tone + 0.4 * octave * np.exp(-t * 25.0) + click) * np.exp(-t * 11.0))
 
 
 def mallet(sample_rate: int, note: int, duration: float = 0.65) -> np.ndarray:
@@ -80,6 +89,11 @@ def for_role(role: str, note: int, sample_rate: int) -> np.ndarray:
     if role == "snare":
         return snare(sample_rate)
     if role == "tom":
+        # The tom bot plays the bass drum's notes on its one drum; on the
+        # speakers the two are told apart, so a listener can hear which
+        # beats are the backbone and which are the decoration.
+        if note in (35, 36):
+            return kick(sample_rate)
         return tom(sample_rate, base_hz=note_hz(max(note, 36)) * 2.0)
     if role in ("bass", "kick"):
         return kick(sample_rate)

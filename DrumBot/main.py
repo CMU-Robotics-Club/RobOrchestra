@@ -15,11 +15,54 @@ import cv2
 
 from camera import Camera
 from config import AppConfig
-from tracking import CommandEvent, GestureRouter, HandStateStore, HitDetector, HitEvent, ZoneHitGate, ZoneMapper
+from tracking import (
+    CommandEvent,
+    GestureRouter,
+    HandStateStore,
+    HitDetector,
+    HitEvent,
+    StrikeDetector,
+    StrikePlaneEstimator,
+    ZoneHitGate,
+    ZoneMapper,
+)
 from transport import CommandMessage, HitMessage, MidiClient, SerialClient
 from vision import FrameObservation, GestureEngine, HandObservation, draw_overlay
 
 logger = logging.getLogger(__name__)
+
+
+class LatencyMonitor:
+    """Track capture-to-dispatch latency and pipeline throughput."""
+
+    def __init__(self, window: int = 240) -> None:
+        self._samples_ms: deque[float] = deque(maxlen=window)
+        self.observations_processed = 0
+        self.hits_emitted = 0
+        self.hits_suppressed = 0
+
+    def record(self, captured_at_s: float, now_s: float) -> None:
+        if captured_at_s <= 0.0:
+            return
+        self._samples_ms.append((now_s - captured_at_s) * 1000.0)
+
+    def summary(self) -> str:
+        if not self._samples_ms:
+            return "pipeline latency: (no samples)"
+        ordered = sorted(self._samples_ms)
+        mean = sum(ordered) / len(ordered)
+        p50 = ordered[len(ordered) // 2]
+        p95 = ordered[min(int(len(ordered) * 0.95), len(ordered) - 1)]
+        return (
+            f"capture->dispatch mean={mean:.1f}ms p50={p50:.1f}ms "
+            f"p95={p95:.1f}ms max={ordered[-1]:.1f}ms"
+        )
+
+    @property
+    def mean_ms(self) -> float:
+        if not self._samples_ms:
+            return 0.0
+        return sum(self._samples_ms) / len(self._samples_ms)
 
 
 @dataclass
@@ -54,7 +97,10 @@ class EventDispatcher:
                 self.midi_client.send_note_off(midi_note)
             if sent_to == 0:
                 logger.warning("MIDI note_on dropped (no active outputs). note=%s zone=%s", midi_note, zone)
-            logger.debug("sent MIDI note_on note=%s velocity=%.2f outputs=%s", midi_note, hit_event.velocity, sent_to)
+            logger.debug(
+                "sent MIDI note_on note=%s velocity=%.2f lead=%sms outputs=%s",
+                midi_note, hit_event.velocity, hit_event.lead_ms, sent_to,
+            )
         logger.debug("sent %s", line)
 
     def emit_command(self, command_event: CommandEvent) -> None:
@@ -83,9 +129,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--camera-width", type=int, default=defaults.camera_width, help="Camera frame width")
     parser.add_argument("--camera-height", type=int, default=defaults.camera_height, help="Camera frame height")
     parser.add_argument("--camera-fps", type=int, default=defaults.camera_fps, help="Camera target FPS")
+    parser.add_argument("--no-mjpg", action="store_true", help="Disable MJPG capture format request")
     parser.add_argument("--no-mirror", action="store_true", help="Disable horizontal mirroring")
     parser.add_argument("--no-display", action="store_true", help="Disable OpenCV preview window")
+    parser.add_argument("--display-every", type=int, default=defaults.display_every_n_frames, help="Render preview every Nth processed frame")
+    parser.add_argument("--stats", action="store_true", help="Print pipeline latency and throughput once per second")
     parser.add_argument("--log-level", type=str, default="INFO", help="Python logging level")
+
+    parser.add_argument("--detector", choices=("predictive", "legacy"), default=defaults.detector, help="Strike detection algorithm")
+    parser.add_argument("--latency-compensation-ms", type=int, default=defaults.latency_compensation_ms, help="Fire this far ahead of predicted impact")
+    parser.add_argument("--strike-landmark-mode", choices=("palm_centroid", "landmark"), default=defaults.strike_landmark_mode, help="Point whose motion defines a strike")
+    parser.add_argument("--strike-arm-velocity", type=float, default=defaults.strike_arm_velocity, help="Downward velocity that arms a stroke")
+    parser.add_argument("--strike-min-travel", type=float, default=defaults.strike_min_travel, help="Minimum stroke travel before firing")
+    parser.add_argument("--strike-refractory-ms", type=int, default=defaults.strike_refractory_ms, help="Hard floor between hits on one hand")
+    parser.add_argument("--strike-plane", type=float, default=None, help="Seed the strike plane (0-1 of frame height) instead of learning it")
+    parser.add_argument("--no-strike-acceleration", action="store_true", help="Use constant-velocity extrapolation only")
 
     parser.add_argument("--serial-port", type=str, default=None, help="Serial device path, e.g. /dev/ttyUSB0")
     parser.add_argument("--baudrate", type=int, default=defaults.serial_baudrate, help="Serial baudrate")
@@ -97,6 +155,71 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-midi", action="store_true", help="Disable MIDI output")
     parser.add_argument("--list-midi-ports", action="store_true", help="List available MIDI output ports and exit")
     return parser.parse_args()
+
+
+def _build_config(args: argparse.Namespace) -> AppConfig:
+    return replace(
+        AppConfig(),
+        gesture_model_path=args.model,
+        camera_index=args.camera_index,
+        camera_width=max(args.camera_width, 160),
+        camera_height=max(args.camera_height, 120),
+        camera_fps=max(args.camera_fps, 1),
+        camera_mjpg=not args.no_mjpg,
+        mirror_enabled=not args.no_mirror,
+        detector=args.detector,
+        latency_compensation_ms=max(args.latency_compensation_ms, 0),
+        strike_landmark_mode=args.strike_landmark_mode,
+        strike_arm_velocity=args.strike_arm_velocity,
+        strike_min_travel=args.strike_min_travel,
+        strike_refractory_ms=max(args.strike_refractory_ms, 0),
+        strike_plane_initial=args.strike_plane,
+        strike_use_acceleration=not args.no_strike_acceleration,
+        display_every_n_frames=max(args.display_every, 1),
+        serial_port=args.serial_port,
+        serial_baudrate=args.baudrate,
+        serial_enabled=not args.no_serial,
+        midi_enabled=not args.no_midi,
+        midi_port_name=args.midi_port,
+        midi_channel=min(max(args.midi_channel - 1, 0), 15),
+        midi_note_off_enabled=args.midi_note_off,
+    )
+
+
+def _build_detector(config: AppConfig) -> HitDetector | StrikeDetector:
+    if config.detector == "legacy":
+        logger.info("Strike detection: legacy velocity-threshold crossing")
+        return HitDetector(
+            min_travel=config.hit_min_travel,
+            velocity_threshold=config.hit_velocity_threshold,
+            cooldown_ms=config.hit_cooldown_ms,
+            velocity_cap=config.hit_velocity_cap,
+        )
+
+    logger.info(
+        "Strike detection: predictive time-to-contact (latency compensation %sms, landmark=%s)",
+        config.latency_compensation_ms, config.strike_landmark_mode,
+    )
+    return StrikeDetector(
+        latency_compensation_ms=config.latency_compensation_ms,
+        arm_velocity=config.strike_arm_velocity,
+        disarm_velocity=config.strike_disarm_velocity,
+        fallback_velocity=config.strike_fallback_velocity,
+        min_travel=config.strike_min_travel,
+        rearm_travel=config.strike_rearm_travel,
+        refractory_ms=config.strike_refractory_ms,
+        velocity_cap=config.hit_velocity_cap,
+        max_lookahead_ms=config.strike_max_lookahead_ms,
+        fit_window=config.strike_fit_window,
+        landmark_mode=config.strike_landmark_mode,
+        landmark_index=config.strike_landmark_index,
+        use_acceleration=config.strike_use_acceleration,
+        plane_estimator=StrikePlaneEstimator(
+            alpha=config.strike_plane_alpha,
+            initial=config.strike_plane_initial,
+            min_observations=config.strike_plane_min_observations,
+        ),
+    )
 
 
 def main() -> int:
@@ -118,41 +241,26 @@ def main() -> int:
             print(f"- {name}")
         return 0
 
-    config = replace(
-        AppConfig(),
-        gesture_model_path=args.model,
-        camera_index=args.camera_index,
-        camera_width=max(args.camera_width, 160),
-        camera_height=max(args.camera_height, 120),
-        camera_fps=max(args.camera_fps, 1),
-        mirror_enabled=not args.no_mirror,
-        serial_port=args.serial_port,
-        serial_baudrate=args.baudrate,
-        serial_enabled=not args.no_serial,
-        midi_enabled=not args.no_midi,
-        midi_port_name=args.midi_port,
-        midi_channel=min(max(args.midi_channel - 1, 0), 15),
-        midi_note_off_enabled=args.midi_note_off,
-    )
+    config = _build_config(args)
 
     camera = Camera(
         index=config.camera_index,
         width=config.camera_width,
         height=config.camera_height,
         fps=config.camera_fps,
+        use_mjpg=config.camera_mjpg,
     )
     gesture_engine = GestureEngine(
         model_path=config.gesture_model_path,
         max_hands=config.max_hands,
         gesture_score_threshold=config.gesture_score_threshold,
+        queue_size=config.result_queue_size,
     )
-    hand_states = HandStateStore(history_size=config.hit_history_size)
-    hit_detector = HitDetector(
-        min_travel=config.hit_min_travel,
-        velocity_threshold=config.hit_velocity_threshold,
-        cooldown_ms=config.hit_cooldown_ms,
-        velocity_cap=config.hit_velocity_cap,
+    hand_states = HandStateStore(
+        history_size=config.hit_history_size,
+        gap_reset_ms=config.hand_gap_reset_ms,
     )
+    detector = _build_detector(config)
     zone_hit_gate = ZoneHitGate(cooldown_ms=config.hit_zone_cooldown_ms)
     gesture_router = GestureRouter(
         label_to_command=config.gesture_to_command,
@@ -192,39 +300,65 @@ def main() -> int:
         recent_hits=recent_hits,
     )
 
-    last_processed_timestamp = -1
+    monitor = LatencyMonitor()
     observation: FrameObservation | None = None
+    last_submitted_ms = -1
+    processed_since_render = 0
+    next_stats_s = time.perf_counter() + 1.0
+
     camera.start()
-    logger.info("Pipeline started. Press q or ESC in the preview window to quit.")
+    logger.info("Pipeline started. Press q or ESC in the preview window to quit (Ctrl-C otherwise).")
 
     try:
         while True:
-            has_frame, frame = camera.read()
-            if not has_frame:
-                continue
-            if config.mirror_enabled:
-                frame = cv2.flip(frame, 1)
+            has_frame, frame, captured_at_s = camera.read_with_timestamp()
 
-            timestamp_ms = int(time.time() * 1000)
-            gesture_engine.submit(frame_bgr=frame, timestamp_ms=timestamp_ms)
-            latest = gesture_engine.get_latest()
-            if latest is not None:
-                observation = latest
+            if has_frame and frame is not None:
+                if config.mirror_enabled:
+                    frame = cv2.flip(frame, 1)
 
-            if observation is not None and observation.timestamp_ms != last_processed_timestamp:
-                last_processed_timestamp = observation.timestamp_ms
+                # MediaPipe LIVE_STREAM rejects non-increasing timestamps, and a
+                # wall clock can step backwards; perf_counter cannot.
+                timestamp_ms = max(int(time.perf_counter() * 1000.0), last_submitted_ms + 1)
+                last_submitted_ms = timestamp_ms
+                gesture_engine.submit(frame_bgr=frame, timestamp_ms=timestamp_ms, captured_at_s=captured_at_s)
+
+            # Process every observation. Skipping any of them would break the
+            # consecutive-sample motion estimate the detector depends on.
+            pending = gesture_engine.drain()
+            for pending_observation in pending:
+                observation = pending_observation
                 _process_observation(
-                    observation=observation,
+                    observation=pending_observation,
                     config=config,
                     hand_states=hand_states,
-                    hit_detector=hit_detector,
+                    detector=detector,
                     zone_hit_gate=zone_hit_gate,
                     zone_mapper=zone_mapper,
                     gesture_router=gesture_router,
                     dispatcher=dispatcher,
+                    monitor=monitor,
+                )
+                monitor.observations_processed += 1
+                monitor.record(pending_observation.captured_at_s, time.perf_counter())
+                processed_since_render += 1
+
+            now_s = time.perf_counter()
+            if args.stats and now_s >= next_stats_s:
+                next_stats_s = now_s + 1.0
+                stats = camera.stats
+                logger.info(
+                    "%s | camera %.1ffps (asked %s) captured=%s delivered=%s "
+                    "stale-dropped=%s (%.0f%%) queue-dropped=%s hits=%s suppressed=%s",
+                    monitor.summary(), stats.measured_fps, config.camera_fps,
+                    stats.frames_captured, stats.frames_delivered,
+                    stats.frames_dropped, stats.drop_ratio * 100.0,
+                    gesture_engine.dropped_results, monitor.hits_emitted, monitor.hits_suppressed,
                 )
 
-            if not args.no_display:
+            if not args.no_display and frame is not None and processed_since_render >= config.display_every_n_frames:
+                processed_since_render = 0
+                plane = detector.plane_estimator.global_plane if isinstance(detector, StrikeDetector) else None
                 frame_to_show = draw_overlay(
                     frame=frame,
                     observation=observation,
@@ -232,14 +366,21 @@ def main() -> int:
                     recent_hits=tuple(recent_hits),
                     zone_edges=zone_edges,
                     zone_labels=zone_labels,
+                    strike_plane=plane,
+                    status_line=f"{monitor.summary()}  hits={monitor.hits_emitted}",
                 )
                 cv2.imshow(config.display_window_name, frame_to_show)
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), 27):
                     break
+
+            if not has_frame and not pending:
+                # Nothing to do; yield rather than spinning a core.
+                time.sleep(0.001)
     except KeyboardInterrupt:
         logger.info("Stopping after keyboard interrupt")
     finally:
+        logger.info("Final %s", monitor.summary())
         midi_client.close()
         serial_client.close()
         gesture_engine.close()
@@ -253,11 +394,12 @@ def _process_observation(
     observation: FrameObservation,
     config: AppConfig,
     hand_states: HandStateStore,
-    hit_detector: HitDetector,
+    detector: HitDetector | StrikeDetector,
     zone_hit_gate: ZoneHitGate,
     zone_mapper: ZoneMapper,
     gesture_router: GestureRouter,
     dispatcher: EventDispatcher,
+    monitor: LatencyMonitor,
 ) -> None:
     """Process one recognizer snapshot."""
 
@@ -266,9 +408,9 @@ def _process_observation(
     active_hands = observation.hands[: config.max_hands]
     state_ids = _resolve_hand_state_ids(active_hands)
     for hand, hand_state_id in zip(active_hands, state_ids):
-        hand_state = hand_states.get_or_create(hand_state_id, hand.handedness)
+        hand_state = hand_states.get_or_create(hand_state_id, hand.handedness, observation.timestamp_ms)
 
-        hit_event = hit_detector.update(
+        hit_event = detector.update(
             hand_state=hand_state,
             landmarks=hand.landmarks,
             timestamp_ms=observation.timestamp_ms,
@@ -277,7 +419,9 @@ def _process_observation(
             zone = zone_mapper.zone_for_x(hit_event.x)
             if zone_hit_gate.should_emit(zone=zone, timestamp_ms=hit_event.timestamp_ms):
                 dispatcher.emit_hit(zone, hit_event)
+                monitor.hits_emitted += 1
             else:
+                monitor.hits_suppressed += 1
                 logger.debug("suppressed duplicate hit in zone=%s at %s", zone, hit_event.timestamp_ms)
 
         command_event = gesture_router.route(

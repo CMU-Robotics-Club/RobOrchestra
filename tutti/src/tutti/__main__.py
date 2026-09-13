@@ -65,11 +65,15 @@ def _open_transport(args, fleet):
     if args.transport in ("legacy", "midi"):
         from tutti.transports.legacy_din import LegacyDinTransport
         legacy = args.transport == "legacy"
+        # "midi" addresses each bot the way its board expects: General MIDI
+        # on channel 10 for the ESP32 bots, and the old note numbers on the
+        # old channel for any legacy board sharing the stage, so a xylophone
+        # on an Arduino and two Bluetooth drums are one transport.
         return LegacyDinTransport(
             fleet,
             port_name=args.midi_port,
-            note_map=LEGACY_NOTE_MAP if legacy else {},
-            channels=LEGACY_CHANNELS if legacy else {b: 9 for b in fleet},
+            note_map=LEGACY_NOTE_MAP,
+            channels=LEGACY_CHANNELS if legacy else {b: LEGACY_CHANNELS.get(b, 9) for b in fleet},
             send_velocity=not legacy,
         )
     from tutti.transports.loopback import LoopbackTransport
@@ -267,10 +271,16 @@ def cmd_jam(args: argparse.Namespace) -> int:
             preferred_bpm=args.preferred_bpm,
             record_path=str(args.record) if args.record else None,
             tempo_hint=args.tempo,
+            groove=args.groove,
             intensity=args.intensity,
             mode=args.mode,
             fill_every_bars=args.fill_every_bars,
             fill_probability=args.fill_probability,
+            decoration=args.decoration,
+            riffs=args.riffs,
+            mutation=args.mutation,
+            min_gap_ms=args.min_gap_ms,
+            hold=args.hold,
             seed=args.seed,
             follow=not args.no_follow,
             infer_downbeat=not args.no_downbeat,
@@ -306,8 +316,8 @@ def cmd_jam(args: argparse.Namespace) -> int:
                       "the drums keep time through rests.")
             print("Play steadily and the drums join once the tracker locks. "
                   "Commands (press Enter):")
-            print("  +/- intensity | mode groove|sparse|busy|auto | fill | "
-                  "mute | status | quit")
+            print("  +/- intensity | mode groove|sparse|busy|auto | decor 0..1 | "
+                  "riffs phrase|period|none | fill | mute | status | quit")
 
             # Commands arrive on stdin lines; the reader blocks in its own
             # daemon thread and the main loop drains a queue, so Ctrl-C and
@@ -341,6 +351,16 @@ def cmd_jam(args: argparse.Namespace) -> int:
                         f"dropped={s['dropped']}")
                 if st.alternatives:
                     line += " alt=" + "/".join(f"{b:.0f}" for b in st.alternatives[:2])
+                if source.groove == "generative" and st.locked:
+                    line += f" act={source.activity:.2f} decor={source.decoration:.1f}"
+                    ctx = source.phrase_context
+                    if ctx is not None:
+                        line += f" sec={ctx.section} phr={ctx.bar_in_phrase + 1}/{ctx.bars_per_phrase}"
+                    hs = source.harmony_state
+                    if hs is not None and hs.chord is not None:
+                        line += f" chord={hs.chord.name} key={hs.key_name}"
+                    if st.swing >= 0.56:
+                        line += f" swing={st.swing:.2f}"
                 if st.rubato > 1.03:
                     line += f" rit=+{(st.rubato - 1) * 100:.0f}%"
                 elif st.rubato < 0.97:
@@ -381,6 +401,18 @@ def cmd_jam(args: argparse.Namespace) -> int:
                                 source.set_mode(cmd.split(None, 1)[1])
                             except (IndexError, ValueError) as exc:
                                 print(f"? {exc}")
+                        elif cmd.lower().startswith("decor"):
+                            try:
+                                source.set_decoration(float(cmd.split(None, 1)[1]))
+                                print(f"decoration {source.decoration:.2f}")
+                            except (IndexError, ValueError) as exc:
+                                print(f"? decor 0..1 ({exc})")
+                        elif cmd.lower().startswith("riffs"):
+                            try:
+                                source.set_riffs(cmd.split(None, 1)[1])
+                                print(f"riffs {source.riffs}")
+                            except (IndexError, ValueError) as exc:
+                                print(f"? {exc}")
                         elif cmd.lower() == "fill":
                             source.request_fill()
                         elif cmd.lower() == "mute":
@@ -413,6 +445,251 @@ def cmd_jam(args: argparse.Namespace) -> int:
             if source.meter_switches:
                 print(f"  meter changed {source.meter_switches} time(s); "
                       f"ended in {_meter_label(source)}")
+            if s["drop_reasons"]:
+                for reason, count in sorted(s["drop_reasons"].items()):
+                    print(f"  {reason}: {count}")
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def cmd_conduct(args: argparse.Namespace) -> int:
+    from tutti.sources.conduct import ConductSource
+
+    if args.improv == (args.manifest is not None):
+        print("error: conduct a score manifest, or --improv for the old demo; "
+              "one or the other", file=sys.stderr)
+        return 1
+
+    fleet = LEGACY_FLEET if args.transport == "legacy" else DEFAULT_FLEET
+    if args.only:
+        wanted = {r.strip().lower() for r in args.only.split(",")}
+        fleet = {k: v for k, v in fleet.items() if v.role.lower() in wanted}
+        if not fleet:
+            print(f"error: no bot has role {args.only!r}", file=sys.stderr)
+            return 1
+    accepts: set[int] = set()
+    for inst in fleet.values():
+        accepts |= set(inst.model.accepts)
+
+    if args.improv:
+        from tutti.core.improv import Improviser, SNARE_NOTE, TOM_NOTE, XYLO_LOW, XYLO_HIGH
+        try:
+            program = Improviser(
+                scale=args.scale, tonic=args.key, xylo=args.xylo, snare=args.snare,
+                tom=args.tom, harmony=args.harmony, seed=args.seed)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        wanted = {SNARE_NOTE, TOM_NOTE} | set(range(XYLO_LOW, XYLO_HIGH + 1))
+        if not accepts & wanted:
+            print("error: nothing on stage plays a snare, a tom or a xylophone note",
+                  file=sys.stderr)
+            return 1
+        count_in = args.count_in or 2
+        what = f"improvising in {program.key_name} {program.scale}"
+    else:
+        from tutti.core.conduct import ScoreProgram
+        try:
+            score = load_score(args.manifest)
+        except ScoreError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        offset = "auto" if args.offset_beats is None else args.offset_beats
+        try:
+            program = ScoreProgram(score, beat_unit=args.beat_unit, offset_beats=offset,
+                                   beats_per_bar=args.meter, accepts=accepts)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        if program.notes == 0:
+            print("error: no note in this score can be played by anything on stage",
+                  file=sys.stderr)
+            return 1
+        count_in = args.count_in or 4
+        what = f"{score.name}: {program.notes} notes, {program.describe()}"
+        if program.unplayable:
+            what += f" ({program.unplayable} notes nothing on stage plays are skipped)"
+
+    try:
+        source = ConductSource(
+            program,
+            count_in=count_in,
+            camera=not args.no_camera and args.fake is None,
+            model_path=args.model,
+            camera_index=args.camera_index,
+            latency_ms=args.latency_ms,
+            detector=args.detector,
+            mirror=not args.no_mirror,
+            display=not args.no_display,
+            tap_port=args.tap_port,
+            fake_bpm=args.fake,
+            fake_drift_pct_per_min=args.fake_drift,
+            dynamics=not args.no_dynamics,
+            coast=args.coast,
+            min_bpm=args.bpm_range[0],
+            max_bpm=args.bpm_range[1],
+        )
+    except (RuntimeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    transport = _open_transport(args, fleet)
+    try:
+        with transport:
+            ensemble = Ensemble(fleet, transport)
+            try:
+                source.start(ensemble)
+            except RuntimeError as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 1
+
+            print(f"On stage: {', '.join(sorted(fleet))}")
+            ports = getattr(transport, "port_names", ())
+            if ports:
+                print(f"MIDI ports: {', '.join(ports)}")
+            print(what)
+            print(f"Beats from: {', '.join(source.input_labels)}")
+            if args.improv:
+                print(f"Count in {count_in} strokes and it plays; stop and it stops.")
+            else:
+                print(f"Count in {count_in} strokes; the piece starts on the next. "
+                      "Stop conducting and it holds on the next beat; "
+                      "start again and it carries on.")
+            print("Commands (then Enter): Enter alone taps a beat | restart | mute | "
+                  "status | quit")
+            if args.improv:
+                print("  xylo 0..1 | snare 0..1 | tom 0..1 | scale NAME | key NAME | harmony on|off")
+
+            import queue as queue_mod
+            import threading
+            commands: queue_mod.SimpleQueue[str] = queue_mod.SimpleQueue()
+
+            def _read_commands() -> None:
+                try:
+                    for line in sys.stdin:
+                        commands.put(line.rstrip("\n"))
+                except ValueError:
+                    pass    # stdin closed under us; nothing left to read
+
+            threading.Thread(target=_read_commands, name="conduct-commands",
+                             daemon=True).start()
+
+            show = source.poll_display is not None and not args.no_camera and \
+                args.fake is None and not args.no_display
+            cv2 = None
+            if show:
+                import cv2
+
+            def _status_line() -> str:
+                clock = source.clock
+                s = ensemble.status()
+                bpm = f"{clock.bpm:5.1f}" if clock is not None and clock.bpm else " --.-"
+                line = f"bpm={bpm} {program.describe()}"
+                if clock is not None:
+                    line += f" strokes={clock.strokes}"
+                    if clock.bounces:
+                        line += f" bounces={clock.bounces}"
+                    if source.last_stroke is not None:
+                        line += f" last={source.last_stroke.kind}"
+                    if clock.holding(ensemble.now_s()):
+                        line += " HOLD"
+                    if not args.no_dynamics:
+                        line += f" dyn={clock.dynamics:.2f}"
+                line += (f" sent={source.scheduled} dropped={s['dropped']} "
+                         f"skipped={source.skipped}")
+                if source.frames:
+                    line += f" frames={source.frames} cam={source.latency_ms_mean:.0f}ms"
+                if s["muted"]:
+                    line += " MUTED"
+                if getattr(transport, "late", 0):
+                    line += f" late={transport.late}"
+                return line
+
+            started = time.monotonic()
+            next_status = started + 1.0
+            quitting = False
+            try:
+                while not source.stopped and not quitting:
+                    if args.duration and time.monotonic() - started >= args.duration:
+                        break
+                    if show:
+                        frame = source.poll_display()
+                        if frame is not None:
+                            cv2.imshow("Tutti Conduct", frame)
+                        key = cv2.waitKey(1) & 0xFF
+                        if key in (ord("q"), 27):
+                            break
+                        if key == ord(" "):
+                            source.tap()
+                        if key == ord("r"):
+                            source.restart()
+                    else:
+                        time.sleep(0.02)
+
+                    while True:
+                        try:
+                            cmd = commands.get_nowait()
+                        except queue_mod.Empty:
+                            break
+                        word = cmd.strip().lower()
+                        if word == "":
+                            source.tap()
+                        elif word in ("restart", "top"):
+                            source.restart()
+                            print("from the top: count in again")
+                        elif word == "mute":
+                            ensemble.command("ARM" if ensemble.muted else "STOP")
+                        elif word == "status":
+                            print(_status_line())
+                        elif word in ("quit", "q", "exit"):
+                            quitting = True
+                        elif args.improv and word.split()[0] in ("xylo", "snare", "tom"):
+                            try:
+                                program.set_density(word.split()[0], float(word.split()[1]))
+                                print(f"{word.split()[0]} density {program.density(word.split()[0]):.2f}")
+                            except (IndexError, ValueError) as exc:
+                                print(f"? {word.split()[0]} 0..1 ({exc})")
+                        elif args.improv and word.startswith("scale"):
+                            try:
+                                program.set_scale(word.split(None, 1)[1])
+                                print(f"scale {program.scale}")
+                            except (IndexError, ValueError) as exc:
+                                print(f"? {exc}")
+                        elif args.improv and word.startswith("key"):
+                            try:
+                                program.set_tonic(cmd.strip().split(None, 1)[1])
+                                print(f"key {program.key_name}")
+                            except (IndexError, ValueError) as exc:
+                                print(f"? {exc}")
+                        elif args.improv and word.startswith("harmony"):
+                            program.harmony = not word.endswith("off")
+                            print(f"harmony {'on' if program.harmony else 'off'}")
+                        else:
+                            print(f"? unknown command {cmd!r}")
+
+                    now = time.monotonic()
+                    if now >= next_status:
+                        next_status = now + 1.0
+                        print(_status_line())
+            except KeyboardInterrupt:
+                pass
+            finally:
+                source.stop()
+                if show and cv2 is not None:
+                    cv2.destroyAllWindows()
+
+            if source.error is not None:
+                print(f"error: the conduct pipeline crashed: {source.error}",
+                      file=sys.stderr)
+                return 1
+
+            s = ensemble.status()
+            clock = source.clock
+            print(f"\nsession: {clock.strokes if clock else 0} strokes, "
+                  f"{s['hits']} hits, {s['dropped']} dropped, {source.skipped} skipped, "
+                  f"{s['suppressed']} while muted")
             if s["drop_reasons"]:
                 for reason, count in sorted(s["drop_reasons"].items()):
                     print(f"  {reason}: {count}")
@@ -532,9 +809,10 @@ def cmd_ports(args: argparse.Namespace) -> int:
         print(f"  {name}")
     if not inputs:
         print("  none")
-    print("\nPass any part of an output name to --midi-port, and of an input "
-          "name to\n'tutti jam --input-port'. Never an index: the number "
-          "changes with the laptop\nand the order things were plugged in.")
+    print("\nPass any part of an output name to --midi-port (repeat it for more "
+          "ports), and of\nan input name to 'tutti jam --input-port'. Never an "
+          "index: the number changes with\nthe laptop and the order things were "
+          "plugged in.")
     return 0
 
 
@@ -624,8 +902,9 @@ def main(argv: list[str] | None = None) -> int:
                    help="loopback: speakers. midi: bots that speak General MIDI, "
                         "which is every ESP32 bot. legacy: old Arduino boards that need "
                         "note numbers translated. null: dry run.")
-    p.add_argument("--midi-port", type=str, default=None, metavar="NAME",
-                   help="MIDI output for --transport midi/legacy; matched by substring")
+    p.add_argument("--midi-port", type=str, action="append", default=None, metavar="NAME",
+                   help="MIDI output for --transport midi/legacy, matched by substring; "
+                        "every port matching is opened, and the flag may be repeated")
     p.add_argument("--only", type=str, default=None, metavar="ROLE",
                    help="use only bots with these roles, e.g. --only snare")
     p.add_argument("--render", type=Path, default=None, metavar="OUT.wav",
@@ -637,14 +916,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--note", type=int, default=38, help="General MIDI note (38 = snare)")
     p.add_argument("--transport", choices=("loopback", "midi", "legacy", "null"),
                    default="loopback")
-    p.add_argument("--midi-port", type=str, default=None, metavar="NAME")
+    p.add_argument("--midi-port", type=str, action="append", default=None, metavar="NAME")
     p.add_argument("--tolerance-ms", type=float, default=15.0)
     p.set_defaults(func=cmd_test)
 
     p = sub.add_parser("gesture", help="drum in the air at the webcam")
     p.add_argument("--transport", choices=("loopback", "midi", "legacy", "null"),
                    default="loopback")
-    p.add_argument("--midi-port", type=str, default=None, metavar="NAME")
+    p.add_argument("--midi-port", type=str, action="append", default=None, metavar="NAME")
     p.add_argument("--only", type=str, default=None, metavar="ROLE",
                    help="use only bots with these roles, e.g. --only snare")
     p.add_argument("--model", type=Path, default=None,
@@ -674,8 +953,9 @@ def main(argv: list[str] | None = None) -> int:
                    default="loopback",
                    help="loopback: speakers. midi: ESP32 bots. legacy: old "
                         "Arduino boards. null: dry run.")
-    p.add_argument("--midi-port", type=str, default=None, metavar="NAME",
-                   help="MIDI output for --transport midi/legacy; matched by substring")
+    p.add_argument("--midi-port", type=str, action="append", default=None, metavar="NAME",
+                   help="MIDI output for --transport midi/legacy, matched by substring; "
+                        "every port matching is opened, and the flag may be repeated")
     p.add_argument("--only", type=str, default="snare,tom", metavar="ROLES",
                    help="use only bots with these roles (default: snare,tom)")
     p.add_argument("--meter", type=str, default="4", metavar="N|auto",
@@ -700,10 +980,33 @@ def main(argv: list[str] | None = None) -> int:
                         "knows the song")
     p.add_argument("--intensity", type=int, default=2, choices=range(0, 5))
     p.add_argument("--mode", choices=("groove", "sparse", "busy"), default="groove")
-    p.add_argument("--fill-every-bars", type=int, default=8)
-    p.add_argument("--fill-probability", type=float, default=0.30)
+    p.add_argument("--fill-every-bars", type=int, default=8,
+                   help="classic groove only: fill every N bars")
+    p.add_argument("--fill-probability", type=float, default=0.30,
+                   help="classic groove only")
+    p.add_argument("--decoration", type=float, default=0.5, metavar="0..1",
+                   help="how much optional playing goes around the beat: 0 is "
+                        "the plain beat, 1 is everything the pianist's activity "
+                        "can buy (default 0.5)")
+    p.add_argument("--riffs", choices=("phrase", "period", "none"), default="phrase",
+                   help="where fills go: every phrase end with a bigger one at a "
+                        "period end (default), only period ends, or only the holes "
+                        "the pianist leaves and the 'fill' command")
+    p.add_argument("--mutation", type=float, default=0.25, metavar="0..1",
+                   help="share of the optional hits re-rolled each bar; 0 repeats "
+                        "the bar, 1 re-rolls it (default 0.25)")
+    p.add_argument("--min-gap-ms", type=float, default=None, metavar="MS",
+                   help="never ask one drum for two hits closer than this; the "
+                        "default is what its model says it can do")
+    p.add_argument("--hold", type=float, default=None, metavar="0..1",
+                   help="how firmly the beat holds against stray notes and "
+                        "pushes: 0 follows every onset (default), 1 is a "
+                        "flywheel; try 0.5 if the beat gets pushed around")
     p.add_argument("--seed", type=int, default=None,
                    help="seed the groove and fake-piano randomness")
+    p.add_argument("--groove", choices=("generative", "classic"), default="generative",
+                   help="generative: grooves made up bar by bar from the playing "
+                        "(default). classic: the three fixed patterns")
     p.add_argument("--no-follow", action="store_true",
                    help="do not follow the pianist's dynamics; intensity and "
                         "mode are manual only")
@@ -715,6 +1018,78 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--duration", type=float, default=0.0,
                    help="stop after this many seconds; 0 runs until quit")
     p.set_defaults(func=cmd_jam)
+
+    p = sub.add_parser("conduct", help="conduct a piece, or the old improv demo, "
+                                       "by beating time at the webcam")
+    p.add_argument("manifest", type=Path, nargs="?", default=None,
+                   help="a score manifest to conduct")
+    p.add_argument("--improv", action="store_true",
+                   help="the old InteractiveDemo music instead of a score: a "
+                        "xylophone walk through a scale over snare and tom patterns")
+    p.add_argument("--transport", choices=("loopback", "midi", "legacy", "null"),
+                   default="loopback",
+                   help="loopback: speakers. midi: ESP32 bots, plus any legacy "
+                        "board on another port. legacy: old Arduino boards only. "
+                        "null: dry run.")
+    p.add_argument("--midi-port", type=str, action="append", default=None, metavar="NAME",
+                   help="MIDI output, matched by substring; every matching port is "
+                        "opened and the flag may be repeated, e.g. --midi-port "
+                        "RobOrchestra --midi-port USB for the drums and the xylophone")
+    p.add_argument("--only", type=str, default=None, metavar="ROLES",
+                   help="use only bots with these roles, e.g. --only snare,tom")
+    p.add_argument("--count-in", type=int, default=None, metavar="N",
+                   help="strokes before the music starts (default 4 for a score, "
+                        "2 for --improv)")
+    p.add_argument("--meter", type=int, default=4, metavar="N",
+                   help="beats per bar, for the bar count and for placing a pickup")
+    p.add_argument("--beat-unit", type=float, default=1.0, metavar="QUARTERS",
+                   help="quarter notes per stroke: 2 to conduct a fast 4/4 in two, "
+                        "0.5 to beat eighths in a slow piece, 1.5 for 6/8 in two")
+    p.add_argument("--offset-beats", type=float, default=None, metavar="BEATS",
+                   help="shift the score so that this many beats come before the "
+                        "first downbeat; by default a pickup lands inside the "
+                        "count-in and the first downbeat is the first beat after it")
+    p.add_argument("--coast", type=int, default=0, metavar="BEATS",
+                   help="beats the orchestra may play past your last stroke before "
+                        "holding (default 0: it holds on the next beat)")
+    p.add_argument("--no-dynamics", action="store_true",
+                   help="ignore stroke size; play the written velocities")
+    p.add_argument("--bpm-range", nargs=2, type=float, default=(30.0, 240.0),
+                   metavar=("LO", "HI"), help="tempi a stroke may set")
+    p.add_argument("--scale", type=str, default="major",
+                   help="--improv: major, minor, dorian, mixolydian, blues, "
+                        "pentatonic, minor_pentatonic, whole_tone, chromatic, ...")
+    p.add_argument("--key", type=str, default="C", help="--improv: the tonic, e.g. F#")
+    p.add_argument("--xylo", type=float, default=0.55, metavar="0..1",
+                   help="--improv: xylophone density")
+    p.add_argument("--snare", type=float, default=0.70, metavar="0..1",
+                   help="--improv: snare density")
+    p.add_argument("--tom", type=float, default=0.45, metavar="0..1",
+                   help="--improv: tom density")
+    p.add_argument("--harmony", action="store_true",
+                   help="--improv: add a third above every melody note")
+    p.add_argument("--seed", type=int, default=None, help="--improv: seed the walk")
+    p.add_argument("--no-camera", action="store_true",
+                   help="beats from Enter, a MIDI pad or --fake only")
+    p.add_argument("--tap-port", type=str, default=None, metavar="NAME",
+                   help="also take beats from any note on this MIDI input")
+    p.add_argument("--fake", nargs="?", const=110.0, default=None, type=float,
+                   metavar="BPM",
+                   help="a built-in metronome conducts instead of the webcam; "
+                        "needs no hardware at all")
+    p.add_argument("--fake-drift", type=float, default=0.0, metavar="PCT",
+                   help="fake conductor tempo drift, percent per minute")
+    p.add_argument("--model", type=Path, default=None,
+                   help="gesture_recognizer.task; defaults to DrumBot's copy")
+    p.add_argument("--camera-index", type=int, default=0)
+    p.add_argument("--latency-ms", type=int, default=90,
+                   help="fire this far ahead of the predicted landing of the hand")
+    p.add_argument("--detector", choices=("predictive", "legacy"), default="predictive")
+    p.add_argument("--no-mirror", action="store_true")
+    p.add_argument("--no-display", action="store_true")
+    p.add_argument("--duration", type=float, default=0.0,
+                   help="stop after this many seconds; 0 runs until quit")
+    p.set_defaults(func=cmd_conduct)
 
     p = sub.add_parser("replay", help="run a recorded piano session through the "
                                       "tracker offline and show what it believed")
@@ -732,7 +1107,7 @@ def main(argv: list[str] | None = None) -> int:
                    default="midi",
                    help="midi: a real bot. loopback: the speakers, which checks the "
                         "probe itself against a known-good path")
-    p.add_argument("--midi-port", type=str, default=None, metavar="NAME")
+    p.add_argument("--midi-port", type=str, action="append", default=None, metavar="NAME")
     p.add_argument("--role", type=str, default="snare")
     p.add_argument("--note", type=int, default=38, help="General MIDI note (38 = snare)")
     p.add_argument("--hits", type=int, default=12)

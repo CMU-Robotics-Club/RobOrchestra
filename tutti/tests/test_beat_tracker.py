@@ -212,6 +212,19 @@ def test_the_runner_up_tempo_is_visible():
     assert all(abs(alt - 120) > 4 for alt in state.alternatives)
 
 
+def test_swing_is_read_off_the_offbeats():
+    period = 60.0 / 120
+    swung, straight = [], []
+    for t in clicks(120, 24):
+        swung += [(t, 1.2), (t + period * 2 / 3, 0.3)]
+        straight += [(t, 1.2), (t + period / 2, 0.3)]
+    a, b = BeatTracker(), BeatTracker()
+    pump_accented(a, swung, until_s=swung[-1][0] + 0.2)
+    pump_accented(b, straight, until_s=straight[-1][0] + 0.2)
+    assert a.state.swing == pytest.approx(0.667, abs=0.04)
+    assert b.state.swing == pytest.approx(0.5, abs=0.04)
+
+
 # a declared tempo
 
 def lock_index(tracker, onsets):
@@ -268,6 +281,21 @@ def test_a_declared_tempo_settles_the_octave():
     pump_accented(slow, onsets, until_s=onsets[-1][0] + 0.2)
     assert fast.state.bpm == pytest.approx(160, abs=3)
     assert slow.state.bpm == pytest.approx(80, abs=3)
+
+
+def test_a_wrong_declared_tempo_yields_to_overwhelming_evidence():
+    # An oom-pah at 190 onsets a minute: bass on the beat at 95, chords on
+    # the "and". Told 130 — a tempo the playing does not contain — the
+    # tracker must not lock a 3:2 misfit onto it; the evidence for 95 is
+    # overwhelming and wins.
+    onsets = []
+    for k in range(48):
+        t = 0.5 + k * 0.315
+        onsets.append((t, 1.6 if k % 2 == 0 else 0.5))
+    tracker = BeatTracker(tempo_hint=130)
+    pump_accented(tracker, onsets, until_s=onsets[-1][0] + 0.2)
+    assert tracker.state.locked
+    assert tracker.state.bpm == pytest.approx(95, abs=3)
 
 
 def test_a_declared_tempo_keeps_time_through_a_rest():
@@ -333,9 +361,44 @@ def test_bar_counting_follows_the_declared_meter():
     pulse = clicks(120, 24)
     events = pump(tracker, pulse, until_s=pulse[-1] + 0.1)
     assert len(events) >= 6
-    for k, event in enumerate(events):
+    # Numbered from the entry onset, in threes; the bar count only ever
+    # moves on a beat 1.
+    period = 60.0 / 120
+    for event in events:
+        k = round((event.time_s - pulse[0]) / period)
         assert event.beat_in_bar == (k % 3) + 1
-        assert event.bar_index == k // 3
+    for a, b in zip(events, events[1:]):
+        assert b.bar_index - a.bar_index in (0, 1)
+        if b.beat_in_bar != 1:
+            assert b.bar_index == a.bar_index
+    assert events[-1].bar_index >= 5
+
+
+def accelerando(start_bpm, end_bpm, ramp_s, hold_s, jitter_ms=0.0, seed=1):
+    """Onsets on every beat, the period sliding linearly, then holding."""
+    rng = random.Random(seed)
+    times, t = [], 0.5
+    while t < 0.5 + ramp_s + hold_s:
+        times.append(t + rng.gauss(0.0, jitter_ms / 1000.0))
+        frac = min(1.0, (t - 0.5) / ramp_s)
+        bpm = start_bpm + (end_bpm - start_bpm) * frac
+        t += 60.0 / bpm
+    return sorted(times)
+
+
+def test_an_accelerando_is_followed_to_the_new_tempo_not_halved():
+    # From 100 to 150 in twelve seconds, with real hands' jitter. Above the
+    # preferred tempo the prior likes 75 better than 150, and through the
+    # push the grid fits badly enough for challengers to be heard; but the
+    # pianist got to 150 by speeding up from 100, and that is the reading
+    # that continues.
+    tracker = BeatTracker()
+    pulse = accelerando(100, 150, ramp_s=12.0, hold_s=10.0, jitter_ms=15.0)
+    events = pump(tracker, pulse, until_s=pulse[-1] + 0.2)
+    late = [e for e in events if e.time_s > pulse[-1] - 4.0]
+    assert late and tracker.state.locked
+    for e in late:
+        assert 135 <= e.bpm <= 165, f"read {e.bpm:.0f} while the pianist held 150"
 
 
 # downbeat inference
@@ -375,6 +438,66 @@ def test_accents_pull_beat_one_onto_the_accented_phase():
     assert profile[0] == max(profile)
 
 
+def test_a_gentle_pianist_still_moves_the_bar():
+    # The same accent pattern at a soft player's scale: the whole bar weighs
+    # less than one forte chord, and the contest must still be held.
+    period = 60.0 / 120
+    onsets = [(0.5 + k * period, 0.45 if k % 4 == 2 else 0.08) for k in range(48)]
+    tracker = BeatTracker()
+    events = pump_accented(tracker, onsets, until_s=onsets[-1][0] + 0.3)
+    accented_times = {t for t, a in onsets if a == 0.45}
+    late_downbeats = [e for e in events[-8:] if e.beat_in_bar == 1]
+    assert late_downbeats
+    for e in late_downbeats:
+        assert any(abs(e.time_s - t) < 0.1 for t in accented_times)
+
+
+def test_the_entry_onset_is_beat_one():
+    # Plain clicks carry no accent to argue with, so the bar sits where the
+    # prior put it: on the first onset heard.
+    period = 60.0 / 120
+    entry = 0.7
+    onsets = [(entry + k * period, 1.0) for k in range(24)]
+    tracker = BeatTracker()
+    events = pump_accented(tracker, onsets, until_s=onsets[-1][0] + 0.3)
+    downbeats = [e for e in events if e.beat_in_bar == 1]
+    assert downbeats
+    for e in downbeats:
+        k = (e.time_s - entry) / period
+        assert abs(k - round(k)) < 0.1
+        assert round(k) % 4 == 0, f"beat 1 at {e.time_s:.2f} is {round(k) % 4} beats past the entry's bar"
+
+
+def test_hold_keeps_the_grid_steadier_through_stray_notes():
+    # A steady pulse with a stray note between beats three times in ten
+    # and a rushed or dragged chord one time in ten. The flywheel already
+    # ignores most of it; hold makes it ignore more.
+    def grid_error(hold):
+        total, n = 0.0, 0
+        for seed in range(6):
+            rng = random.Random(seed)
+            period, t, onsets, grid = 0.5, 0.5, [], []
+            for k in range(40):
+                grid.append(t)
+                shift = rng.uniform(-0.15, 0.15) * period if (k >= 8 and rng.random() < 0.1) else 0.0
+                onsets.append((t + shift + rng.gauss(0.0, 0.010), 1.0))
+                if k >= 8 and rng.random() < 0.3:
+                    onsets.append((t + rng.uniform(0.12, 0.45) * period, rng.uniform(0.3, 1.0)))
+                t += period
+            tracker = BeatTracker(tempo_hint=120.0, hold=hold)
+            events = pump_accented(tracker, sorted(onsets), until_s=grid[-1] + 0.3)
+            assert tracker.state.locked
+            for e in events:
+                if e.time_s > grid[8]:
+                    total += min(abs(e.time_s - g) for g in grid) ** 2
+                    n += 1
+        return (total / n) ** 0.5
+
+    loose, firm = grid_error(0.0), grid_error(0.8)
+    assert firm < loose < 0.030
+    assert BeatTracker().hold == 0.0 and BeatTracker(tempo_hint=100.0).hold == 0.0
+
+
 def test_one_loud_hit_does_not_move_the_bar():
     period = 60.0 / 120
     onsets = [(0.5 + k * period, 1.0) for k in range(40)]
@@ -409,6 +532,22 @@ def test_merged_chord_notes_still_feed_the_accent_bucket():
     tracker.on_onset(t + 0.01, 2.0)      # merged, accent must still land
     tracker.on_onset(t + 0.02, 2.0)      # merged
     assert sum(tracker._bar_accent) == pytest.approx(before + 5.0)
+
+
+def test_late_credit_lands_on_the_last_cluster():
+    period = 60.0 / 120
+    tracker = BeatTracker()
+    for k in range(20):
+        tracker.on_onset(0.5 + k * period, 1.0)
+        tracker.advance(0.5 + k * period)
+    assert tracker.state.locked
+    before = sum(tracker._bar_accent)
+    tracker.on_onset(0.5 + 20 * period, 1.0)
+    tracker.credit_last_cluster(1.5)
+    assert sum(tracker._bar_accent) == pytest.approx(before + 2.5)
+    assert tracker._onset_weights[-1] == pytest.approx((1.0 + 1.5) ** 0.5)
+    tracker.credit_last_cluster(-3.0)                   # never subtracts
+    assert sum(tracker._bar_accent) == pytest.approx(before + 2.5)
 
 
 def test_accent_history_is_dense_and_silent_beats_read_as_zero():

@@ -114,18 +114,54 @@ locks, the groove engine writes the next beat's drums onto the predicted grid
 via `Ensemble.strike_at()`, early enough for any transport to land them on
 time. When the tracker is not confident the drums stay silent.
 
-The drums also listen to *how* the piano is played, not just when. Loudness
-drives intensity; density drives texture inversely, so a flurry thins the
-drums out to leave space and sustained pads invite them in; a hole in the
-phrase earns a fill; and when the pianist stops, the kit fades over about a
-bar and rests instead of hammering on alone — all judged against the
-pianist's own typical spacing, so someone padding whole notes is a style,
-not a phrase ending. Accents (velocity, bass depth, bass harmony changes)
-also feed downbeat inference: wherever the lock happened to land, beat 1
-migrates onto the pianist's actual downbeat after a few consistent bars,
-which is what puts the snare's backbeat on 2 and 4. The bar only moves when
-another phase wins the accent contest several bars running — one sforzando
-changes nothing. `--no-follow` and `--no-downbeat` switch these off.
+The drums also listen to *how* the piano is played, not just when. The
+groove is made up bar by bar rather than looked up: a kick opens every
+group of the bar and the snare answers it, and those never move, but
+everything else — offbeat kicks, the push into the next group, ghost snares,
+a tom before the backbeat — is a probability shaped by one knob, activity,
+which the pianist's loudness raises and a piano flurry lowers. Each bar
+re-rolls a quarter of those decisions, so the groove evolves without
+churning. Every hit's velocity follows the pianist's gain continuously, and
+the beats they lean on get leaned on. Swing is read from their offbeats and
+the drums' offbeats go there too.
+
+The piece's shape gets its due. Bars are counted into four-bar phrases and
+eight-bar periods (a fill at a phrase end, a bigger one at a period end); a
+phrase that sits well outside what the section has been doing — louder,
+busier, an octave away, a modulation, not merely a chord held for four bars
+— is a new section and opens with an accent; the chord is named every beat
+and the rhythm of chord changes is learned and predicted, so a beat where
+the harmony is about to move gets a kick. A hole in the phrase earns a fill
+that answers the pianist's last bar's rhythm rather than a stock one. When
+the pianist stops, the kit fades over about a bar — judged against their
+own typical spacing, so someone padding whole notes is a style, not an
+ending. Accents (velocity, bass depth, bass harmony changes) also feed
+downbeat inference, which is what puts the backbeat on the pianist's 2 and
+4. The bass is whatever drops under the register the hands were just in —
+a left hand in F is the bass at F3 — not a note below a fixed line; the
+first note of a stretch of playing is taken as beat 1, because that is how
+people come in; and after that the bar only moves when another beat wins
+the accent contest several bars running, a contest every bar gets to hold
+however gently it was played. The status line shows the drummer's mind: `act=`, `sec=`,
+`phr=`, `chord=`, `key=`, `swing=`. `--groove classic` brings back the
+three fixed patterns; `--no-follow` and `--no-downbeat` switch the
+listening off.
+
+The knobs. `--decoration 0..1` is how much optional playing goes around the
+beat — 0 is the plain beat (kick on one, snare on the backbeat, nothing
+else), 1 is everything the pianist's activity can buy, and the default is
+0.5 because a steady beat with riffs between is what most people mean by
+drums. `--riffs phrase|period|none` is where the fills go: every phrase end
+with a bigger one at a period end, only period ends, or nowhere but the
+`fill` command. `--mutation 0..1` is how much of the optional playing is
+re-rolled each bar (0 repeats the bar). `--min-gap-ms` keeps one drum from
+being asked for two hits closer than that, for hardware that can do 50 ms
+but not well. `--hold 0..1` is how firmly the beat stays put against pushes
+and stray notes (0 follows every onset; try 0.5 if the beat gets shoved).
+While playing, `decor 0.3` and `riffs period` change the first two on the
+fly, and a hole in the playing is only answered with a fill once it is
+clearly a hole — a beat and a half beyond the pianist's usual spacing, or
+half a bar — so a fumble is not a cue.
 
 Meters other than 4/4 get real patterns, not a 4/4 grid cycled round. A bar
 is described by how its beats clump — `--meter 5 --grouping 3+2` is Take
@@ -189,6 +225,50 @@ offset over the automatic level and a chosen mode pins until `mode auto`.
 `--transport midi --midi-port RobOrchestra` sends the same groove to real
 bots instead of the speakers.
 
+## Conducting
+
+    uv sync --extra gesture --extra audio
+    uv run tutti conduct scores/Route1.json
+
+Beat time at the webcam and the piece plays at your tempo. Count in four
+strokes and it starts on the fifth; speed up and it follows; stop, and it
+holds on the next beat until you move again; conduct bigger and it plays
+louder. When the piece ends, the next count-in starts it over. A closed
+fist mutes the kit, an open palm brings it back.
+
+    uv run tutti conduct --improv
+
+is the old InteractiveDemo, ported: a xylophone melody random-walking
+through a scale over snare and tom patterns that fire by probability, the
+sketch's own tables and its own rule for the walk. Two strokes set the tempo
+and it plays for as long as you conduct. `--scale blues --key A` picks the
+scale, `--xylo 0.3` and friends set the densities, and `xylo 0.3`, `scale
+dorian`, `key F#` change them while it runs.
+
+The old demo counted beats over a three-second window and turned the count
+into a BPM, which is a tempo but not a phase: the notes never knew which
+beat they were on. Here every stroke is a numbered beat. The clock predicts
+one beat past your last stroke, which is how the notes *on* the next beat
+get scheduled while your hand is still coming down (the detector fires
+early and says when it expects the hand to land), and nothing beyond that
+is predicted at all, which is why the orchestra stops when you do. A stroke
+inside half a beat of the last is the camera seeing one gesture twice and
+is ignored; a stroke about two beats out is one the camera missed, and the
+count jumps so the orchestra stays with you rather than a beat behind.
+
+Beats can also come from the Enter key (or the space bar in the preview
+window), from any note on a MIDI pad with `--tap-port`, or from a built-in
+metronome with `--fake 120` for hearing the whole thing with no camera and
+nobody waving. `--no-camera` skips the webcam. `--coast 1` lets the
+orchestra run one more beat past your last stroke before holding, for a
+camera that drops the occasional stroke. `--beat-unit 2` conducts a fast 4/4
+in two. A pickup lands inside the count-in and the first downbeat is the
+first beat after it; `--offset-beats` overrides that.
+
+More pieces to conduct: `scores/MistyMountainsCold.json`,
+`scores/EyeOfTheTiger.json`, `scores/AxelF.json` and
+`scores/NextEpisode.json`, the last two xylophone only.
+
 ## Measuring a bot's latency
 
     uv run tutti latency --transport midi --midi-port RobOrchestra_Snare
@@ -230,6 +310,20 @@ audio blocks; for the old daisy chain it is one mechanical travel, not the
 The ESP32 firmware triggers on GM notes directly, so it needs no translation
 and gets velocity passed through. The old boards do: `snarebot_servo_midi.ino`
 fires on note 36, which in General MIDI is the bass drum.
+
+One stage can be several ports. Each ESP32 bot is its own Bluetooth MIDI
+port on macOS, and Xylobot hangs off a USB adapter, so `--midi-port` opens
+every port matching the name and may be repeated:
+
+    uv run tutti conduct scores/Route1.json --transport midi \
+        --midi-port RobOrchestra --midi-port "USB MIDI"
+
+A hit goes to the ports whose name mentions its bot's role (the snare's to
+`RobOrchestra_Snare`) and otherwise to all of them, which is safe because
+every board ignores notes that are not its own. With `--transport midi` a
+legacy board sharing the stage still gets its old note numbers on its old
+channel; the xylophone on the Arduino and the two Bluetooth drums are one
+transport.
 
 ## Driving the existing robots
 
@@ -318,9 +412,10 @@ Note numbers follow General MIDI percussion: 35/36 bass drum, 38 snare, 41-50 to
 
 ## Layout
 
-    src/tutti/core/        score, plan, fleet, report, player, beat, tempo, groove, listen, meter, latency
-    src/tutti/transports/  base interface, loopback, synth
-    src/tutti/sources/     things that produce notes or tempo: gesture, jam
+    src/tutti/core/        score, plan, fleet, report, player, beat, tempo, listen, meter,
+                           phrase, harmony, generate, groove, latency, conduct, improv
+    src/tutti/transports/  base interface, loopback, synth, legacy_din
+    src/tutti/sources/     things that produce notes or tempo: gesture, baton, jam, conduct
     scores/                score manifests
     tests/
 

@@ -297,3 +297,68 @@ def test_the_downbeat_is_reachable_rather_than_late():
         assert t.late == 0
     finally:
         t.close()
+
+
+# several ports at once: two Bluetooth drums and a xylophone on USB
+
+def test_a_substring_opens_every_port_it_matches():
+    available = ["RobOrchestra_Snare", "RobOrchestra_Tom", "USB MIDI Interface"]
+    assert LegacyDinTransport.resolve_ports(available, "roborchestra") == [
+        "RobOrchestra_Snare", "RobOrchestra_Tom"]
+
+
+def test_the_flag_may_be_repeated_and_each_name_adds_its_matches():
+    available = ["RobOrchestra_Snare", "RobOrchestra_Tom", "USB MIDI Interface", "IAC Bus 1"]
+    assert LegacyDinTransport.resolve_ports(available, ["roborchestra", "usb"]) == [
+        "RobOrchestra_Snare", "RobOrchestra_Tom", "USB MIDI Interface"]
+
+
+def test_an_exact_name_opens_that_port_alone():
+    available = ["RobOrchestra_Snare", "RobOrchestra_Snare 2"]
+    assert LegacyDinTransport.resolve_ports(available, "RobOrchestra_Snare") == ["RobOrchestra_Snare"]
+
+
+def test_no_request_still_picks_one_likely_port():
+    assert LegacyDinTransport.resolve_ports(["IAC Bus 1", "USB-MIDI-2.0"], None) == ["USB-MIDI-2.0"]
+
+
+def test_hits_go_to_the_port_named_for_their_bot():
+    from tutti.core.fleet import DEFAULT_FLEET
+    t = LegacyDinTransport(DEFAULT_FLEET)
+    routes = t.routes(["RobOrchestra_Snare", "RobOrchestra_Tom", "USB MIDI Interface"])
+    assert routes["snarebot-01"] == ("RobOrchestra_Snare",)
+    assert routes["tombot-01"] == ("RobOrchestra_Tom",)
+    # nothing names the xylophone, so it fans out; every board ignores what is not its own
+    assert routes["xylobot-01"] == ("RobOrchestra_Snare", "RobOrchestra_Tom", "USB MIDI Interface")
+
+
+def test_a_bot_id_in_the_port_name_routes_too():
+    from tutti.core.fleet import DEFAULT_FLEET
+    t = LegacyDinTransport(DEFAULT_FLEET)
+    routes = t.routes(["xylobot-01 chain", "drums"])
+    assert routes["xylobot-01"] == ("xylobot-01 chain",)
+    assert routes["snarebot-01"] == ("xylobot-01 chain", "drums")
+
+
+def test_emit_reaches_only_the_routed_ports():
+    from tutti.core.fleet import DEFAULT_FLEET
+    snare_port, tom_port, usb_port = FakePort(), FakePort(), FakePort()
+    clock = FakeClock()
+    t = LegacyDinTransport(DEFAULT_FLEET, channels={"xylobot-01": 0, "snarebot-01": 9,
+                                                    "tombot-01": 9},
+                           clock=clock, send_velocity=True)
+    t._ports = {"RobOrchestra_Snare": snare_port, "RobOrchestra_Tom": tom_port,
+                "USB MIDI": usb_port}
+    t.start()
+    try:
+        t.send([hit(0.0, "snarebot-01", 38), hit(0.0, "tombot-01", 45),
+                hit(0.0, "xylobot-01", 64)])
+        clock.t = 0.5
+        assert wait_for(lambda: t.sent == 3)
+        assert snare_port.notes == [(9, 38), (0, 64)]
+        assert tom_port.notes == [(9, 45), (0, 64)]
+        assert usb_port.notes == [(0, 64)]
+    finally:
+        t.close()
+    offs = [m for m in usb_port.messages if m.type == "control_change" and m.control == 123]
+    assert len(offs) == 16              # panic reaches every port

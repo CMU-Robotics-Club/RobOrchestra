@@ -230,4 +230,9 @@ def rank_periods(
         kept.append(h)
         if len(kept) == TOP_HYPOTHESES:
             break
+    # The best-supported period always rides along, however the prior
+    # ranks it: it is the evidence a wrong hint has to be able to lose to.
+    strongest = max(scored, key=lambda h: h.support)
+    if not any(same_period(strongest.period_s, k.period_s) for k in kept):
+        kept.append(strongest)
     return kept

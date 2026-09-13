@@ -38,9 +38,12 @@ import time
 
 from ..core.beat import BeatTracker
 from ..core.ensemble import Ensemble
+from ..core.generate import BeatContext, GrooveGenerator, DECORATION, MUTATE, RIFFS
 from ..core.groove import GrooveEngine, check_grouping, default_grouping
+from ..core.harmony import HarmonyState, HarmonyTracker
 from ..core.listen import Feel, Listener
 from ..core.meter import best_for_meter, best_guess, score_history
+from ..core.phrase import PhraseContext, PhraseTracker
 from .base import Control, Source
 from .fake_piano import FakePianoInput
 from .midi_in import MidiInput, NoteOn
@@ -70,6 +73,17 @@ TICK_S = 0.005
 # Everything the groove engine can ask for. If nobody on stage accepts any
 # of these, the jam would be a silent lecture; better to say so up front.
 GROOVE_NOTES = (36, 38, 45)
+
+GROOVES = ("generative", "classic")
+# Manual +/- steps, as a shift in the generator's activity.
+ACTIVITY_PER_STEP = 0.15
+SPARSE_ACTIVITY_CAP = 0.25
+BUSY_ACTIVITY_FLOOR = 0.8
+# The pianist's accent on a beat (from the tracker's bar profile) bends the
+# drums' accent on it, within reason.
+ACCENT_PULL = 0.3
+ACCENT_MIN, ACCENT_MAX = 0.85, 1.25
+ACCENT_EVIDENCE = 2.0
 
 
 def save_session(path: str, events: list[NoteOn]) -> None:
@@ -170,7 +184,16 @@ class JamSource(Source):
         preferred_bpm: float = 100.0,
         record_path: str | None = None,
         tempo_hint: float | None = None,
+        groove: str = "generative",
+        decoration: float = DECORATION,
+        riffs: str = "phrase",
+        mutation: float = MUTATE,
+        min_gap_ms: float | None = None,
+        hold: float | None = None,
     ) -> None:
+        if groove not in GROOVES:
+            raise ValueError(f"unknown groove {groove!r}; one of {', '.join(GROOVES)}")
+        self._groove = groove
         if fake_bpm is not None and input_port is not None:
             raise ValueError("pick one pianist: --fake or --input-port, not both")
         if not 0 < min_bpm < max_bpm:
@@ -207,10 +230,28 @@ class JamSource(Source):
         self._seed = seed
         self._follow = bool(follow)
         self._infer_downbeat = bool(infer_downbeat)
+        self._decoration = float(decoration)
+        if riffs not in RIFFS:
+            raise ValueError(f"riffs must be one of {', '.join(RIFFS)}, not {riffs!r}")
+        self._riffs = riffs
+        self._mutation = float(mutation)
+        if min_gap_ms is not None and min_gap_ms < 0:
+            raise ValueError("min_gap_ms cannot be negative")
+        self._min_gap_ms = float(min_gap_ms) if min_gap_ms is not None else None
+        if hold is not None and not 0.0 <= hold <= 1.0:
+            raise ValueError("hold is 0 to 1")
+        self._hold = hold
 
         self._ensemble: Ensemble | None = None
         self._tracker: BeatTracker | None = None
         self._engine: GrooveEngine | None = None
+        self._generator: GrooveGenerator | None = None
+        self._phrase: PhraseTracker | None = None
+        self._harmony: HarmonyTracker | None = None
+        self._phrase_ctx: PhraseContext | None = None
+        self._harmony_state: HarmonyState | None = None
+        self._echo: tuple[int, ...] = ()
+        self._activity = 0.5
         self._listener: Listener | None = None
         self._input = None
         self._emit_ahead_s = 0.0
@@ -250,8 +291,14 @@ class JamSource(Source):
             infer_downbeat=self._infer_downbeat,
             preferred_bpm=self._preferred_bpm,
             tempo_hint=self._tempo_hint,
+            hold=self._hold,
         )
         kt_gap_s, snare_gap_s = resource_gaps(ensemble.instruments)
+        if self._min_gap_ms is not None:
+            # A stricter floor than the models claim: what the hardware
+            # can do and what it can do well are different numbers.
+            kt_gap_s = max(kt_gap_s, self._min_gap_ms / 1000.0)
+            snare_gap_s = max(snare_gap_s, self._min_gap_ms / 1000.0)
         self._engine = GrooveEngine(
             intensity=self._intensity,
             mode=self._mode,
@@ -263,6 +310,21 @@ class JamSource(Source):
             snare_min_gap_s=snare_gap_s,
             grouping=self._grouping,
         )
+        self._generator = GrooveGenerator(
+            beats_per_bar=self._meter,
+            grouping=self._grouping,
+            rng_seed=self._seed,
+            kt_min_gap_s=kt_gap_s,
+            snare_min_gap_s=snare_gap_s,
+            decoration=self._decoration,
+            riffs=self._riffs,
+            mutation=self._mutation,
+        )
+        self._phrase = PhraseTracker()
+        self._harmony = HarmonyTracker()
+        self._phrase_ctx = self._phrase.context()
+        self._harmony_state = None
+        self._echo = ()
         self._listener = Listener(beats_per_bar=self._meter,
                                   keep_time=self._tempo_hint is not None)
         self._lead_floor_s = ensemble.max_live_lead_s()
@@ -281,13 +343,20 @@ class JamSource(Source):
         assert self._listener is not None
         assert self._ensemble is not None, "bind() before _tick()"
 
+        assert self._generator is not None and self._phrase is not None
+        assert self._harmony is not None
+
         while True:
             try:
                 event = self._events.get_nowait()
             except queue.Empty:
                 break
             accent = self._listener.on_note(event.note, event.velocity, event.t_s)
+            settled = self._listener.take_settled_credit()
+            if settled > 0.0:
+                self._tracker.credit_last_cluster(settled)
             self._tracker.on_onset(event.t_s, accent)
+            self._harmony.on_note(event.note, event.velocity, event.t_s)
 
         beats = self._tracker.advance(now_s + self._emit_ahead_s)
         state = self._tracker.state
@@ -295,27 +364,37 @@ class JamSource(Source):
         feel = self._listener.feel(now_s, period_s)
         self._feel = feel
 
-        if feel.gap_fill and state.locked:
+        if feel.gap_fill and state.locked and self._riffs != "none":
             # A hole in the phrase earns a fill — but only once there is a
             # bar to put it in. Before the lock a request would just sit
             # there and fire, meaninglessly, in the first bar afterwards.
             self._engine.request_fill()
+            self._generator.request_fill()
             self.gap_fills += 1
 
         if feel.resting or state.confidence < MIN_SCHEDULE_CONFIDENCE:
             return
 
         for beat in beats:
+            index = beat.bar_index * self._meter + (beat.beat_in_bar - 1)
+            self._harmony_state = self._harmony.on_beat(index, beat.time_s)
             if beat.beat_in_bar == 1:
-                # Bar lines are where a drummer changes texture, and where
-                # the question of what the bar even is gets asked.
+                # Bar lines are where a drummer changes texture, where the
+                # question of what the bar even is gets asked, and where the
+                # bar just finished is weighed for phrase and section.
                 if self._auto_meter:
                     self._consider_meter()
                 if self._follow:
                     self._last_suggested = feel.intensity
                     self._engine.set_intensity(feel.intensity + self._intensity_bias)
                     self._engine.set_mode(self._mode_override or feel.mode)
-            for note in self._engine.notes_for_beat(beat, state.confidence):
+                self._phrase_ctx = self._phrase.on_bar(self._listener.bar_features(self._meter))
+                self._echo = self._last_bar_rhythm(beat.time_s, beat.period_s)
+            if self._groove == "generative":
+                notes = self._generator.notes_for_beat(self._beat_context(beat, feel, state))
+            else:
+                notes = self._engine.notes_for_beat(beat, state.confidence)
+            for note in notes:
                 if note.time_s < now_s + max(0.0, self._lead_floor_s - 0.010):
                     # The burst of already-unreachable notes right after
                     # locking: behind now, or inside the transport's lead by
@@ -329,6 +408,62 @@ class JamSource(Source):
                     note.note, velocity, note.time_s, source=self.name)
                 if result.ok:
                     self.scheduled += 1
+
+    def _beat_context(self, beat, feel: Feel, state) -> BeatContext:
+        """Everything the generator wants to know about this beat."""
+        assert self._phrase_ctx is not None and self._harmony is not None
+        activity = feel.activity if self._follow else 0.5
+        activity += ACTIVITY_PER_STEP * self._intensity_bias
+        mode = self._mode_override or (feel.mode if self._follow else self._mode)
+        if mode == "sparse":
+            activity = min(activity, SPARSE_ACTIVITY_CAP)
+        elif mode == "busy":
+            activity = max(activity, BUSY_ACTIVITY_FLOOR)
+        activity = max(0.05, min(1.0, activity))
+        self._activity = activity
+        ctx = self._phrase_ctx
+        index = beat.bar_index * self._meter + (beat.beat_in_bar - 1)
+        return BeatContext(
+            time_s=beat.time_s,
+            period_s=beat.period_s,
+            beat_in_bar=beat.beat_in_bar,
+            bar_index=beat.bar_index,
+            bar_in_phrase=ctx.bar_in_phrase,
+            phrase_end=ctx.phrase_end,
+            hyper_end=ctx.hyper_end,
+            section_started=ctx.section_started and beat.beat_in_bar == 1,
+            activity=activity,
+            gain=feel.gain,
+            accent=self._accent_for(beat.beat_in_bar),
+            swing=state.swing,
+            chord_change=self._harmony.expects_change(index),
+            echo=self._echo,
+        )
+
+    def _accent_for(self, beat_in_bar: int) -> float:
+        """How much the pianist leans on this beat, as a factor around 1.0."""
+        assert self._tracker is not None
+        profile = self._tracker.phase_profile
+        if len(profile) < beat_in_bar or sum(profile) < ACCENT_EVIDENCE:
+            return 1.0
+        mean = sum(profile) / len(profile)
+        if mean <= 0.0:
+            return 1.0
+        factor = 1.0 + ACCENT_PULL * (profile[beat_in_bar - 1] / mean - 1.0)
+        return max(ACCENT_MIN, min(ACCENT_MAX, factor))
+
+    def _last_bar_rhythm(self, bar_start_s: float, period_s: float) -> tuple[int, ...]:
+        """The pianist's onsets in the bar just finished, as sixteenth positions."""
+        assert self._listener is not None
+        previous_start = bar_start_s - self._meter * period_s
+        sixteenth = period_s / 4.0
+        positions = set()
+        for t in self._listener.recent_clusters:
+            if previous_start - 0.05 <= t < bar_start_s - 0.05:
+                pos = round((t - previous_start) / sixteenth)
+                if 0 <= pos < 4 * self._meter:
+                    positions.add(pos)
+        return tuple(sorted(positions))
 
     def _consider_meter(self) -> None:
         """Once a bar: is the pianist in the meter we think they are?"""
@@ -357,6 +492,7 @@ class JamSource(Source):
 
         self._tracker.set_meter(best.beats_per_bar, best.downbeat_index)
         self._engine.set_meter(best.beats_per_bar, best.grouping)
+        self._generator.set_meter(best.beats_per_bar, best.grouping)
         self._listener.set_meter(best.beats_per_bar)
         self._meter = best.beats_per_bar
         self._grouping = best.grouping
@@ -457,6 +593,22 @@ class JamSource(Source):
         return self._tempo_hint
 
     @property
+    def groove(self) -> str:
+        return self._groove
+
+    @property
+    def activity(self) -> float:
+        return self._activity
+
+    @property
+    def phrase_context(self) -> PhraseContext | None:
+        return self._phrase_ctx
+
+    @property
+    def harmony_state(self) -> HarmonyState | None:
+        return self._harmony_state
+
+    @property
     def intensity(self) -> int:
         return self._engine.intensity if self._engine is not None else self._intensity
 
@@ -473,6 +625,8 @@ class JamSource(Source):
         value = min(max(int(value), 0), 4)
         if self._follow and self._last_suggested is not None:
             self._intensity_bias = value - self._last_suggested
+        else:
+            self._intensity_bias = value - 2
         self._engine.set_intensity(value)
 
     def set_mode(self, value: str) -> None:
@@ -484,6 +638,32 @@ class JamSource(Source):
             return
         self._engine.set_mode(value)    # raises on an unknown mode
         self._mode_override = self._engine.mode
+
+    @property
+    def decoration(self) -> float:
+        return self._generator.decoration if self._generator else self._decoration
+
+    @property
+    def riffs(self) -> str:
+        return self._generator.riffs if self._generator else self._riffs
+
+    @property
+    def hold(self) -> float | None:
+        return self._tracker.hold if self._tracker else self._hold
+
+    def set_decoration(self, value: float) -> None:
+        self._decoration = max(0.0, min(1.0, float(value)))
+        if self._generator is not None:
+            self._generator.set_decoration(self._decoration)
+
+    def set_riffs(self, value: str) -> None:
+        if self._generator is not None:
+            self._generator.set_riffs(value)      # raises on an unknown value
+            self._riffs = self._generator.riffs
+        else:
+            if value not in RIFFS:
+                raise ValueError(f"riffs must be one of {', '.join(RIFFS)}")
+            self._riffs = value
 
     def request_fill(self) -> None:
         if self._engine is not None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,18 +30,36 @@ class HandObservation:
 class FrameObservation:
     timestamp_ms: int
     hands: tuple[HandObservation, ...]
+    captured_at_s: float = 0.0
 
 
 # ── Gesture engine ───────────────────────────────────────────────────
 
 class GestureEngine:
-    def __init__(self, model_path: Path, max_hands: int, gesture_score_threshold: float) -> None:
+    """Async MediaPipe gesture recognizer with a bounded result queue.
+
+    Results are queued rather than overwritten. The strike detector works from
+    consecutive motion samples, so silently discarding a frame's landmarks
+    because the main loop was busy destroys the very signal it differentiates:
+    a dropped sample either erases the stroke or doubles the effective timestep
+    and halves the measured velocity.
+    """
+
+    def __init__(
+        self,
+        model_path: Path,
+        max_hands: int,
+        gesture_score_threshold: float,
+        queue_size: int = 8,
+    ) -> None:
         if not model_path.exists():
             raise FileNotFoundError(f"Gesture model not found at {model_path}. Download gesture_recognizer.task first.")
 
         self._score_threshold = gesture_score_threshold
         self._lock = Lock()
-        self._latest: FrameObservation | None = None
+        self._results: deque[FrameObservation] = deque(maxlen=queue_size)
+        self._pending_capture_times: dict[int, float] = {}
+        self._dropped_results = 0
 
         options = vision.GestureRecognizerOptions(
             base_options=mp_python.BaseOptions(model_asset_path=str(model_path)),
@@ -50,14 +69,31 @@ class GestureEngine:
         )
         self._recognizer = vision.GestureRecognizer.create_from_options(options)
 
-    def submit(self, frame_bgr: np.ndarray, timestamp_ms: int) -> None:
+    @property
+    def dropped_results(self) -> int:
+        """Observations discarded because the queue overflowed."""
+
+        return self._dropped_results
+
+    def submit(self, frame_bgr: np.ndarray, timestamp_ms: int, captured_at_s: float = 0.0) -> None:
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+        if captured_at_s:
+            with self._lock:
+                self._pending_capture_times[timestamp_ms] = captured_at_s
         self._recognizer.recognize_async(mp_image, timestamp_ms)
+
+    def drain(self) -> list[FrameObservation]:
+        """Remove and return every observation received since the last call."""
+
+        with self._lock:
+            out = list(self._results)
+            self._results.clear()
+            return out
 
     def get_latest(self) -> FrameObservation | None:
         with self._lock:
-            return self._latest
+            return self._results[-1] if self._results else None
 
     def close(self) -> None:
         self._recognizer.close()
@@ -74,7 +110,16 @@ class GestureEngine:
             hands.append(HandObservation(hand_id=i, handedness=handedness, landmarks=landmarks, top_gesture=top_label, top_gesture_score=top_score))
 
         with self._lock:
-            self._latest = FrameObservation(timestamp_ms=timestamp_ms, hands=tuple(hands))
+            captured_at_s = self._pending_capture_times.pop(timestamp_ms, 0.0)
+            # Submissions that never produced a callback would otherwise leak.
+            if len(self._pending_capture_times) > 64:
+                for stale in [t for t in self._pending_capture_times if t < timestamp_ms]:
+                    del self._pending_capture_times[stale]
+            if len(self._results) == self._results.maxlen:
+                self._dropped_results += 1
+            self._results.append(
+                FrameObservation(timestamp_ms=timestamp_ms, hands=tuple(hands), captured_at_s=captured_at_s)
+            )
 
     def _handedness_at(self, result: vision.GestureRecognizerResult, i: int) -> str:
         if i >= len(result.handedness):
@@ -100,11 +145,18 @@ def draw_overlay(
     recent_hits: Sequence[str],
     zone_edges: Sequence[float] = (),
     zone_labels: Sequence[str] = (),
+    strike_plane: float | None = None,
+    status_line: str | None = None,
 ) -> np.ndarray:
     output = frame.copy()
     h, w = output.shape[:2]
 
     _draw_zone_layout(output, zone_edges=zone_edges, zone_labels=zone_labels)
+
+    if strike_plane is not None:
+        y = int(min(max(strike_plane, 0.0), 1.0) * h)
+        cv2.line(output, (0, y), (w, y), (0, 165, 255), 1, cv2.LINE_AA)
+        cv2.putText(output, "strike plane", (w - 130, max(y - 6, 12)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 165, 255), 1, cv2.LINE_AA)
 
     if observation is not None:
         for hand in observation.hands:
@@ -120,6 +172,9 @@ def draw_overlay(
 
     _draw_block(output, "Commands", recent_commands, (12, 24), (0, 255, 0))
     _draw_block(output, "Hits", recent_hits, (12, 132), (255, 220, 0))
+
+    if status_line:
+        cv2.putText(output, status_line, (12, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
     return output
 
 

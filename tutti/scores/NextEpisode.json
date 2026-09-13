@@ -1,0 +1,7 @@
+{
+  "song": "NextEpisode",
+  "midi": "../../Software/Songs/The Next Episode Melody (Xylobot) Midi.mid",
+  "parts": [
+    {"part_id": 1, "role": "xylo", "track": 0, "note_range": [60, 76], "fold_octaves": true}
+  ]
+}

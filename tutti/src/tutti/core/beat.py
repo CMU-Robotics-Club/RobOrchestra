@@ -38,9 +38,9 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from math import sqrt
+from math import ceil, log, sqrt
 
-from .tempo import TempoHypothesis, rank_periods, same_period
+from .tempo import TOP_HYPOTHESES, TempoHypothesis, rank_periods, same_period
 
 LOCK_CONFIDENCE = 0.55
 UNLOCK_CONFIDENCE = 0.40
@@ -70,6 +70,17 @@ HINT_SILENCE_UNLOCK_BEATS = 12.0
 COUNT_IN_GAPS = 2
 COUNT_IN_TOLERANCE = 0.08
 COUNT_IN_EVIDENCE = 0.8
+# A hint is a prior, not a cage. When the playing supports some other
+# period overwhelmingly and the period near the hint only poorly — a 3:2
+# misfit, say, because the hint was simply wrong for the piece — the
+# evidence wins, and the drums play what the pianist is actually playing.
+HINT_OVERRIDE_SUPPORT = 0.6         # the evidence must be this strong
+HINT_OVERRIDE_RATIO = 0.75          # and the near-hint reading this much weaker
+# ...and the evidence must be for a period *unrelated* to the hint. Double,
+# half, triple and their kin are what a hint exists to settle; only a
+# period the hint cannot explain at all — a 4:3 misfit — overrules it.
+HINT_RELATED = (0.25, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0, 1.5, 2.0, 3.0, 4.0)
+HINT_RELATED_TOLERANCE = 0.06
 # A handful of random onsets always fits *some* period for a moment, since
 # the candidates are read off the onsets themselves. So the first lock, like
 # every later change of mind, needs the same hypothesis to top the ranking
@@ -79,6 +90,10 @@ COUNT_IN_EVIDENCE = 0.8
 LOCK_STREAK = 6
 LOCK_STREAK_STRONG = 3          # a clean pulse need not wait as long
 STRONG_SUPPORT = 0.85
+# Between the two the wait grades smoothly with support. A hard line at
+# STRONG_SUPPORT made the lock time a coin flip for a pulse sitting near
+# it — an accelerando from the first bar reads 0.83 or 0.86 depending on
+# how the chords happened to be weighted, and waited three onsets or six.
 FULL_EVIDENCE_ONSETS = 6
 # The candidate's refined period wobbles a few percent as the window
 # slides; the candidate follows it rather than being reset by it.
@@ -128,6 +143,16 @@ TEMPO_ALPHA_FREE = 0.35
 # tempo is wrong. When the pianist really jumps tempo the grid stops
 # fitting, and then the challengers get their hearing.
 CHALLENGER_FIT_CEILING = 0.75
+# Half-time and the beat explain the same onsets, and the prior chose
+# between them at lock. It does not get to choose again every time the
+# window slides: mid-piece, octave-equivalent readings with comparable
+# support — support, not score, because the prior is exactly what must
+# not vote here — are settled by continuity with the tempo being followed.
+# The ratio tolerance is loose because through an accelerando the window
+# straddles two tempi and every reading in it is smeared.
+OCTAVE_RATIOS = (0.25, 1.0 / 3.0, 0.5, 2.0, 3.0, 4.0)
+OCTAVE_TOLERANCE = 0.12
+OCTAVE_EQUIVALENCE = 0.8        # support ratio for "explains the onsets as well"
 
 # How hard one onset may pull the predicted grid. 0.30 is the flywheel's
 # stiffness: high enough to track drift, low enough that a syncopated hit
@@ -140,6 +165,19 @@ PHASE_NUDGE = 0.30
 PHASE_NUDGE_RUBATO = 0.70       # under expressive timing, follow more, fly less
 PHASE_NUDGE_WINDOW = 0.30
 OFFGRID_RESET_STREAK = 3
+# Hold: how firmly the grid is a flywheel rather than a follower, 0 to 1.
+# Under hold the phase yields less to each onset and to fewer of them, a
+# wrong note between beats is not read as evidence against the grid, it
+# takes a longer run of off-grid onsets to move the bar, and rubato bends
+# less before the tempo itself follows. Off by default: stray notes are
+# already ignored by the flywheel (measured: 23 ms grid error against 19
+# at full hold), and a stiffer grid fits an expressive pianist worse. It
+# is there for a player who wants the beat to stay put through pushes.
+HOLD_NUDGE = 0.7                # fraction of the nudge hold takes away, at 1
+HOLD_WINDOW = 0.4
+HOLD_STREAK = 4                 # extra off-grid onsets needed before re-acquiring
+HOLD_RUBATO = 0.6
+HOLD_OFFGRID_FIT = 0.5          # what a stray onset scores against the grid, at 1
 
 # How an onset reads against the grid, for the grid-fit confidence. Tight
 # is a hit and is the only thing rubato is read from; sloppy still nudges
@@ -167,6 +205,12 @@ RUBATO_LIMIT = 0.25
 RUBATO_ALPHA = 0.6
 RUBATO_TEMPO_FOLLOW = 0.3
 
+# Swing is read, not assumed: an "and" that keeps landing at two thirds of
+# the beat is a swing feel, at a half it is straight, and the drums should
+# put their own offbeats where the pianist puts theirs.
+SWING_ZONE = (0.42, 0.78)
+SWING_ALPHA = 0.15
+
 # Once locked, confidence is how well the predicted grid is landing on the
 # onsets — because that is what the drummer needs to know — tempered by
 # regularity, so free playing that has stopped being a pulse loses the lock
@@ -192,7 +236,12 @@ DECAY_PER_S = 0.05
 # what makes one sforzando harmless — it wins its own bar and then has
 # nothing left — while a real accent pattern wins every bar and takes over.
 ACCENT_GRID_WINDOW = 0.25       # fraction of a period an onset may sit off-grid
-ACCENT_FLOOR = 2.0              # evidence a bar needs before it gets a vote
+# A bar votes only if it held a contest: accent on at least two of its beats.
+# An absolute evidence floor was tried and failed on real hands — a gentle
+# pianist's whole bar weighs less than one forte chord, so the bar phase sat
+# a beat wrong for a whole song — and the streak below already makes a lone
+# sforzando harmless.
+VOTE_MIN_BEATS = 2
 ROTATE_DOMINANCE = 1.25         # winner must beat the incumbent by this ratio
 ROTATE_BARS = 3                 # consecutive winning bars before beat 1 moves
 PROFILE_ALPHA = 0.4             # smoothing for the diagnostic phase profile
@@ -221,6 +270,7 @@ class BeatState:
     last_onset_s: float | None
     alternatives: tuple[float, ...] = ()    # runner-up tempi, in BPM
     rubato: float = 1.0                     # local period over global; above 1 is slowing
+    swing: float = 0.5                      # where the "and" falls: 0.5 straight, 0.67 triplet
 
 
 class BeatTracker:
@@ -235,9 +285,19 @@ class BeatTracker:
         infer_downbeat: bool = True,
         preferred_bpm: float = 100.0,
         tempo_hint: float | None = None,
+        hold: float | None = None,
     ) -> None:
         if not 0.0 < min_bpm < max_bpm:
             raise ValueError("need 0 < min_bpm < max_bpm")
+        self._hold = max(0.0, min(1.0, float(hold or 0.0)))
+        h = self._hold
+        self._nudge = PHASE_NUDGE * (1.0 - HOLD_NUDGE * h)
+        self._nudge_rubato = PHASE_NUDGE_RUBATO * (1.0 - HOLD_NUDGE * h)
+        self._nudge_window = PHASE_NUDGE_WINDOW * (1.0 - HOLD_WINDOW * h)
+        self._offgrid_reset = OFFGRID_RESET_STREAK + round(HOLD_STREAK * h)
+        self._offgrid_fit = HOLD_OFFGRID_FIT * h
+        self._rubato_limit = RUBATO_LIMIT * (1.0 - HOLD_RUBATO * h)
+        self._tempo_follow = RUBATO_TEMPO_FOLLOW * (1.0 - HOLD_RUBATO * h)
         if beats_per_bar < 1:
             raise ValueError("beats_per_bar must be at least 1")
         if preferred_bpm <= 0:
@@ -247,6 +307,11 @@ class BeatTracker:
         self._min_bpm = float(min_bpm)
         self._max_bpm = float(max_bpm)
         self._tempo_hint = float(tempo_hint) if tempo_hint else None
+        if self._tempo_hint:
+            # A declared tempo may sit outside the by-ear range — a fast
+            # waltz in three at 190 — and the range must let it be found.
+            self._min_bpm = min(self._min_bpm, self._tempo_hint / 1.3)
+            self._max_bpm = max(self._max_bpm, self._tempo_hint * 1.3)
         self._preferred_bpm = self._tempo_hint or float(preferred_bpm)
         self._prior_width = HINT_PRIOR_WIDTH if self._tempo_hint else None
         if self._tempo_hint:
@@ -285,6 +350,9 @@ class BeatTracker:
         # Rubato: recent (onset, grid point) pairs and the smoothed ratio.
         self._grid_points: deque[tuple[float, float]] = deque(maxlen=RUBATO_ONSETS)
         self._rubato = 1.0
+        # Swing: where the pianist's "and" actually falls, read from the
+        # off-grid onsets that sit in the half-to-two-thirds zone.
+        self._swing = 0.5
 
         # Evidence from the periodicity ranking, and whether recent onsets
         # landed on the grid; confidence is drawn from one or the other.
@@ -301,6 +369,9 @@ class BeatTracker:
         self._phase_streak = 0
         self._beats_since_bar = 0
         self._last_cluster_phase: int | None = None
+        # The first onset of a stretch of playing. People start on the one,
+        # so the grid is numbered from it at lock, until the accents object.
+        self._entry_s: float | None = None
 
         # Accent per absolute beat index, kept for a while so a meter scorer
         # can look back over the last few bars whatever the bar length is.
@@ -311,6 +382,10 @@ class BeatTracker:
         self.onsets = 0
 
     # what the tracker believes
+
+    @property
+    def hold(self) -> float:
+        return self._hold
 
     @property
     def beats_per_bar(self) -> int:
@@ -350,6 +425,7 @@ class BeatTracker:
             last_onset_s=self._last_onset_s,
             alternatives=alternatives,
             rubato=self._rubato,
+            swing=self._swing,
         )
 
     def set_meter(self, beats_per_bar: int, downbeat_index: int | None = None) -> None:
@@ -402,17 +478,12 @@ class BeatTracker:
         accent = max(float(accent), 0.0)
         if (self._last_onset_s is not None
                 and t_s - self._last_onset_s < self._min_onset_gap_s):
-            if self._onset_weights:
-                w = self._onset_weights[-1]
-                self._onset_weights[-1] = sqrt(w * w + accent)
-            if self._last_cluster_phase is not None:
-                self._bar_accent[self._last_cluster_phase] += accent
-            if self._last_cluster_index is not None:
-                self._accent_log[self._last_cluster_index] = (
-                    self._accent_log.get(self._last_cluster_index, 0.0) + accent)
+            self._merge_accent(accent)
             return False
         self._onset_times.append(t_s)
         self._onset_weights.append(sqrt(max(accent, 0.05)))
+        if self._entry_s is None:
+            self._entry_s = t_s
         self._last_onset_s = t_s
         self.onsets += 1
         if not self._count_in():
@@ -421,6 +492,28 @@ class BeatTracker:
         self._refresh_confidence()
         self._note_accent(t_s, accent)
         return True
+
+    def credit_last_cluster(self, accent: float) -> None:
+        """Bank accent that was only knowable once the last cluster was complete.
+
+        A listener judges some things — an open root under a chord, a bass
+        line moving — only when the cluster's last note is in, which may be
+        after the first note has already been fed here. This lands the late
+        credit where that cluster's own notes went.
+        """
+        self._merge_accent(max(float(accent), 0.0))
+
+    def _merge_accent(self, accent: float) -> None:
+        if accent <= 0.0:
+            return
+        if self._onset_weights:
+            w = self._onset_weights[-1]
+            self._onset_weights[-1] = sqrt(w * w + accent)
+        if self._last_cluster_phase is not None:
+            self._bar_accent[self._last_cluster_phase] += accent
+        if self._last_cluster_index is not None:
+            self._accent_log[self._last_cluster_index] = (
+                self._accent_log.get(self._last_cluster_index, 0.0) + accent)
 
     def _count_in(self) -> bool:
         """With a declared tempo, a couple of gaps at it are enough to start."""
@@ -510,6 +603,7 @@ class BeatTracker:
                 self._beats_since_bar = 0
                 self._phase_candidate = None
                 self._phase_streak = 0
+                self._entry_s = None      # whatever comes next is a new entry
 
         return self._emit_due_beats(now_s)
 
@@ -531,8 +625,14 @@ class BeatTracker:
         strength = min(1.0, in_window / FULL_EVIDENCE_ONSETS)
 
         if self._active_period is None:
-            near_top = [h for h in hypotheses if h.score >= NEAR_TOP_SCORE * top.score]
+            # The ranking proper is the first few by score; a best-supported
+            # extra may ride along after them, and it only matters to a hint.
+            ranked = hypotheses[:TOP_HYPOTHESES]
+            near_top = [h for h in ranked if h.score >= NEAR_TOP_SCORE * top.score]
             top = max(near_top, key=lambda h: h.support)
+            strongest = max(hypotheses, key=lambda h: h.support)
+            if self._overrules_hint(strongest, top):
+                top = strongest
             supported = top.support * strength
             regular = self._regularity(top.period_s, REGULARITY_TOLERANCE_LOCK)
             worthy = self._earns_lock(top.support, regular, strength, top.period_s)
@@ -545,7 +645,7 @@ class BeatTracker:
                 self._lock_candidate, self._lock_streak = top.period_s, 1
             else:
                 self._lock_candidate, self._lock_streak = None, 0
-            needed = LOCK_STREAK_STRONG if supported >= STRONG_SUPPORT else LOCK_STREAK
+            needed = self._streak_needed(supported)
             enough = MIN_ONSETS_TO_LOCK
             if self._near_hint(top.period_s):
                 needed, enough = min(needed, HINT_LOCK_STREAK), HINT_MIN_ONSETS
@@ -557,6 +657,18 @@ class BeatTracker:
 
         active = next((h for h in hypotheses
                        if same_period(h.period_s, self._active_period)), None)
+        # Under a hint, the prior may rank the pianist's real period below
+        # the hint's favourite; overwhelming support for it overrules that.
+        strongest = max(hypotheses, key=lambda h: h.support)
+        overwhelming = (
+            active is not None
+            and not same_period(strongest.period_s, self._active_period)
+            and self._overrules_hint(strongest, active)
+        )
+        if overwhelming:
+            top = strongest
+        elif self._active_period is not None:
+            top = self._continuous(top, hypotheses)
         if active is not None and same_period(top.period_s, self._active_period):
             # The incumbent still leads: follow its refined period with inertia.
             self._challenger_period = None
@@ -568,10 +680,13 @@ class BeatTracker:
             return
 
         # Someone else leads. Count how long they keep it up — unless the
-        # grid is fitting, in which case the window is simply behind.
+        # grid is fitting, in which case the window is simply behind. The
+        # exception is a wrong tempo hint: a misfit grid can look like it
+        # fits when the pianist's onsets land on its subdivisions, and only
+        # overwhelming evidence for another period sees through that.
         self._evidence = active.support if active is not None else self._evidence * 0.7
         fit = (sum(self._grid_fit) / len(self._grid_fit)) if len(self._grid_fit) >= 3 else 0.0
-        if self._locked and fit >= CHALLENGER_FIT_CEILING:
+        if self._locked and fit >= CHALLENGER_FIT_CEILING and not overwhelming:
             self._challenger_period = None
             self._challenger_streak = 0
             return
@@ -586,14 +701,62 @@ class BeatTracker:
         if self._tempo_hint and not self._near_hint(top.period_s):
             dominance = HINT_CHALLENGER_DOMINANCE
         if (self._challenger_streak >= CHALLENGER_STREAK
-                and top.score >= dominance * active_score):
+                and (top.score >= dominance * active_score or overwhelming)):
             self._adopt(top)
+
+    def _continuous(self, top: TempoHypothesis,
+                    hypotheses: list[TempoHypothesis]) -> TempoHypothesis:
+        """Among octave-equivalent near-top readings, the one nearest the tempo now.
+
+        A pianist who has accelerated from 100 to 136 is at 136, not at 68,
+        however the prior ranks those two; the beat is the level that was
+        being followed.
+        """
+        if self._active_period is None:
+            return top
+        best, best_gap = top, abs(log(top.period_s / self._active_period))
+        for h in hypotheses:
+            if h is top or h.support < OCTAVE_EQUIVALENCE * top.support:
+                continue
+            ratio = h.period_s / top.period_s
+            if not any(abs(ratio - m) <= OCTAVE_TOLERANCE * m for m in OCTAVE_RATIOS):
+                continue
+            gap = abs(log(h.period_s / self._active_period))
+            if gap < best_gap:
+                best, best_gap = h, gap
+        return best
 
     def _near_hint(self, period_s: float) -> bool:
         if not self._tempo_hint:
             return False
         hint_period = 60.0 / self._tempo_hint
         return abs(period_s - hint_period) <= HINT_BAND * hint_period
+
+    def _related_to_hint(self, period_s: float) -> bool:
+        """Whether a period is the hint or a simple multiple or subdivision of it."""
+        if not self._tempo_hint:
+            return False
+        hint_period = 60.0 / self._tempo_hint
+        return any(abs(period_s - m * hint_period) <= HINT_RELATED_TOLERANCE * m * hint_period
+                   for m in HINT_RELATED)
+
+    def _overrules_hint(self, strongest: TempoHypothesis, favourite: TempoHypothesis) -> bool:
+        """Evidence for an unrelated period so strong the hint must yield."""
+        return (self._tempo_hint is not None
+                and not self._related_to_hint(strongest.period_s)
+                and strongest.support >= HINT_OVERRIDE_SUPPORT
+                and favourite.support <= HINT_OVERRIDE_RATIO * strongest.support)
+
+    @staticmethod
+    def _streak_needed(supported: float) -> int:
+        """Consecutive wins a candidate needs, fewer the better supported."""
+        if supported >= STRONG_SUPPORT:
+            return LOCK_STREAK_STRONG
+        if supported <= LOCK_CONFIDENCE:
+            return LOCK_STREAK
+        span = STRONG_SUPPORT - LOCK_CONFIDENCE
+        extra = (STRONG_SUPPORT - supported) / span * (LOCK_STREAK - LOCK_STREAK_STRONG)
+        return min(LOCK_STREAK, LOCK_STREAK_STRONG + ceil(extra - 1e-9))
 
     def _earns_lock(self, support: float, regular: float, strength: float = 1.0,
                     period_s: float | None = None) -> bool:
@@ -622,6 +785,7 @@ class BeatTracker:
                 self._locked = True
                 if self._next_beat_s is None:
                     self._next_beat_s = self._acquire_phase(self._active_period)
+                self._number_from_entry()
 
     def _adopt(self, hypothesis: TempoHypothesis) -> None:
         """Make this hypothesis the one the grid follows."""
@@ -640,6 +804,8 @@ class BeatTracker:
         regular = self._regularity(hypothesis.period_s, REGULARITY_TOLERANCE_LOCK)
         self._locked = self._earns_lock(hypothesis.support, regular, period_s=hypothesis.period_s)
         self._next_beat_s = self._acquire_phase(hypothesis.period_s) if self._locked else None
+        if self._locked:
+            self._number_from_entry()
         if level_change:
             # Beat indices mean something else at a different tempo, so the
             # bar-phase evidence and the per-beat log start over.
@@ -651,6 +817,23 @@ class BeatTracker:
             self._phase_candidate = None
             self._phase_streak = 0
             self._beats_since_bar = 0
+
+    def _number_from_entry(self) -> None:
+        """Number the grid so the entry onset is beat 1.
+
+        Nobody counts in and then starts on the "and of three": the first
+        note of a stretch of playing is a downbeat far more often than any
+        other beat. That is only a prior — an anacrusis proves it wrong — so
+        the accent contest keeps the last word, and one entry is spent once
+        it has been used, so a re-lock later in the piece leaves the bar
+        where the accents put it.
+        """
+        if (not self._infer_downbeat or self._entry_s is None
+                or self._next_beat_s is None or self._active_period is None):
+            return
+        k = round((self._next_beat_s - self._entry_s) / self._grid_period())
+        self._bar_phase = (self._beat_counter - k) % self._beats_per_bar
+        self._entry_s = None
 
     def _acquire_phase(self, period: float, recent: int = ACQUIRE_ONSETS) -> float:
         """Where the grid goes at lock: on the onset most others agree with.
@@ -705,13 +888,15 @@ class BeatTracker:
         nearest_time = self._next_beat_s + nearest_index * period
         phase_error = onset_s - nearest_time
 
-        if abs(phase_error) > PHASE_NUDGE_WINDOW * period:
+        if abs(phase_error) > self._nudge_window * period:
             offset = (phase_error / period) % 1.0
             on_subdivision = any(abs(offset - f) <= SUBDIVISION_TOLERANCE
                                  for f in (0.5, 1.0 / 3.0, 2.0 / 3.0))
-            self._grid_fit.append(SUBDIVISION_FIT if on_subdivision else 0.0)
+            self._grid_fit.append(SUBDIVISION_FIT if on_subdivision else self._offgrid_fit)
+            if on_subdivision and SWING_ZONE[0] <= offset <= SWING_ZONE[1]:
+                self._swing += SWING_ALPHA * (offset - self._swing)
             self._offgrid_streak += 1
-            if self._offgrid_streak < OFFGRID_RESET_STREAK:
+            if self._offgrid_streak < self._offgrid_reset:
                 return      # syncopation: the flywheel does not follow it
             # The grid was wrong. Re-acquire where the weight of the last
             # few onsets says the pulse is — the run that just contradicted
@@ -729,7 +914,7 @@ class BeatTracker:
         else:
             self._grid_fit.append(SLOPPY_FIT)
 
-        nudge = PHASE_NUDGE_RUBATO if abs(self._rubato - 1.0) > RUBATO_DEADBAND else PHASE_NUDGE
+        nudge = self._nudge_rubato if abs(self._rubato - 1.0) > RUBATO_DEADBAND else self._nudge
         corrected = nearest_time + phase_error * nudge
         if self._last_emitted_beat_s is not None:
             # Half a period, not zero: an onset trailing an already-emitted
@@ -751,12 +936,12 @@ class BeatTracker:
         if steps < 2:
             return      # one interval is timing, not tempo
         local = (t1 - t0) / steps
-        ratio = max(1.0 - RUBATO_LIMIT, min(1.0 + RUBATO_LIMIT, local / base))
+        ratio = max(1.0 - self._rubato_limit, min(1.0 + self._rubato_limit, local / base))
         self._rubato += RUBATO_ALPHA * (ratio - self._rubato)
         if abs(self._rubato - 1.0) > RUBATO_DEADBAND and self._active_period is not None:
             # Sustained: let the tempo itself drift after the playing, so the
             # ratio re-centres and the stretch never has to saturate.
-            self._active_period += RUBATO_TEMPO_FOLLOW * (local - self._active_period)
+            self._active_period += self._tempo_follow * (local - self._active_period)
             self._bpm = 60.0 / self._active_period
 
     # accents and the bar
@@ -814,12 +999,12 @@ class BeatTracker:
         for p in range(self._beats_per_bar):
             self._phase_ema[p] += PROFILE_ALPHA * (bar[p] - self._phase_ema[p])
 
-        if sum(bar) < ACCENT_FLOOR:
+        if sum(1 for a in bar if a > 0.0) < VOTE_MIN_BEATS:
             self._phase_candidate = None
             self._phase_streak = 0
             return
         winner = max(range(self._beats_per_bar), key=lambda p: bar[p])
-        incumbent = max(bar[self._bar_phase], 0.25)
+        incumbent = bar[self._bar_phase]
         if winner == self._bar_phase or bar[winner] < ROTATE_DOMINANCE * incumbent:
             self._phase_candidate = None
             self._phase_streak = 0

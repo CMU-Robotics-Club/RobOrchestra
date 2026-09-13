@@ -1,0 +1,7 @@
+{
+  "song": "AxelF",
+  "midi": "../../Software/Songs/Axel F Melody (Xylobot) Midi.mid",
+  "parts": [
+    {"part_id": 1, "role": "xylo", "track": 0, "note_range": [60, 76], "fold_octaves": true}
+  ]
+}

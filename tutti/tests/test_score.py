@@ -198,3 +198,22 @@ def test_manifest_with_no_parts_is_an_error(tmp_path):
     (tmp_path / "m.json").write_text(json.dumps({"midi": "t.mid", "parts": []}))
     with pytest.raises(ScoreError, match="no parts"):
         load_score(tmp_path / "m.json")
+
+
+def test_events_carry_their_position_in_beats():
+    """Beat positions come from ticks, so they do not move when the tempo does."""
+    import mido
+
+    mid = mido.MidiFile(ticks_per_beat=480)
+    track = mido.MidiTrack()
+    mid.tracks.append(track)
+    track.append(mido.MetaMessage("set_tempo", tempo=500_000, time=0))
+    track.append(mido.Message("note_on", note=60, velocity=100, time=0))
+    track.append(mido.Message("note_off", note=60, velocity=0, time=240))
+    track.append(mido.MetaMessage("set_tempo", tempo=250_000, time=0))
+    track.append(mido.Message("note_on", note=62, velocity=100, time=720))
+    track.append(mido.Message("note_off", note=62, velocity=0, time=120))
+    score = build_score(mid, [Part(part_id=1, role="xylo")])
+    assert [e.beat for e in score.events] == [0.0, 2.0]
+    assert score.events[1].time_s == pytest.approx(0.25 + 1.5 * 0.25)
+    assert score.events[0].duration_s == pytest.approx(0.25)

@@ -1,0 +1,9 @@
+{
+  "song": "EyeOfTheTiger",
+  "midi": "../../Software/Songs/EyeOfTheTiger.mid",
+  "parts": [
+    {"part_id": 1, "role": "xylo",  "track": 1, "note_range": [60, 76], "fold_octaves": true},
+    {"part_id": 2, "role": "snare", "track": 8, "notes": [38]},
+    {"part_id": 3, "role": "bass",  "track": 2, "notes": [35, 36]}
+  ]
+}

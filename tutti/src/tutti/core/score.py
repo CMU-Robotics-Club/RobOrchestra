@@ -33,6 +33,7 @@ class NoteEvent:
     time_s: float
     duration_s: float | None = None   # None if the file never sent a matching note-off
     source_note: int = 0              # what was written in the file, for debugging
+    beat: float = 0.0                 # position in quarter notes, independent of tempo
 
     def __post_init__(self):
         if not 0 <= self.note <= 127:
@@ -238,6 +239,7 @@ def build_score(mid: mido.MidiFile, parts: list[Part], name: str = "") -> Score:
                         velocity=msg.velocity,
                         time_s=tempo_map.seconds_at(tick),
                         source_note=msg.note,
+                        beat=tick / mid.ticks_per_beat,
                     )
                 )
                 open_notes[key] = len(score.events) - 1
@@ -253,6 +255,7 @@ def build_score(mid: mido.MidiFile, parts: list[Part], name: str = "") -> Score:
                     time_s=started.time_s,
                     duration_s=tempo_map.seconds_at(tick) - started.time_s,
                     source_note=started.source_note,
+                    beat=started.beat,
                 )
 
     score.events.sort(key=lambda e: (e.time_s, e.part_id, e.note))

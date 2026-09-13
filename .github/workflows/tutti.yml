@@ -1,0 +1,25 @@
+name: tutti
+
+on:
+  push:
+    paths: ["tutti/**", ".github/workflows/tutti.yml"]
+  pull_request:
+    paths: ["tutti/**", ".github/workflows/tutti.yml"]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        python: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: tutti
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install ${{ matrix.python }}
+      - run: uv sync --python ${{ matrix.python }}
+      - run: uv run pytest -q

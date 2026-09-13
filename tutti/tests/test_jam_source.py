@@ -158,8 +158,9 @@ def test_a_hole_in_the_phrase_earns_a_fill():
     period = 60.0 / 120.0
     bars_a, mid = comping(bars=6)
     bars_b, end = comping(bars=4, seed=9, start=mid)
-    # Punch a two-beat hole: drop everything in the first half of bar 7.
-    hole = [e for e in bars_b if not (mid - 0.02 <= e.t_s < mid + 2 * period - 0.1)]
+    # Punch a three-beat hole: drop everything up to beat four of bar 7. A
+    # two-beat gap is a hesitation now, and gets no answer.
+    hole = [e for e in bars_b if not (mid - 0.02 <= e.t_s < mid + 3 * period - 0.1)]
     h = Harness()
     h.run(bars_a + hole, until_s=end + 0.5)
     assert h.source.gap_fills >= 1
@@ -176,6 +177,15 @@ def test_the_drums_fade_out_when_the_pianist_stops():
         "the last snare before silence should already be fading")
 
 
+def full_snares(hits, since_s=0.0):
+    """Backbeat snares: the generator also plays ghosts at about half velocity."""
+    snares = [h for h in hits if h.note == 38 and h.play_at_s > since_s]
+    if not snares:
+        return []
+    loudest = max(s.velocity for s in snares)
+    return [s for s in snares if s.velocity >= 0.7 * loudest]
+
+
 def test_the_backbeat_finds_beats_two_and_four():
     # The fake pianist accents beat 1 hard (low loud root). Wherever the lock
     # lands, downbeat inference should steer the snare's backbeat onto the
@@ -184,8 +194,7 @@ def test_the_backbeat_finds_beats_two_and_four():
     h = Harness()
     h.run(events, until_s=end + 0.5)
     period = 60.0 / 120.0
-    late_snares = [s for s in h.transport.received
-                   if s.note == 38 and s.play_at_s > end - 4 * 4 * period]
+    late_snares = full_snares(h.transport.received, since_s=end - 4 * 4 * period)
     assert late_snares
     for s in late_snares:
         beat_pos = ((s.play_at_s - 0.5) / period) % 4
@@ -247,8 +256,7 @@ def test_a_declared_tempo_locks_within_a_bar():
 # stage 3: meter
 
 def late_snare_positions(h, end, period, meter, bars=4):
-    late = [s for s in h.transport.received
-            if s.note == 38 and s.play_at_s > end - bars * meter * period]
+    late = full_snares(h.transport.received, since_s=end - bars * meter * period)
     assert late, "expected snares in the last bars"
     return [((s.play_at_s - 0.5) / period) % meter for s in late]
 
@@ -261,9 +269,11 @@ def test_auto_meter_hears_a_waltz_and_plays_one():
     assert h.source.meter == 3
     assert h.source.grouping == (3,)
     assert h.source.meter_switches >= 1
-    # A waltz snare sits on beat 3 of the pianist's bar.
-    for pos in late_snare_positions(h, end, period, meter=3):
-        assert abs(pos - 2) < 0.3, f"snare on beat position {pos:.2f}"
+    # A waltz snare answers on beat 3 of the pianist's bar, sometimes on 2 as well.
+    positions = late_snare_positions(h, end, period, meter=3)
+    for pos in positions:
+        assert min(abs(pos - 2), abs(pos - 1)) < 0.3, f"snare on beat position {pos:.2f}"
+    assert any(abs(pos - 2) < 0.3 for pos in positions)
 
 
 def test_auto_meter_hears_five_four_with_its_grouping():
@@ -272,10 +282,12 @@ def test_auto_meter_hears_five_four_with_its_grouping():
     h = Harness(meter=4, auto_meter=True)
     h.run(events, until_s=end + 0.5)
     assert h.source.meter == 5
-    # The fake pianist puts the fifth on beat 3, which is two-plus-three.
+    # The fake pianist puts the fifth on beat 3, which is two-plus-three: the
+    # snares answer on beat 2 and beat 5, with the three-group's optional
+    # snare on its second beat (beat 4) allowed.
     assert h.source.grouping == (2, 3)
     for pos in late_snare_positions(h, end, period, meter=5):
-        assert min(abs(pos - 1), abs(pos - 4)) < 0.3, f"snare on beat position {pos:.2f}"
+        assert min(abs(pos - 1), abs(pos - 3), abs(pos - 4)) < 0.3, f"snare on beat position {pos:.2f}"
 
 
 def test_auto_meter_leaves_four_four_alone():
@@ -309,3 +321,22 @@ def test_a_stage_with_no_drums_is_named_not_silent():
     }
     with pytest.raises(RuntimeError, match="snare or tom"):
         Harness(fleet=xylo_only)
+
+
+def test_groove_knobs_reach_the_generator_the_floors_and_the_tracker():
+    h = Harness(decoration=0.2, riffs="period", mutation=0.1, min_gap_ms=200, hold=0.4)
+    if h.source._generator is None:
+        h.source.bind(h.ensemble)
+    gen = h.source._generator
+    assert gen.decoration == pytest.approx(0.2)
+    assert gen.riffs == "period"
+    assert gen.mutation == pytest.approx(0.1)
+    assert gen._floors._kt >= 0.2 and gen._floors._snare >= 0.2
+    assert h.source._tracker.hold == pytest.approx(0.4)
+    h.source.set_decoration(0.7)
+    h.source.set_riffs("none")
+    assert gen.decoration == pytest.approx(0.7) and h.source.riffs == "none"
+    with pytest.raises(ValueError):
+        h.source.set_riffs("sometimes")
+    with pytest.raises(ValueError):
+        JamSource(riffs="sometimes")

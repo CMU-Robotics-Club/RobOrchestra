@@ -36,6 +36,10 @@ class Snapshot:
     rubato: float
     gap_fills: int = 0
     velocity_scale: float = 1.0
+    activity: float = 0.0
+    section: int = 0
+    chord: str = ""
+    key: str = ""
 
 
 @dataclass
@@ -94,6 +98,11 @@ def replay_session(
                 hits=len(transport.received), alternatives=state.alternatives,
                 rubato=state.rubato, gap_fills=source.gap_fills,
                 velocity_scale=source.feel.velocity_scale if source.feel else 1.0,
+                activity=source.activity,
+                section=source.phrase_context.section if source.phrase_context else 0,
+                chord=(source.harmony_state.chord.name
+                       if source.harmony_state and source.harmony_state.chord else ""),
+                key=source.harmony_state.key_name if source.harmony_state else "",
             ))
         clock[0] += step_s
 
@@ -115,6 +124,10 @@ def describe(replay: Replay) -> list[str]:
             line += " alt=" + "/".join(f"{b:.0f}" for b in s.alternatives[:2])
         if abs(s.rubato - 1.0) > 0.03:
             line += f" rubato={s.rubato - 1.0:+.0%}"
+        if s.locked:
+            line += f" act={s.activity:.2f} sec={s.section}"
+        if s.chord:
+            line += f" {s.chord}/{s.key}"
         if s.velocity_scale < 1.0:
             line += f" fading={s.velocity_scale:.2f}"
         if s.gap_fills:
