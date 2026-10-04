@@ -19,7 +19,7 @@ boolean watchConductor = false;
 boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
 boolean simulateXylobotRange = false; //Mod by octaves to get to Xylobot range (60-74). NOT NEEDED WHEN USING XYLOBOT, Xylobot's low-level code does this itself
 
-//String fileName = "twinkle_twinkle_xylo.mid";
+String fileName = "twinkle_twinkle_xylo.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
@@ -27,7 +27,7 @@ boolean simulateXylobotRange = false; //Mod by octaves to get to Xylobot range (
 //String fileName = "six_eighths_test3.mid";
 //String fileName = "three_fourths_test.mid";
 //String fileName = "five_fourths_test.mid";
-String fileName = "WWRY3.mid";
+//String fileName = "WWRY3.mid";
 //String fileName = "AnotherOneBitesTheDust.mid";
 //String fileName = "Mars3.mid";
 //String fileName = "callresponsetest3.mid";
@@ -37,7 +37,7 @@ String fileName = "WWRY3.mid";
 //String fileName = "VivaLaVida.mid";
 //String fileName = "VivaLaVidaSimple.mid";
 
-int playHarmony = 0; //0 to play melody line (track 0), 1 to play harmony line (track 1)
+int playHarmony = 1; //0 to play melody line (track 0), 1 to play harmony line (track 1)
 
 double beatThresh = 0.01; //Tunes itself based on ambient noise, DO NOT TOUCH
 double minBeatThresh = 0.5; //0.08; //Absolute minimum volume to be considered a beat, shouldn't need to touch this much
@@ -65,7 +65,7 @@ float maxMsPerRhythm;
 double beatprobamp = 3; //How confident we are that when we hear a beat, it corresponds to an actual beat. (As opposed to beatSD, which is how unsure we are that the beat is at the correct time.) 
 double beatSD = bucketsPerRhythm/320.0; //SD on Gaussians for sensor model (when we heard a beat) in # time buckets
 double posSD = bucketsPerRhythm/128.0; //SD on Gaussians for motion model (time since last measurement) in # time buckets
-double tempoSD = nTempoBuckets/32.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
+double tempoSD = nTempoBuckets/256.0;//1; //SD on tempo changes (# tempo buckets) - higher means we think weird stuff is more likely due to a tempo change than bad execution of same tempo
 
 //These get filled in later
 ArrayList<ArrayList<Integer>> notes; //Gets populated when we read the MIDI file
@@ -78,12 +78,14 @@ Matrix[] beatProbsArrVis;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
-boolean midiBeat = false;
+int midiBeat = -1;
 
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
 //hearNote stuff
+
+//TODO getting out-of-bounds errors. Not sure what these pitches are, but they don't map to MIDI directly
 public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f, 61.7f, 65.4f, 69.3f,
   73.4f, 77.8f, 82.4f, 87.3f, 92.5f, 98.0f, 103.8f, 110.0f, 116.5f, 123.5f,
   130.8f, 138.6f, 146.8f, 155.6f, 164.8f, 174.6f, 185.0f, 196.0f, 207.7f, 220.0f,
@@ -91,7 +93,7 @@ public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f
   415.3f, 440.0f, 466.2f, 493.9f, 523.3f, 554.4f, 587.3f, 622.3f, 659.3f, 698.5f,
   740.0f, 784.0f, 830.6f, 880.0f, 932.3f, 987.8f, 1046.5f, 1108.7f, 1174.7f, 1244.5f,
   1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f };
-public final int[] pitch_offsets = {0, 12, 19, 24, 28, 31, 33, 36};
+//public final int[] pitch_offsets = {0, 12, 19, 24, 28, 31, 33, 36}; //I don't think this does anything...
 SpecWhitener sw;
 //Minim minim;
 //AudioInput in2;
@@ -533,11 +535,9 @@ void draw()
   }
 
   boolean keyPressedBeat = keyPressed;
-  boolean heardBeat = (hearNotes && amp.analyze() > 0.7 * beatThresh && (ignorePitch || hasPitch));
+  boolean heardBeat = false;//(hearNotes && amp.analyze() > 0.7 * beatThresh && (ignorePitch || hasPitch));
   boolean sawBeat = iv > 0;
-  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat;// || midiBeat;
-  
-  midiBeat = false;
+  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat || (midiBeat!=-1);
 
   //Update beat-hearing threshold
   if (hearNotes){
@@ -575,10 +575,24 @@ void draw()
         tempil += probs2.get(j, l)*posPDF;
       }
       if (isBeat) {
-        if (keyPressedBeat || (heardBeat && ignorePitch)) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
+        if (keyPressedBeat || (heardBeat && ignorePitch) || (midiBeat!=-1 && ignorePitch)) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
           tempil *= beatProbs.get(i, 0);
         else
         {
+          //Handle !ignorePitch
+          if (midiBeat != -1) { //We know we're not ignoring pitch because DeMorgan stuff
+
+            //PITCHES (indices matching beatProbsArr) and MIDI don't line up
+            //A5 is 69 in MIDI but 41 in PTICHES, so subtract 28?
+            int h = midiBeat-28;
+              if (true)//(fzeros[h] == 1)
+              {
+                tempil *= beatProbsArr[h].get(i, 0);
+              } else
+                tempil *= 1-beatProbsArr[h].get(i, 0);
+            }
+          
+          
           if (heardBeat) { //We know we're not ignoring pitch because DeMorgan stuff
             for (int h = 0; h < fzeros.length; h++)
             {
@@ -597,7 +611,8 @@ void draw()
       } else {
         tempil *= (1-beatProbs.get(i, 0));
       }
-
+      
+      midiBeat = -1;
       prenewprobs2.set(i-bucketShift, l, tempil);
     }
   }
@@ -719,7 +734,7 @@ void draw()
 
 
   //If things get weird, consider adding a small delay here. Seems fine for now though.
-  //delay(250);
+  //delay(100); //Might help the MIDI a bit maybe? Destroys all hope of keyboard input
 }
 
 int MIDIfromPitch(double freq) {
@@ -928,7 +943,7 @@ void noteOn(int channel, int pitch, int velocity, long timestamp, String bus_nam
   print(bus_name);
   
   if (bus_name == "inBus") {
-    midiBeat = true;
+    midiBeat = pitch;
     println("Note On - Channel: " + channel + " | Pitch: " + pitch + " | Velocity: " + velocity);
   }
 }
