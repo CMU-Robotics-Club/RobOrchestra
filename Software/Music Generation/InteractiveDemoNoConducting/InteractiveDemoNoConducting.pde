@@ -2,9 +2,8 @@ import controlP5.*;
 import themidibus.*;
 
 ControlP5 cp5;
-MidiBus myBus;
-MidiBus myBusBT;
-MidiBus myBusBT2;
+MidiBus[] myBus;
+int[] toSend = {}; //Which MIDI output to send to - overwrites to everything in setup
 
 Button melodyLabel;
 Button harmonyLabel;
@@ -134,10 +133,19 @@ void setup() {
   size(10000, 10000); //Doesn't take variables, changes window size and controlP5 responsive area
   surface.setSize(380 * scale, 278 * scale); //Takes variables, changes window size but apparently not controlP5 responsive area
   cp5 = new ControlP5(this);
-  myBus = new MidiBus(this, 0, 3);
-  myBusBT = new MidiBus(this, 0, 4); //Second MidiBus, plays same notes as first MidiBus but should point to whatever we're sending to the Bluetooth drums
-  myBusBT2 = new MidiBus(this, 0, 5); //Second MidiBus, plays same notes as first MidiBus but should point to whatever we're sending to the Bluetooth drums
-
+  
+  //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
+  toSend = new int[MidiBus.availableOutputs().length];
+  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+    toSend[i] = i;
+  }
+  
+  //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
+  myBus = new MidiBus[toSend.length];
+  for (int i = 0; i < myBus.length; i++){
+    myBus[i] = new MidiBus(this, 0, i);
+  }
+  
   MidiBus.list();
     
   cp5.setFont(new ControlFont(createFont("OpenSans-Bold.ttf", 9 * scale, true), 9 * scale));
@@ -309,7 +317,7 @@ void draw() {
   if(!isPlaying1 && isPlaying2 && millis() > curTime2 + (60000 / (tempo * 2))) {
     prev_tone_index_2 = playMelody(prev_tone_index_2, false); 
     curTime2 = millis();
-  }  
+  }
 }
 
 int playMelody(int prev_tone_index, boolean isHarmony) {
@@ -326,16 +334,16 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
   int toneIndex = 0;
   
   if(snarePlay <= snareThresh) {
-    myBus.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
-    myBusBT.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
-    myBusBT2.sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100));  
-}
+      for (int i = 0; i < myBus.length; i++){
+        myBus[i].sendNoteOn(new Note(perc_channel, snarePitchMIDI, 100)); 
+      }
+  }
    
   delay(2); //TODO I don't know why this is here, might've been lag compensation in which case retune. Leaving for now
   if(tomPlay <= tomThresh) {
-    myBus.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
-    myBusBT.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
-    myBusBT2.sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100));   
+    for (int i = 0; i < myBus.length; i++){
+      myBus[i].sendNoteOn(new Note(perc_channel, tomPitchMIDI, 100)); 
+    } 
   }
     
   delay(2); //TODO I don't know why this is here, might've been lag compensation in which case retune. Leaving for now
@@ -362,9 +370,9 @@ int playMelody(int prev_tone_index, boolean isHarmony) {
     }
     print(toneIndex);
     toneToPlay = tonic + scaleOffsets[curScale][curSubScale][toneIndex];
-    myBus.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
-    myBusBT.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
-    myBusBT2.sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));       
+    for (int i = 0; i < myBus.length; i++){
+      myBus[i].sendNoteOn(new Note(channel, 60 + (toneToPlay % 12), velocity));
+    }     
     }      
   beatIndex = (beatIndex + 1) % measureLength;
   return toneIndex;

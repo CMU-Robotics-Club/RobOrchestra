@@ -98,8 +98,8 @@ PitchDetect pd2;
 AudioIn in; //Raw sound input
 PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but we might use this eventually to grab pitch info from a human
 Amplitude amp; //Get amplitudes from input
-MidiBus myBus; //Pass MIDI to instruments/SimpleSynth
-MidiBus compBus; //Pass MIDI to instruments/SimpleSynth
+MidiBus[] myBus;
+int[] toSend = {}; //Which MIDI output to send to - overwrites to everything in setup
 FFT fft;
 int num_bands = 1024;
 int timeSize = num_bands;
@@ -193,8 +193,17 @@ void setup()
   //in2.enableMonitoring();
 
 
-  myBus = new MidiBus(this, 0, 3);
-  compBus = new MidiBus(this, 0, 4);
+  //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
+  toSend = new int[MidiBus.availableOutputs().length];
+  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+    toSend[i] = i;
+  }
+  
+  //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
+  myBus = new MidiBus[toSend.length];
+  for (int i = 0; i < myBus.length; i++){
+    myBus[i] = new MidiBus(this, 0, i);
+  }
   MidiBus.list();
 
   
@@ -667,8 +676,9 @@ void draw()
       for (Integer ppitch : pitch) {
         if (ppitch > 0) {
 
-          myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
-          compBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          for (int i = 0; i < myBus.length; i++){
+            myBus[i].sendNoteOff(new Note(0, ppitch.intValue(), 25)); 
+          }
         }
       }
 
@@ -685,8 +695,9 @@ void draw()
               ppitch -= 12;
             }
           }
-          myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
-          compBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          for (int i = 0; i < myBus.length; i++){
+            myBus[i].sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          }
         }
       }
       lastPlayedTime = millis();
@@ -803,8 +814,9 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     if (rhythmPattern.get(i).size() > 0) { //So we stop each note when the next note starts
       for (Integer ppitch : played) {
         if (ppitch > 0) {
-          myBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
-          compBus.sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          for (int i = 0; i < myBus.length; i++){
+            myBus[i].sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          }
         }
       }
       //Start new note

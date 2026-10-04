@@ -23,9 +23,8 @@ public static final int NOTE_OFF = 0x80;
 public static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 //End import file processing stuff (from MIDIReader)
 
-MidiBus myBus; //Creates a MidiBus object
-MidiBus compBus; //Creates a MidiBus object
-MidiBus compBus2; //Creates a MidiBus object
+MidiBus[] myBus;
+int[] toSend = {}; //Which MIDI output to send to - overwrites to everything in setup
 int channel = 1; //set channel. 0 for speakers
 int globalVolume = 50; //melody note volume
 
@@ -56,9 +55,17 @@ void setup(){
   
   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
-  myBus = new MidiBus(this, 0, 3);  
-  compBus = new MidiBus(this, 0, 4);
-  compBus2 = new MidiBus(this, 0, 5); 
+  //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
+  toSend = new int[MidiBus.availableOutputs().length];
+  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+    toSend[i] = i;
+  }
+  
+  //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
+  myBus = new MidiBus[toSend.length];
+  for (int i = 0; i < myBus.length; i++){
+    myBus[i] = new MidiBus(this, 0, i);
+  }
   
   //File myFile = new File(dataPath("twinkle_twinkle.mid")); //INPUT
   //File myFile = new File(dataPath("twinkle_twinkle_melody.mid")); //INPUT
@@ -136,16 +143,15 @@ void draw(){
                     //key is the numerical value for the pitch
                     
                     //Add a new note for the new pitch
-                    
-                    myBus.sendNoteOn(n);
-                    compBus.sendNoteOn(n);
-                    compBus2.sendNoteOn(n);
+                    for (int ii = 0; ii < myBus.length; ii++){
+                      myBus[ii].sendNoteOn(n); 
+                    }
                   }
                   else{
                     //Note is actually 0 velocity
-                    myBus.sendNoteOff(n);
-                    compBus.sendNoteOff(n);
-                    compBus2.sendNoteOff(n);
+                    for (int ii = 0; ii < myBus.length; ii++){
+                      myBus[ii].sendNoteOff(n); 
+                    }
                   }
                   
                   //Print stuff
@@ -154,22 +160,9 @@ void draw(){
                   //qprint("Note on, " + noteName + octave + " key=" + key + " velocity: " + velocity);  
         } else if (sm.getCommand() == NOTE_OFF) {
                   Note n = new Note(sm.getChannel(), sm.getData1(), sm.getData2());
-                  myBus.sendNoteOff(n);
-                  compBus.sendNoteOff(n);
-                  compBus2.sendNoteOff(n);
-                  //int key = sm.getData1();
-                  //int octave = (key / 12)-1;
-                  //int note = key % 12;
-                  
-                  ////Compute length of whatever note stopped
-                  //PartialNote p = activeNotes.get(activeNotes.indexOf(new PartialNote(key)));
-                  //p.len = (int)(timestamp - p.startTime);
-                  //p.len *= mspertick;
-                  //checkCompletedNotes(trackNumber, myBus);
-                  
-                  //String noteName = NOTE_NAMES[note];
-                  //int velocity = sm.getData2();
-                  //qprint("Note off, " + noteName + octave + " key=" + key + " velocity: " + velocity);
+                  for (int ii = 0; ii < myBus.length; ii++){
+                    myBus[ii].sendNoteOff(n); 
+                  }
               } else {
                   qprint("Command:" + sm.getCommand()); //Ignore commands (not sure what those are for)
               }
@@ -190,19 +183,12 @@ void draw(){
       i++;
     }
   }
-    
- 
-  
-  
-  
-  
- 
           
 }
-  private void qprint(String toPrint){
-    if(printThings){
-       System.out.println(toPrint); 
-    }
+
+//For debug:
+private void qprint(String toPrint){
+  if(printThings){
+     System.out.println(toPrint); 
   }
-    //test David doing stuff
-  
+}

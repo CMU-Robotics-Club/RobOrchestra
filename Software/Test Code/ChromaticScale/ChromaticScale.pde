@@ -4,7 +4,8 @@
 
 import themidibus.*; //Library documentation: http://www.smallbutdigital.com/themidibus.php
 
-MidiBus myBus; //Creates a MidiBus object
+MidiBus[] myBus;
+int[] toSend = {}; //Which MIDI output to send to - overwrites to everything in setup
 int channel = 0; //channel xylobot is on
 int noteLen = 1000; //set note length in milliseconds
 
@@ -29,7 +30,17 @@ void setup() {
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, 0, 3); //Creates bus to send MIDI data to xylobot
+  //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
+  toSend = new int[MidiBus.availableOutputs().length];
+  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+    toSend[i] = i;
+  }
+  
+  //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
+  myBus = new MidiBus[toSend.length];
+  for (int i = 0; i < myBus.length; i++){
+    myBus[i] = new MidiBus(this, 0, i);
+  }
 
 }
 
@@ -42,28 +53,16 @@ void draw() {
     //creates a note object
     Note mynote = new Note(channel, x, 100, noteLen);
     
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);
+    //sends note to Xylobot
+    for (int i = 0; i < myBus.length; i++){
+      myBus[i].sendNoteOn(mynote); 
+    }
     double legato = 0.5;
     delay((int)(legato*noteLen));
-    myBus.sendNoteOff(mynote);
+    for (int i = 0; i < myBus.length; i++){
+      myBus[i].sendNoteOff(mynote); 
+    }
     delay((int)((1-legato)*noteLen));
-    
-    /*delay(1);
-    
-    //creates a note object
-    mynote = new Note(channel, x+4, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);
-    
-    delay(1);
-    
-    //creates a note object
-    mynote = new Note(channel, x+7, 100, noteLen);
-    
-    //sends note to Xylobot 
-    myBus.sendNoteOn(mynote);//*/
   }
 
 }

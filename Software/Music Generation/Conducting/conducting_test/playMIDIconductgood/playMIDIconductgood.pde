@@ -3,7 +3,9 @@ import java.util.*;
 import java.text.SimpleDateFormat;
 import themidibus.*; //Library documentation: http://www.smallbutdigital.com/themidibus.php
 
-MidiBus myBus; //Creates a MidiBus object
+MidiBus[] myBus;
+int[] toSend = {}; //Which MIDI output to send to - overwrites to everything in setup
+
 int channel = 0; //channel xylobot is on
 int noteLen = 5;
 
@@ -25,17 +27,28 @@ boolean shouldRead;
 
 void setup() {
    shouldRead = true;
+   print("Arduino stuff");
    printArray(Serial.list());
    String[] devs = Serial.list();
    //int dev_numb = getDevNumb(devs);
-   mySerial = new Serial( this, devs[3], 115200); //9600 for chromatic, 115200 for theremin
+   mySerial = new Serial( this, devs[6], 115200); //9600 for chromatic, 115200 for theremin
    //If port is busy, close Arduino serial monitor
   
   System.out.println("");   
   MidiBus.list(); // List all available Midi devices on STDOUT. Hopefully robots show up here!
   System.out.println("");
 
-  myBus = new MidiBus(this, 0, 4); //Creates bus to send MIDI data to xylobot
+  //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
+  toSend = new int[MidiBus.availableOutputs().length];
+  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+    toSend[i] = i;
+  }
+  
+  //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
+  myBus = new MidiBus[toSend.length];
+  for (int i = 0; i < myBus.length; i++){
+    myBus[i] = new MidiBus(this, 0, i);
+  }
 }
 
 void draw() {
@@ -49,14 +62,18 @@ void draw() {
               
               //Stop previous note
               if(mynote != null){
-                myBus.sendNoteOff(mynote);
+                for (int i = 0; i < myBus.length; i++){
+                  myBus[i].sendNoteOff(mynote); 
+                }
               }
             
               //int x = parseInt(value);
               mynote = new Note(channel, pitch, 100);
     
               //sends note to Xylobot 
-              myBus.sendNoteOn(mynote);
+              for (int i = 0; i < myBus.length; i++){
+                myBus[i].sendNoteOn(mynote); 
+              }
               pitch++;
               if (pitch > maxpitch){pitch = 60;}
               
