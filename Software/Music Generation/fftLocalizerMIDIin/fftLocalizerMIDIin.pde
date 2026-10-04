@@ -78,6 +78,8 @@ Matrix[] beatProbsArrVis;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
+boolean midiBeat = false;
+
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
 
@@ -99,7 +101,12 @@ AudioIn in; //Raw sound input
 PitchDetector pd; //Get pitches from input. Doesn't currently do anything, but we might use this eventually to grab pitch info from a human
 Amplitude amp; //Get amplitudes from input
 MidiBus[] myBus;
-int[] toSend = {}; //Which MIDI output to send to - overwrites to everything in setup
+int[] toSend = { 3, 4}; //Which MIDI output to send to - overwrites to everything in setup
+//The trick is apparently to have MuseScore send to IAC1, which we can intercept as noteOn messages
+//And then send to just SimpleSynth+Xylobot and do NOT send to IAC1? Not sure how we'd handle this with drums...
+
+MidiBus inBus;
+
 FFT fft;
 int num_bands = 1024;
 int timeSize = num_bands;
@@ -194,16 +201,17 @@ void setup()
 
 
   //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
-  toSend = new int[MidiBus.availableOutputs().length];
-  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
-    toSend[i] = i;
-  }
+  //toSend = new int[MidiBus.availableOutputs().length];
+  //for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+  //  toSend[i] = i;
+  //}
   
   //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
   myBus = new MidiBus[toSend.length];
   for (int i = 0; i < myBus.length; i++){
-    myBus[i] = new MidiBus(this, 0, toSend[i]);
+    myBus[i] = new MidiBus(this, -1, toSend[i]);
   }
+  inBus = new MidiBus(this, 1, -1, "inBus");
   MidiBus.list();
 
   
@@ -527,7 +535,9 @@ void draw()
   boolean keyPressedBeat = keyPressed;
   boolean heardBeat = (hearNotes && amp.analyze() > 0.7 * beatThresh && (ignorePitch || hasPitch));
   boolean sawBeat = iv > 0;
-  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat;
+  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat;// || midiBeat;
+  
+  midiBeat = false;
 
   //Update beat-hearing threshold
   if (hearNotes){
@@ -814,8 +824,8 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
     if (rhythmPattern.get(i).size() > 0) { //So we stop each note when the next note starts
       for (Integer ppitch : played) {
         if (ppitch > 0) {
-          for (int i = 0; i < myBus.length; i++){
-            myBus[i].sendNoteOff(new Note(0, ppitch.intValue(), 25));
+          for (int ii = 0; ii < myBus.length; ii++){
+            myBus[ii].sendNoteOff(new Note(0, ppitch.intValue(), 25));
           }
         }
       }
@@ -823,8 +833,9 @@ void playRhythm(ArrayList<ArrayList<Integer>> rhythmPattern, float measuresPerRh
       played = rhythmPattern.get(i); //Which we know is non-zero because of outer if statement
       for (Integer ppitch : rhythmPattern.get(i)) {
         if (ppitch > 0) {
-          myBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
-          compBus.sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          for (int ii = 0; ii < myBus.length; ii++){
+            myBus[ii].sendNoteOn(new Note(0, ppitch.intValue(), 25));
+          }
         }
       }
     }
@@ -909,4 +920,15 @@ void mousePressed() {
 
   rangeLow = hue - 8;
   rangeHigh = hue + 8;
+}
+
+// 1. Automatically called when a Note On message is received (because magic, apparently)
+void noteOn(int channel, int pitch, int velocity, long timestamp, String bus_name) {
+  print("noteOn?");
+  print(bus_name);
+  
+  if (bus_name == "inBus") {
+    midiBeat = true;
+    println("Note On - Channel: " + channel + " | Pitch: " + pitch + " | Velocity: " + velocity);
+  }
 }

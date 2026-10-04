@@ -39,14 +39,13 @@ void setup() {
   //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
   myBus = new MidiBus[toSend.length];
   for (int i = 0; i < myBus.length; i++){
-    myBus[i] = new MidiBus(this, 0, i);
+    myBus[i] = new MidiBus(this, 0, toSend[i]);
   }
 
 }
 
 //loops
 void draw() {
-  //for(int x = lo; x < hi; x++){
   for(int x = lo; x <= hi; x++){
     System.out.println("Testing note with MIDI value " + x);
     
