@@ -1,4 +1,6 @@
 //Adapted from: https://github.com/821760408-sp/pitch-detect/tree/master probably? - David doing archaeology, 2/8/26
+//May need two instances of SimpleSynth (one for MIDI keyboard, one for localizer output). If so, in Terminal do:
+//open -n -a "SimpleSynth"
 
 import processing.sound.AudioIn; //Input from computer mic
 import processing.sound.PitchDetector; //Input from computer mic
@@ -16,10 +18,10 @@ import java.awt.Rectangle;
 
 boolean hearNotes = true;
 boolean watchConductor = false;
-boolean ignorePitch = true; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
+boolean ignorePitch = false; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
 boolean simulateXylobotRange = false; //Mod by octaves to get to Xylobot range (60-74). NOT NEEDED WHEN USING XYLOBOT, Xylobot's low-level code does this itself
 
-String fileName = "twinkle_twinkle_xylo.mid";
+String fileName = "twinkle_twinkle_xyloDoubleMelody.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
@@ -203,17 +205,17 @@ void setup()
 
 
   //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
-  //toSend = new int[MidiBus.availableOutputs().length];
-  //for (int i = 0; i < MidiBus.availableOutputs().length; i++){
-  //  toSend[i] = i;
-  //}
+  toSend = new int[MidiBus.availableOutputs().length];
+  for (int i = 0; i < MidiBus.availableOutputs().length; i++){
+    toSend[i] = i;
+  }/**/
   
   //Use toSend - this looks silly, but splitting this out is more convenient if we don't want to blast MIDI everywhere
   myBus = new MidiBus[toSend.length];
   for (int i = 0; i < myBus.length; i++){
     myBus[i] = new MidiBus(this, -1, toSend[i]);
   }
-  inBus = new MidiBus(this, 1, -1, "inBus");
+  inBus = new MidiBus(this, 2, -1, "inBus");
   MidiBus.list();
 
   
@@ -515,10 +517,10 @@ void draw()
     for (int i = 20; i < fzeros.length; i++)
     {
 
-      if (fzeros[i] == 1)
+      /*if (fzeros[i] == 1)
       {
         println(PITCHES[i]);
-      }
+      }*/
     }
     
     for (int i = 20; i < PITCHES.length; i++)
@@ -537,8 +539,10 @@ void draw()
   boolean keyPressedBeat = keyPressed;
   boolean heardBeat = false;//(hearNotes && amp.analyze() > 0.7 * beatThresh && (ignorePitch || hasPitch));
   boolean sawBeat = iv > 0;
-  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat || (midiBeat!=-1);
-
+  boolean midiBeatOn = midiBeat != -1;
+  int midiPitch = midiBeat;
+  midiBeat = -1;
+  boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat || midiBeatOn;
   //Update beat-hearing threshold
   if (hearNotes){
     if (amp.analyze() > beatThresh) beatThresh += 0.005;
@@ -551,7 +555,7 @@ void draw()
 
   boolean isBeat = detectedBeat && beatReady;
   beatReady = !detectedBeat; //Avoid repeated beats
-  if (isBeat) println("beat");
+  //if (isBeat) println("beat");
   //Compute new probs
   Matrix newprobs2 = new Matrix(bucketsPerRhythm+1, nTempoBuckets);
   double newprobsum = 0;
@@ -575,16 +579,17 @@ void draw()
         tempil += probs2.get(j, l)*posPDF;
       }
       if (isBeat) {
-        if (keyPressedBeat || (heardBeat && ignorePitch) || (midiBeat!=-1 && ignorePitch)) //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
+        if (keyPressedBeat || (heardBeat && ignorePitch) || (midiBeatOn && ignorePitch)){ //Having keyPressedBeat override everything else - if you're tapping beats in via keyboard, you probably want to ignore other stuff
           tempil *= beatProbs.get(i, 0);
+        }
         else
         {
           //Handle !ignorePitch
-          if (midiBeat != -1) { //We know we're not ignoring pitch because DeMorgan stuff
+          if (midiBeatOn) { //We know we're not ignoring pitch because DeMorgan stuff
 
             //PITCHES (indices matching beatProbsArr) and MIDI don't line up
             //A5 is 69 in MIDI but 41 in PTICHES, so subtract 28?
-            int h = midiBeat-28;
+            int h = midiPitch-28;
               if (true)//(fzeros[h] == 1)
               {
                 tempil *= beatProbsArr[h].get(i, 0);
@@ -610,9 +615,7 @@ void draw()
         }
       } else {
         tempil *= (1-beatProbs.get(i, 0));
-      }
-      
-      midiBeat = -1;
+      }      
       prenewprobs2.set(i-bucketShift, l, tempil);
     }
   }
@@ -655,8 +658,8 @@ void draw()
   dispProbArray(beatProbs, detectedBeat);
   //Override if saw or heard a beat
   if (hasPitch && !ignorePitch) {
-    background(0, 255, 0); //Green
-    dispProbArray(beatProbsArr[firstPitchIdx], detectedBeat);
+    //background(0, 255, 0); //Green
+    dispProbArray(beatProbsArr[firstPitchIdx], 0, 0, 255);
   }
   if (sawBeat) {
     switch (iv)
@@ -775,6 +778,14 @@ double pitchFromMIDI(int midi) {
   return freq;
 }
 
+void dispProbArray(Matrix A, int r, int g, int b) {
+    int n = A.getRowDimension();
+  for (int i = 0; i < n; i++) {
+    fill(0);
+    fill(r, g, b);
+    rect(i*width/n, (1- (float)A.get(i, 0))*height, width/n, (float) A.get(i, 0)*height);
+  }
+}
 
 void dispProbArray(Matrix A, boolean isBeat) {
 
