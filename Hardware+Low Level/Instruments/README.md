@@ -12,5 +12,7 @@ Each directory contains Arduino code, CAD files and documentation for each of ou
 * ukuleleBot
 * roboOboe
 * harmonicaBot
+* ViolinBot
+* XyloBot V2
 
 (Older, unused robot designs can be found in the "archives" directory.)
