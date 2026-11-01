@@ -1,6 +1,7 @@
 //Adapted from: https://github.com/821760408-sp/pitch-detect/tree/master probably? - David doing archaeology, 2/8/26
 //May need two instances of SimpleSynth (one for MIDI keyboard, one for localizer output). If so, in Terminal do:
 //open -n -a "SimpleSynth"
+//Also double-check the input argument to inBus and the toSend array for myBus[], and make sure the toSend overwrite in setup() is commented
 
 import processing.sound.AudioIn; //Input from computer mic
 import processing.sound.PitchDetector; //Input from computer mic
@@ -21,7 +22,7 @@ boolean watchConductor = false;
 boolean ignorePitch = false; //If hearNotes = True, treats any loud noise as a keyPressedBeat instead of using pitch information
 boolean simulateXylobotRange = false; //Mod by octaves to get to Xylobot range (60-74). NOT NEEDED WHEN USING XYLOBOT, Xylobot's low-level code does this itself
 
-String fileName = "twinkle_twinkle_xyloDoubleMelody.mid";
+String fileName = "twinkle_twinkle_xyloDoubleMelodyChords.mid";
 //String fileName = "GoC.mid";
 //String fileName = "GoT7.mid";
 //String fileName = "ae_test3.mid";
@@ -80,7 +81,7 @@ Matrix[] beatProbsArrVis;
 Matrix tempoGaussMat = new Matrix(nTempoBuckets, nTempoBuckets);
 Matrix msPerRhythm = new Matrix(nTempoBuckets, 1); //This actually ends up storing msPerBucket...
 
-int midiBeat = -1;
+ArrayList<Integer> midiBeat = new ArrayList<Integer>();
 
 public static final int NOTE_ON = 0x90;
 public static final int NOTE_OFF = 0x80;
@@ -94,7 +95,9 @@ public final float[] PITCHES = { 41.2f, 43.7f, 46.2f, 49.0f, 51.9f, 55.0f, 58.3f
   233.1f, 246.9f, 261.6f, 277.2f, 293.7f, 311.1f, 329.6f, 349.2f, 370.0f, 392.0f,
   415.3f, 440.0f, 466.2f, 493.9f, 523.3f, 554.4f, 587.3f, 622.3f, 659.3f, 698.5f,
   740.0f, 784.0f, 830.6f, 880.0f, 932.3f, 987.8f, 1046.5f, 1108.7f, 1174.7f, 1244.5f,
-  1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f };
+  1318.5f, 1396.9f, 1480.0f, 1568.0f, 1661.2f, 1760.0f, 1864.7f, 1979.5f, 2093.0f, 2217.5f,
+  2349.3f, 2489.0f, 2637.0f, 2793.8f, 2960.0f, 3136.0f, 3322.4f, 3520.0f, 3729.3f, 3951.1f,
+  4186.0f};
 //public final int[] pitch_offsets = {0, 12, 19, 24, 28, 31, 33, 36}; //I don't think this does anything...
 SpecWhitener sw;
 //Minim minim;
@@ -205,7 +208,7 @@ void setup()
 
 
   //Overwrite toSend to send to everything by default - block comment if you want to avoid sending everywhere
-  toSend = new int[MidiBus.availableOutputs().length];
+  /*toSend = new int[MidiBus.availableOutputs().length];
   for (int i = 0; i < MidiBus.availableOutputs().length; i++){
     toSend[i] = i;
   }/**/
@@ -215,7 +218,7 @@ void setup()
   for (int i = 0; i < myBus.length; i++){
     myBus[i] = new MidiBus(this, -1, toSend[i]);
   }
-  inBus = new MidiBus(this, 2, -1, "inBus");
+  inBus = new MidiBus(this, 1, -1, "inBus"); //David computer: in=2 for MIDI piano, 1 for MuseScore with piano not plugged in
   MidiBus.list();
 
   
@@ -407,7 +410,7 @@ void draw()
         {
           //if (!(rhythmPattern.get(i).get(k) >= 60 && rhythmPattern.get(i).get(k) <= 72)) continue;
           if (hearNotes){
-
+            //print(beatProbsArr[rhythmPattern.get(i).get(k)-28]);
             beatProbsArr[rhythmPattern.get(i).get(k)-28].set(j, 0, beatProbsArr[rhythmPattern.get(i).get(k)-28].get(j, 0) + beatprobamp * GaussPDF(disp, 0, beatSD));
           }
         }
@@ -539,9 +542,9 @@ void draw()
   boolean keyPressedBeat = keyPressed;
   boolean heardBeat = false;//(hearNotes && amp.analyze() > 0.7 * beatThresh && (ignorePitch || hasPitch));
   boolean sawBeat = iv > 0;
-  boolean midiBeatOn = midiBeat != -1;
-  int midiPitch = midiBeat;
-  midiBeat = -1;
+  boolean midiBeatOn = midiBeat.size() > 0;
+  ArrayList<Integer> midiPitch = midiBeat;
+  midiBeat = new ArrayList();
   boolean detectedBeat = heardBeat || keyPressedBeat || sawBeat || midiBeatOn;
   //Update beat-hearing threshold
   if (hearNotes){
@@ -589,13 +592,10 @@ void draw()
 
             //PITCHES (indices matching beatProbsArr) and MIDI don't line up
             //A5 is 69 in MIDI but 41 in PTICHES, so subtract 28?
-            int h = midiPitch-28;
-              if (true)//(fzeros[h] == 1)
-              {
-                tempil *= beatProbsArr[h].get(i, 0);
-              } else
-                tempil *= 1-beatProbsArr[h].get(i, 0);
-            }
+            for (Integer pitch: midiPitch){
+            int h = pitch-28;
+            tempil *= beatProbsArr[h].get(i, 0); //Update probability arrays
+          }
           
           
           if (heardBeat) { //We know we're not ignoring pitch because DeMorgan stuff
@@ -613,7 +613,9 @@ void draw()
             tempil *= beatProbsArrVis[iv].get(i, 0);
           }
         }
-      } else {
+      }
+      }
+      else {
         tempil *= (1-beatProbs.get(i, 0));
       }      
       prenewprobs2.set(i-bucketShift, l, tempil);
@@ -954,7 +956,7 @@ void noteOn(int channel, int pitch, int velocity, long timestamp, String bus_nam
   print(bus_name);
   
   if (bus_name == "inBus") {
-    midiBeat = pitch;
+    midiBeat.add(pitch);
     println("Note On - Channel: " + channel + " | Pitch: " + pitch + " | Velocity: " + velocity);
   }
 }
