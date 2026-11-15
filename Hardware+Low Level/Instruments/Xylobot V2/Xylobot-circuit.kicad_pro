@@ -536,11 +536,14 @@
   },
   "pcbnew": {
     "last_paths": {
+      "gencad": "",
       "idf": "",
       "netlist": "./",
       "plot": "",
+      "pos_files": "",
       "specctra_dsn": "",
       "step": "",
+      "svg": "",
       "vrml": ""
     },
     "page_layout_descr_file": ""
@@ -687,7 +690,7 @@
         "uuid": "3d48dbf0-9197-447b-9607-43b7b94f3dad"
       }
     ],
-    "used_designators": "U1-18,R1-26,C1-13,#PWR1-131,Q1-26,D1-26,L1-25",
+    "used_designators": "",
     "variants": []
   },
   "sheets": [
