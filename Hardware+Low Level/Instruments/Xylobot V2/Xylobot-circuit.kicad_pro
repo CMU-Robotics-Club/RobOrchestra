@@ -39,9 +39,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.8,
-          "height": 1.27,
-          "width": 1.27
+          "drill": 0.3,
+          "height": 0.6,
+          "width": 0.6
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -520,10 +520,48 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 2147483647,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 0.2,
+        "track_width": 0.25,
         "tuning_profile": "",
         "via_diameter": 0.6,
         "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.25,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Power12V",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 1.0,
+        "tuning_profile": "",
+        "via_diameter": 1.0,
+        "via_drill": 0.5,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Power3V3",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.3,
+        "tuning_profile": "",
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
         "wire_width": 6
       }
     ],
@@ -532,7 +570,136 @@
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Power12V",
+        "pattern": "VDD"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(F1-Pad1)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(F1-Pad2)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D1-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D10-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D11-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D12-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D13-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D14-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D15-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D16-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D17-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D2-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D21-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D22-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D23-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D24-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D25-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D26-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D27-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D28-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D3-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D4-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D5-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D6-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D7-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D8-A)"
+      },
+      {
+        "netclass": "Power12V",
+        "pattern": "Net-(D9-A)"
+      },
+      {
+        "netclass": "Power3V3",
+        "pattern": "VCC"
+      },
+      {
+        "netclass": "Power3V3",
+        "pattern": "VBUS"
+      },
+      {
+        "netclass": "Power3V3",
+        "pattern": "Net-(D20-K)"
+      },
+      {
+        "netclass": "Power3V3",
+        "pattern": "Net-(U20-SW)"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {
@@ -541,7 +708,7 @@
       "netlist": "./",
       "plot": "",
       "pos_files": "",
-      "specctra_dsn": "",
+      "specctra_dsn": "../Xylobot-circuitry.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
@@ -690,7 +857,7 @@
         "uuid": "3d48dbf0-9197-447b-9607-43b7b94f3dad"
       }
     ],
-    "used_designators": "",
+    "used_designators": "SW1-2,L1-26,R1-33,J1-2,U1-20,F1,D1-28,C1-30,#PWR1-168,Q1-28,#FLG1-5",
     "variants": []
   },
   "sheets": [
